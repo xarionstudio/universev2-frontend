@@ -1,53 +1,60 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { Search, CheckCircle2, Clock, CircleAlert } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { ftwData, ftwHistoryFor, ftwStripAt, type FtwRecord } from "@/lib/data/ftw"
+import * as React from "react";
+import Link from "next/link";
+import { CheckCircle2, CircleAlert, Clock, Search } from "lucide-react";
+
 import {
-  PageTitle,
-  Panel,
-  Toolbar,
-  ToolbarTitle,
-  ToolbarGroup,
-  PanelFoot,
+  ftwData,
+  ftwHistoryFor,
+  ftwStripAt,
+  type FtwRecord,
+} from "@/lib/data/ftw";
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import {
   FootSum,
   Fresh,
-} from "@/components/ui/panel"
-import { StatCard } from "@/components/ui/stat-card"
-import { SearchInput } from "@/components/ui/search-input"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StatCard } from "@/components/ui/stat-card";
+import { StateBox } from "@/components/ui/state-box";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
   NameCell,
-} from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"
-import { StateBox } from "@/components/ui/state-box"
-import { cn } from "@/lib/utils"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-type StKey = "fit" | "kurang" | "belum"
+type StKey = "fit" | "kurang" | "belum";
 
 type Row = {
-  op: FtwRecord
-  company: string
-  pos: string
-  st: StKey
-  sleep: string
-  sendTime: string
-  date: string
-  d: number
-}
+  op: FtwRecord;
+  company: string;
+  pos: string;
+  st: StKey;
+  sleep: string;
+  sendTime: string;
+  date: string;
+  d: number;
+};
 
-const stOf = (n: number): StKey => (n === 1 ? "fit" : n === 0 ? "kurang" : "belum")
+const stOf = (n: number): StKey =>
+  n === 1 ? "fit" : n === 0 ? "kurang" : "belum";
 
 const sleepClass = (st: StKey) =>
   cn(
@@ -55,74 +62,74 @@ const sleepClass = (st: StKey) =>
     st === "kurang" && "font-semibold text-(--color-danger-text)",
     st === "belum" && "text-(--text-tertiary)",
     st === "fit" && "text-(--text-secondary)"
-  )
+  );
 
 const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
   ok: "bg-[rgba(23,206,100,.75)]",
   bad: "bg-[rgba(233,155,42,.85)]",
   na: "bg-(--fill-hover-strong)",
-}
+};
 
 export default function FitToWorkPage() {
-  const { t, lang } = useI18n()
-  const { empAll } = useAppStore()
-  const todayIso = new Date().toISOString().slice(0, 10)
+  const { t, lang } = useI18n();
+  const { empAll } = useAppStore();
+  const todayIso = new Date().toISOString().slice(0, 10);
 
-  const [q, setQ] = React.useState("")
-  const [st, setSt] = React.useState("")
-  const [shift, setShift] = React.useState("")
-  const [d1, setD1] = React.useState(todayIso)
-  const [d2, setD2] = React.useState(todayIso)
-  const [per, setPer] = React.useState("10")
-  const [page, setPage] = React.useState(1)
-  const [freshTime, setFreshTime] = React.useState("")
+  const [q, setQ] = React.useState("");
+  const [st, setSt] = React.useState("");
+  const [shift, setShift] = React.useState("");
+  const [d1, setD1] = React.useState(todayIso);
+  const [d2, setD2] = React.useState(todayIso);
+  const [per, setPer] = React.useState("10");
+  const [page, setPage] = React.useState(1);
+  const [freshTime, setFreshTime] = React.useState("");
 
   const updateFresh = React.useCallback(() => {
-    const d = new Date()
+    const d = new Date();
     setFreshTime(
       `${d.getHours() < 10 ? "0" : ""}${d.getHours()}:${d.getMinutes() < 10 ? "0" : ""}${d.getMinutes()} WITA`
-    )
-  }, [])
+    );
+  }, []);
 
   React.useEffect(() => {
-    const id = setTimeout(updateFresh, 0)
-    return () => clearTimeout(id)
-  }, [updateFresh])
+    const id = setTimeout(updateFresh, 0);
+    return () => clearTimeout(id);
+  }, [updateFresh]);
 
   const stBadge = (key: StKey) => {
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
       fit: { v: "success", l: t.bFit },
       kurang: { v: "warning", l: t.ftwStatKurang },
       belum: { v: "neutral", l: t.ftwStatBelum },
-    }
+    };
     return (
       <Badge variant={map[key].v} dot>
         {map[key].l}
       </Badge>
-    )
-  }
+    );
+  };
 
-  const emps = empAll()
-  const needle = q.trim().toLowerCase()
-  const rows: Row[] = []
+  const emps = empAll();
+  const needle = q.trim().toLowerCase();
+  const rows: Row[] = [];
   for (const op of ftwData(lang)) {
-    if (shift && op.shift !== shift) continue
+    if (shift && op.shift !== shift) continue;
     if (
       needle &&
       !op.name.toLowerCase().includes(needle) &&
       !op.nik.includes(needle)
     )
-      continue
-    const emp = emps.find((e) => e.nik === op.nik)
-    const company = emp?.company ?? "PT Unggul Dinamika Utama"
-    const pos = emp?.pos ?? "—"
+      continue;
+    const emp = emps.find((e) => e.nik === op.nik);
+    const company = emp?.company ?? "PT Unggul Dinamika Utama";
+    const pos = emp?.pos ?? "—";
     for (const entry of ftwHistoryFor(op, lang, 90)) {
-      if (d1 && entry.iso < d1) continue
-      if (d2 && entry.iso > d2) continue
+      if (d1 && entry.iso < d1) continue;
+      if (d2 && entry.iso > d2) continue;
       // hari ini pakai data log asli operator, bukan deret riwayat sintetis
-      const isToday = entry.d === 0
-      const key = isToday ? op.st : stOf(entry.st)
-      if (st && key !== st) continue
+      const isToday = entry.d === 0;
+      const key = isToday ? op.st : stOf(entry.st);
+      if (st && key !== st) continue;
       rows.push({
         op,
         company,
@@ -132,17 +139,17 @@ export default function FitToWorkPage() {
         sendTime: entry.sendTime,
         date: entry.date,
         d: entry.d,
-      })
+      });
     }
   }
 
-  const perN = parseInt(per, 10)
-  const total = rows.length
-  const pageCount = Math.max(1, Math.ceil(total / perN))
-  const cur = Math.min(page, pageCount)
-  const shown = rows.slice((cur - 1) * perN, cur * perN)
-  const start = total === 0 ? 0 : (cur - 1) * perN + 1
-  const end = Math.min(total, cur * perN)
+  const perN = parseInt(per, 10);
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / perN));
+  const cur = Math.min(page, pageCount);
+  const shown = rows.slice((cur - 1) * perN, cur * perN);
+  const start = total === 0 ? 0 : (cur - 1) * perN + 1;
+  const end = Math.min(total, cur * perN);
 
   return (
     <div className="flex flex-col gap-6">
@@ -199,16 +206,16 @@ export default function FitToWorkPage() {
               aria-label={t.searchOp}
               value={q}
               onChange={(e) => {
-                setQ(e.target.value)
-                setPage(1)
+                setQ(e.target.value);
+                setPage(1);
               }}
             />
             <Select
               wrapperClassName="w-[170px]"
               value={st}
               onChange={(e) => {
-                setSt(e.target.value)
-                setPage(1)
+                setSt(e.target.value);
+                setPage(1);
               }}
               aria-label={t.allStatus}
             >
@@ -221,8 +228,8 @@ export default function FitToWorkPage() {
               wrapperClassName="w-[150px]"
               value={shift}
               onChange={(e) => {
-                setShift(e.target.value)
-                setPage(1)
+                setShift(e.target.value);
+                setPage(1);
               }}
               aria-label={t.allShift}
             >
@@ -236,8 +243,8 @@ export default function FitToWorkPage() {
                 className="w-40 font-mono"
                 value={d1}
                 onChange={(e) => {
-                  setD1(e.target.value)
-                  setPage(1)
+                  setD1(e.target.value);
+                  setPage(1);
                 }}
                 aria-label={t.lblDate}
               />
@@ -247,8 +254,8 @@ export default function FitToWorkPage() {
                 className="w-40 font-mono"
                 value={d2}
                 onChange={(e) => {
-                  setD2(e.target.value)
-                  setPage(1)
+                  setD2(e.target.value);
+                  setPage(1);
                 }}
                 aria-label={t.lblDateTo}
               />
@@ -275,8 +282,8 @@ export default function FitToWorkPage() {
               </TableHeader>
               <TableBody>
                 {shown.map((r) => {
-                  const strip = ftwStripAt(r.op, r.d)
-                  const bad = strip.filter((s) => s === "bad").length
+                  const strip = ftwStripAt(r.op, r.d);
+                  const bad = strip.filter((s) => s === "bad").length;
                   return (
                     <TableRow key={`${r.op.nik}-${r.d}`}>
                       <TableCell>
@@ -288,7 +295,9 @@ export default function FitToWorkPage() {
                       <TableCell>
                         {r.op.shift === "malam" ? t.shiftNight : t.shiftDay}
                       </TableCell>
-                      <TableCell className={sleepClass(r.st)}>{r.sleep}</TableCell>
+                      <TableCell className={sleepClass(r.st)}>
+                        {r.sleep}
+                      </TableCell>
                       <TableCell>{stBadge(r.st)}</TableCell>
                       <TableCell className="font-mono whitespace-nowrap">
                         {r.date}
@@ -317,7 +326,7 @@ export default function FitToWorkPage() {
                         </Link>
                       </TableCell>
                     </TableRow>
-                  )
+                  );
                 })}
               </TableBody>
             </Table>
@@ -342,12 +351,12 @@ export default function FitToWorkPage() {
             per={per}
             perOptions={["10", "25", "50"]}
             onPer={(v) => {
-              setPer(v)
-              setPage(1)
+              setPer(v);
+              setPage(1);
             }}
           />
         </PanelFoot>
       </Panel>
     </div>
-  )
+  );
 }

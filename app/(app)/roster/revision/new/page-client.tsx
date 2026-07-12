@@ -1,65 +1,84 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, CalendarDays, Plus, Send, Trash2 } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import { revCodeList, type ApRow } from "@/lib/data/roster"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Field } from "@/components/ui/field"
-import { Input, Textarea } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
-import { StateBox } from "@/components/ui/state-box"
-import { Dialog, DialogIcon, DialogTitle, DialogBody, DialogActions } from "@/components/ui/dialog"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, CalendarDays, Plus, Send, Trash2 } from "lucide-react";
+
+import { revCodeList, type ApRow } from "@/lib/data/roster";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogIcon,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 type Entry = {
-  name: string
-  nik: string
-  tgl: string
-  kode: string
-  jam: string
-  alasan: string
-}
+  name: string;
+  nik: string;
+  tgl: string;
+  kode: string;
+  jam: string;
+  alasan: string;
+};
 
 function yesterdayISO() {
-  return new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  return new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 }
 
 export default function RosterRevisionNewPage() {
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const { empAll, setApRows } = useAppStore()
-  const router = useRouter()
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const { empAll, setApRows } = useAppStore();
+  const router = useRouter();
 
-  const employees = empAll().filter((e) => e.status === "aktif")
-  const codes = revCodeList(lang)
+  const employees = empAll().filter((e) => e.status === "aktif");
+  const codes = revCodeList(lang);
 
-  const [emp, setEmp] = React.useState("")
-  const [tgl, setTgl] = React.useState(yesterdayISO)
-  const [kode, setKode] = React.useState("")
-  const [withJam, setWithJam] = React.useState(false)
-  const [jin, setJin] = React.useState("05:45")
-  const [jout, setJout] = React.useState("17:30")
-  const [alasan, setAlasan] = React.useState("")
-  const [errs, setErrs] = React.useState<{ emp?: boolean; tgl?: boolean; kode?: boolean; alasan?: boolean }>({})
+  const [emp, setEmp] = React.useState("");
+  const [tgl, setTgl] = React.useState(yesterdayISO);
+  const [kode, setKode] = React.useState("");
+  const [withJam, setWithJam] = React.useState(false);
+  const [jin, setJin] = React.useState("05:45");
+  const [jout, setJout] = React.useState("17:30");
+  const [alasan, setAlasan] = React.useState("");
+  const [errs, setErrs] = React.useState<{
+    emp?: boolean;
+    tgl?: boolean;
+    kode?: boolean;
+    alasan?: boolean;
+  }>({});
 
-  const [entries, setEntries] = React.useState<Entry[]>([])
-  const [reviewOpen, setReviewOpen] = React.useState(false)
+  const [entries, setEntries] = React.useState<Entry[]>([]);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
 
   function addEntry() {
     const next = {
@@ -67,11 +86,11 @@ export default function RosterRevisionNewPage() {
       tgl: !tgl,
       kode: !kode,
       alasan: !alasan.trim(),
-    }
-    setErrs(next)
-    if (next.emp || next.tgl || next.kode || next.alasan) return
-    const e = employees.find((x) => x.nik === emp)
-    if (!e) return
+    };
+    setErrs(next);
+    if (next.emp || next.tgl || next.kode || next.alasan) return;
+    const e = employees.find((x) => x.nik === emp);
+    if (!e) return;
     setEntries((prev) => [
       ...prev,
       {
@@ -82,20 +101,20 @@ export default function RosterRevisionNewPage() {
         jam: withJam ? `${jin}–${jout}` : "",
         alasan: alasan.trim(),
       },
-    ])
-    setEmp("")
-    setKode("")
-    setAlasan("")
-    setWithJam(false)
-    setJin("05:45")
-    setJout("17:30")
+    ]);
+    setEmp("");
+    setKode("");
+    setAlasan("");
+    setWithJam(false);
+    setJin("05:45");
+    setJout("17:30");
   }
 
   function sendAll() {
-    const d = new Date()
-    const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-01`
+    const d = new Date();
+    const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-01`;
     const rows: ApRow[] = entries.map((e) => {
-      const what = `${e.tgl} — kode ${e.kode} · ${e.alasan}`
+      const what = `${e.tgl} — kode ${e.kode} · ${e.alasan}`;
       return {
         sid,
         name: e.name,
@@ -105,13 +124,13 @@ export default function RosterRevisionNewPage() {
         whenId: "baru saja",
         whenEn: "just now",
         status: "pending",
-      }
-    })
-    setApRows((prev) => [...prev, ...rows])
-    pushToast("success", `${entries.length} ${t.toastRevT}`, t.toastRevD)
-    setEntries([])
-    setReviewOpen(false)
-    router.push("/roster/revision")
+      };
+    });
+    setApRows((prev) => [...prev, ...rows]);
+    pushToast("success", `${entries.length} ${t.toastRevT}`, t.toastRevD);
+    setEntries([]);
+    setReviewOpen(false);
+    router.push("/roster/revision");
   }
 
   return (
@@ -136,7 +155,11 @@ export default function RosterRevisionNewPage() {
               error={errs.emp}
               errorMessage={t.errEmp}
             >
-              <Select id="rev-kar" value={emp} onChange={(e) => setEmp(e.target.value)}>
+              <Select
+                id="rev-kar"
+                value={emp}
+                onChange={(e) => setEmp(e.target.value)}
+              >
                 <option value="">{t.phEmp}</option>
                 {employees.map((e) => (
                   <option key={e.nik} value={e.nik}>
@@ -146,7 +169,12 @@ export default function RosterRevisionNewPage() {
               </Select>
             </Field>
 
-            <Field label={t.lblDate} htmlFor="rev-tgl" required error={errs.tgl}>
+            <Field
+              label={t.lblDate}
+              htmlFor="rev-tgl"
+              required
+              error={errs.tgl}
+            >
               <Input
                 id="rev-tgl"
                 type="date"
@@ -168,7 +196,11 @@ export default function RosterRevisionNewPage() {
                 </>
               }
             >
-              <Select id="rev-kode" value={kode} onChange={(e) => setKode(e.target.value)}>
+              <Select
+                id="rev-kode"
+                value={kode}
+                onChange={(e) => setKode(e.target.value)}
+              >
                 <option value="">{t.phCode}</option>
                 {codes.map((c) => (
                   <option key={c}>{c}</option>
@@ -224,7 +256,11 @@ export default function RosterRevisionNewPage() {
               />
             </Field>
 
-            <Button variant="secondary" className="self-start" onClick={addEntry}>
+            <Button
+              variant="secondary"
+              className="self-start"
+              onClick={addEntry}
+            >
               <Plus />
               {t.addEntry}
             </Button>
@@ -265,9 +301,13 @@ export default function RosterRevisionNewPage() {
                       <TableCell>
                         <Badge variant="info">{e.kode}</Badge>{" "}
                         {e.jam ? (
-                          <span className="font-mono text-xs text-(--text-secondary)">{e.jam}</span>
+                          <span className="font-mono text-xs text-(--text-secondary)">
+                            {e.jam}
+                          </span>
                         ) : null}
-                        <div className="mt-0.5 text-xs text-(--text-tertiary)">{e.alasan}</div>
+                        <div className="mt-0.5 text-xs text-(--text-tertiary)">
+                          {e.alasan}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <IconButton
@@ -293,7 +333,11 @@ export default function RosterRevisionNewPage() {
         </Panel>
       </div>
 
-      <Dialog open={reviewOpen} onClose={() => setReviewOpen(false)} labelledBy="rev-t">
+      <Dialog
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        labelledBy="rev-t"
+      >
         <DialogIcon variant="info">
           <Send />
         </DialogIcon>
@@ -322,5 +366,5 @@ export default function RosterRevisionNewPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -1,115 +1,126 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { RefreshCw, Search, Wrench } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { useToast } from "@/components/ui/toast"
-import { statusDotColor, type UnitStatus } from "@/lib/data/unit-status"
-import {
-  PageTitle,
-  Panel,
-  Toolbar,
-  ToolbarTitle,
-  ToolbarGroup,
-  PanelFoot,
-  FootSum,
-  Fresh,
-} from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { SearchInput } from "@/components/ui/search-input"
-import { Segmented, SegmentedButton } from "@/components/ui/segmented"
-import { Select } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/input"
-import { Field } from "@/components/ui/field"
+import * as React from "react";
+import { RefreshCw, Search, Wrench } from "lucide-react";
+
+import { statusDotColor, type UnitStatus } from "@/lib/data/unit-status";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Drawer, DrawerClose, Timeline, TimelineItem } from "@/components/ui/drawer"
+} from "@/components/ui/dialog";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  Drawer,
+  DrawerClose,
+  Timeline,
+  TimelineItem,
+} from "@/components/ui/drawer";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/input";
+import {
+  FootSum,
+  Fresh,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
-import { StateBox } from "@/components/ui/state-box"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-const statusBadge: Record<UnitStatus, { variant: BadgeVariant; label: string }> = {
+const statusBadge: Record<
+  UnitStatus,
+  { variant: BadgeVariant; label: string }
+> = {
   ready: { variant: "success", label: "Ready" },
   breakdown: { variant: "danger", label: "Breakdown" },
   standby: { variant: "warning", label: "Standby" },
-}
+};
 
 function pad(n: number) {
-  return n < 10 ? `0${n}` : `${n}`
+  return n < 10 ? `0${n}` : `${n}`;
 }
 
 function stampNow() {
-  const d = new Date()
-  return `${pad(d.getHours())}:${pad(d.getMinutes())} WITA`
+  const d = new Date();
+  return `${pad(d.getHours())}:${pad(d.getMinutes())} WITA`;
 }
 
 export default function UnitStatusPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { units, setUnits } = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { units, setUnits } = useAppStore();
 
-  const [filter, setFilter] = React.useState<"all" | UnitStatus>("all")
-  const [q, setQ] = React.useState("")
-  const [busy, setBusy] = React.useState(false)
-  const [freshTime, setFreshTime] = React.useState(stampNow)
+  const [filter, setFilter] = React.useState<"all" | UnitStatus>("all");
+  const [q, setQ] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [freshTime, setFreshTime] = React.useState(stampNow);
 
-  const [drawerCode, setDrawerCode] = React.useState<string | null>(null)
-  const [dlgCode, setDlgCode] = React.useState<string | null>(null)
-  const [newSt, setNewSt] = React.useState("Ready")
-  const [reason, setReason] = React.useState("")
+  const [drawerCode, setDrawerCode] = React.useState<string | null>(null);
+  const [dlgCode, setDlgCode] = React.useState<string | null>(null);
+  const [newSt, setNewSt] = React.useState("Ready");
+  const [reason, setReason] = React.useState("");
 
   function refresh() {
-    setBusy(true)
+    setBusy(true);
     setTimeout(() => {
-      setBusy(false)
-      setFreshTime(stampNow())
-    }, 900)
+      setBusy(false);
+      setFreshTime(stampNow());
+    }, 900);
   }
 
-  const needle = q.trim().toLowerCase()
+  const needle = q.trim().toLowerCase();
   const rows = units.filter((u) => {
-    if (filter !== "all" && u.status !== filter) return false
-    if (!needle) return true
+    if (filter !== "all" && u.status !== filter) return false;
+    if (!needle) return true;
     return (
       u.code.toLowerCase().includes(needle) ||
       u.type.toLowerCase().includes(needle) ||
       u.loc.toLowerCase().includes(needle)
-    )
-  })
-  const breakN = units.filter((u) => u.status === "breakdown").length
+    );
+  });
+  const breakN = units.filter((u) => u.status === "breakdown").length;
 
-  const drawerUnit = drawerCode ? units.find((u) => u.code === drawerCode) : undefined
-  const dlgUnit = dlgCode ? units.find((u) => u.code === dlgCode) : undefined
+  const drawerUnit = drawerCode
+    ? units.find((u) => u.code === drawerCode)
+    : undefined;
+  const dlgUnit = dlgCode ? units.find((u) => u.code === dlgCode) : undefined;
 
   function openDialog(code: string) {
-    const u = units.find((x) => x.code === code)
-    if (!u) return
-    setNewSt(statusBadge[u.status].label)
-    setReason("")
-    setDlgCode(code)
+    const u = units.find((x) => x.code === code);
+    if (!u) return;
+    setNewSt(statusBadge[u.status].label);
+    setReason("");
+    setDlgCode(code);
   }
 
   function saveStatus() {
-    if (!dlgUnit || !reason.trim()) return
-    const kind = newSt.toLowerCase() as UnitStatus
-    const now = new Date()
-    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`
-    const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`
-    const why = reason.trim()
+    if (!dlgUnit || !reason.trim()) return;
+    const kind = newSt.toLowerCase() as UnitStatus;
+    const now = new Date();
+    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`;
+    const why = reason.trim();
     setUnits((prev) =>
       prev.map((u) =>
         u.code === dlgUnit.code
@@ -121,12 +132,19 @@ export default function UnitStatusPage() {
             }
           : u
       )
-    )
-    setDlgCode(null)
-    pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD)
+    );
+    setDlgCode(null);
+    pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD);
   }
 
-  const heads = [t.thUnitCode, t.thType, t.thStatus, t.thLoc, t.thLastUpd, t.thAct]
+  const heads = [
+    t.thUnitCode,
+    t.thType,
+    t.thStatus,
+    t.thLoc,
+    t.thLastUpd,
+    t.thAct,
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -142,7 +160,10 @@ export default function UnitStatusPage() {
           <ToolbarTitle>{t.usListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <Segmented role="group" aria-label="Filter status">
-              <SegmentedButton active={filter === "all"} onClick={() => setFilter("all")}>
+              <SegmentedButton
+                active={filter === "all"}
+                onClick={() => setFilter("all")}
+              >
                 {t.segAll}
               </SegmentedButton>
               <SegmentedButton
@@ -264,7 +285,10 @@ export default function UnitStatusPage() {
                   {drawerUnit.type} · {drawerUnit.loc}
                 </span>
               </div>
-              <DrawerClose onClick={() => setDrawerCode(null)} aria-label={t.btnClose} />
+              <DrawerClose
+                onClick={() => setDrawerCode(null)}
+                aria-label={t.btnClose}
+              />
             </div>
             <div className="mb-5">
               <Badge variant={statusBadge[drawerUnit.status].variant} dot>
@@ -290,7 +314,11 @@ export default function UnitStatusPage() {
       </Drawer>
 
       {/* Dialog ubah status */}
-      <Dialog open={!!dlgUnit} onClose={() => setDlgCode(null)} labelledBy="us-st-t">
+      <Dialog
+        open={!!dlgUnit}
+        onClose={() => setDlgCode(null)}
+        labelledBy="us-st-t"
+      >
         <DialogIcon variant="warning">
           <Wrench />
         </DialogIcon>
@@ -299,7 +327,11 @@ export default function UnitStatusPage() {
         </DialogTitle>
         <DialogBody>{t.usDlgB}</DialogBody>
         <Field label={t.lblNewSt} htmlFor="st-new" required className="mt-4">
-          <Select id="st-new" value={newSt} onChange={(e) => setNewSt(e.target.value)}>
+          <Select
+            id="st-new"
+            value={newSt}
+            onChange={(e) => setNewSt(e.target.value)}
+          >
             <option>Ready</option>
             <option>Breakdown</option>
             <option>Standby</option>
@@ -329,5 +361,5 @@ export default function UnitStatusPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -1,40 +1,46 @@
 import {
+  CalendarDays,
+  Database,
+  Heart,
   LayoutDashboard,
   Monitor,
-  Users,
-  CalendarDays,
-  Heart,
-  Truck,
-  Database,
-  UserPlus,
   Settings,
+  Truck,
+  UserPlus,
+  Users,
   type LucideIcon,
-} from "lucide-react"
-import type { Dict } from "@/lib/i18n/id"
-import type { MenuVis } from "@/components/providers/app-store"
-import { mdCats, mdCatLabels, type MdCat } from "@/lib/data/master-data"
-import type { Lang } from "@/lib/i18n"
+} from "lucide-react";
+
+import { mdCatLabels, mdCats, type MdCat } from "@/lib/data/master-data";
+import type { Lang } from "@/lib/i18n";
+import type { Dict } from "@/lib/i18n/id";
+import type { MenuVis } from "@/components/providers/app-store";
 
 export type NavChild = {
-  href?: string
-  labelKey?: keyof Dict
-  label?: string
+  href?: string;
+  labelKey?: keyof Dict;
+  label?: string;
   /* anak yang membuka layar display (tab baru, fullscreen) alih-alih navigasi */
-  displayUrl?: string
-}
+  displayUrl?: string;
+};
 
 export type NavItem = {
-  key: string
-  labelKey: keyof Dict
-  icon: LucideIcon
-  href?: string
-  children?: NavChild[]
-  visKey?: keyof MenuVis
-}
+  key: string;
+  labelKey: keyof Dict;
+  icon: LucideIcon;
+  href?: string;
+  children?: NavChild[];
+  visKey?: keyof MenuVis;
+};
 
 export function navItems(lang: Lang): NavItem[] {
   return [
-    { key: "dashboard", labelKey: "navDashboard", icon: LayoutDashboard, href: "/dashboard" },
+    {
+      key: "dashboard",
+      labelKey: "navDashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+    },
     {
       key: "display",
       labelKey: "navDisplay",
@@ -47,7 +53,13 @@ export function navItems(lang: Lang): NavItem[] {
         { label: "Monitoring Fingerprint", displayUrl: "/display/fingerprint" },
       ],
     },
-    { key: "employees", labelKey: "navEmployees", icon: Users, href: "/employees", visKey: "employees" },
+    {
+      key: "employees",
+      labelKey: "navEmployees",
+      icon: Users,
+      href: "/employees",
+      visKey: "employees",
+    },
     {
       key: "roster",
       labelKey: "navRoster",
@@ -60,7 +72,13 @@ export function navItems(lang: Lang): NavItem[] {
         { href: "/roster/attendance", labelKey: "navR4" },
       ],
     },
-    { key: "ftw", labelKey: "navFtw", icon: Heart, href: "/fit-to-work", visKey: "ftw" },
+    {
+      key: "ftw",
+      labelKey: "navFtw",
+      icon: Heart,
+      href: "/fit-to-work",
+      visKey: "ftw",
+    },
     {
       key: "asset",
       labelKey: "navAsset",
@@ -95,7 +113,7 @@ export function navItems(lang: Lang): NavItem[] {
         { href: "/roles", labelKey: "umRolesT" },
       ],
     },
-  ]
+  ];
 }
 
 export const settingsItem: NavItem = {
@@ -103,23 +121,24 @@ export const settingsItem: NavItem = {
   labelKey: "navSettings",
   icon: Settings,
   href: "/settings",
-}
+};
 
 /* Grup pemilik sebuah path — untuk breadcrumb & auto-expand */
 export function groupOfPath(pathname: string, lang: Lang): NavItem | null {
   for (const item of navItems(lang)) {
-    if (!item.children) continue
-    if (item.children.some((c) => c.href && pathname.startsWith(c.href))) return item
+    if (!item.children) continue;
+    if (item.children.some((c) => c.href && pathname.startsWith(c.href)))
+      return item;
   }
-  return null
+  return null;
 }
 
 /* Label crumb halaman aktif — dicari dari nav; fallback per-halaman meng-override */
 export function activeChild(pathname: string, lang: Lang): NavChild | null {
   for (const item of navItems(lang)) {
     for (const c of item.children || []) {
-      if (c.href && pathname.startsWith(c.href)) return c
+      if (c.href && pathname.startsWith(c.href)) return c;
     }
   }
-  return null
+  return null;
 }

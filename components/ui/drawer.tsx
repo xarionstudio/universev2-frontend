@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Drawer kanan (riwayat status unit) */
 function Drawer({
@@ -11,26 +12,26 @@ function Drawer({
   className,
   children,
 }: {
-  open: boolean
-  onClose: () => void
-  labelledBy?: string
-  className?: string
-  children: React.ReactNode
+  open: boolean;
+  onClose: () => void;
+  labelledBy?: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
   React.useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
-  }, [open, onClose])
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <div role="presentation" className="fixed inset-0 z-100">
       <div
-        className="absolute inset-0 bg-(--scrim) backdrop-blur-[4px]"
+        className="absolute inset-0 bg-(--scrim) backdrop-blur-xs"
         onClick={onClose}
       />
       <aside
@@ -45,13 +46,10 @@ function Drawer({
         {children}
       </aside>
     </div>
-  )
+  );
 }
 
-function DrawerClose({
-  className,
-  ...props
-}: React.ComponentProps<"button">) {
+function DrawerClose({ className, ...props }: React.ComponentProps<"button">) {
   return (
     <button
       data-slot="drawer-close"
@@ -63,7 +61,7 @@ function DrawerClose({
     >
       ✕
     </button>
-  )
+  );
 }
 
 /* Timeline riwayat (tl) — garis kiri + titik berwarna status */
@@ -77,7 +75,7 @@ function Timeline({ className, ...props }: React.ComponentProps<"ul">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TimelineItem({
@@ -86,10 +84,10 @@ function TimelineItem({
   what,
   why,
 }: {
-  dotColor: string
-  when: React.ReactNode
-  what: React.ReactNode
-  why?: React.ReactNode
+  dotColor: string;
+  when: React.ReactNode;
+  what: React.ReactNode;
+  why?: React.ReactNode;
 }) {
   return (
     <li className="relative pb-5 pl-6 last:pb-0">
@@ -105,7 +103,7 @@ function TimelineItem({
         </div>
       ) : null}
     </li>
-  )
+  );
 }
 
-export { Drawer, DrawerClose, Timeline, TimelineItem }
+export { Drawer, DrawerClose, Timeline, TimelineItem };

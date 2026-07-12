@@ -1,46 +1,55 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Download, Search, Upload } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { rosterMeta } from "@/lib/data/roster"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, ToolbarGroup, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { SearchInput } from "@/components/ui/search-input"
-import { StateBox } from "@/components/ui/state-box"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Download, Search, Upload } from "lucide-react";
+
+import { rosterMeta } from "@/lib/data/roster";
+import { useI18n } from "@/lib/i18n";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 export default function RosterDataPage() {
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const router = useRouter()
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const router = useRouter();
 
-  const [date, setDate] = React.useState("")
-  const [q, setQ] = React.useState("")
+  const [date, setDate] = React.useState("");
+  const [q, setQ] = React.useState("");
 
   const rows = rosterMeta(lang).filter((r) => {
-    if (date && r.month !== date.slice(0, 7)) return false
-    const needle = q.trim().toLowerCase()
-    if (!needle) return true
+    if (date && r.month !== date.slice(0, 7)) return false;
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
     return (
       r.label.toLowerCase().includes(needle) ||
       r.file.toLowerCase().includes(needle) ||
       r.by.toLowerCase().includes(needle)
-    )
-  })
+    );
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,7 +65,10 @@ export default function RosterDataPage() {
           <ToolbarTitle>{t.rdListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <div className="flex items-center gap-2">
-              <label htmlFor="rd-tgl" className="text-xs text-(--text-tertiary)">
+              <label
+                htmlFor="rd-tgl"
+                className="text-xs text-(--text-tertiary)"
+              >
                 {t.lblDate}
               </label>
               <Input
@@ -96,12 +108,18 @@ export default function RosterDataPage() {
                     <NameCell name={r.label} sub={r.file} />
                   </TableCell>
                   <TableCell className="max-xl:hidden">
-                    <NameCell name={<span className="font-medium">{r.by}</span>} sub={r.date} />
+                    <NameCell
+                      name={<span className="font-medium">{r.by}</span>}
+                      sub={r.date}
+                    />
                   </TableCell>
                   <TableCell className="font-mono">{r.emp}</TableCell>
                   <TableCell className="font-mono">{r.rows}</TableCell>
                   <TableCell>
-                    <Badge variant={r.status === "aktif" ? "success" : "neutral"} dot>
+                    <Badge
+                      variant={r.status === "aktif" ? "success" : "neutral"}
+                      dot
+                    >
                       {r.status === "aktif" ? t.stAktif : t.stArsip}
                     </Badge>
                   </TableCell>
@@ -140,5 +158,5 @@ export default function RosterDataPage() {
         </PanelFoot>
       </Panel>
     </div>
-  )
+  );
 }

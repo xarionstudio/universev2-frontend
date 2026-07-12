@@ -1,111 +1,128 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  Search,
-  Filter,
   Download,
-  RefreshCw,
-  Plus,
   Eye,
+  Filter,
   Pencil,
+  Plus,
+  RefreshCw,
+  Search,
   Trash2,
-} from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import type { Employee, Komp } from "@/lib/data/employees"
-import { Panel, Toolbar, ToolbarTitle, ToolbarGroup, PanelFoot, FootSum } from "@/components/ui/panel"
-import { SearchInput } from "@/components/ui/search-input"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
-import { DropMenuWrap, DropMenu, DropMenuHeading } from "@/components/ui/drop-menu"
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  NameCell,
-} from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"
-import { StateBox } from "@/components/ui/state-box"
+} from "lucide-react";
+
+import type { Employee, Komp } from "@/lib/data/employees";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import {
+  DropMenu,
+  DropMenuHeading,
+  DropMenuWrap,
+} from "@/components/ui/drop-menu";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  FootSum,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { StateBox } from "@/components/ui/state-box";
+import {
+  NameCell,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-const DEPTS = ["Operation", "SDI", "HRGA", "Plant"] as const
+const DEPTS = ["Operation", "SDI", "HRGA", "Plant"] as const;
 
 function kompVariant(exp: string): BadgeVariant {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const d = new Date(`${exp}T00:00:00`)
-  if (d.getTime() < today.getTime()) return "danger"
-  const days = (d.getTime() - today.getTime()) / 86400000
-  return days <= 60 ? "warning" : "info"
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(`${exp}T00:00:00`);
+  if (d.getTime() < today.getTime()) return "danger";
+  const days = (d.getTime() - today.getTime()) / 86400000;
+  return days <= 60 ? "warning" : "info";
 }
 
 export default function EmployeesPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { empAll, deleteEmployee } = useAppStore()
-  const router = useRouter()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { empAll, deleteEmployee } = useAppStore();
+  const router = useRouter();
 
-  const [q, setQ] = React.useState("")
-  const [fOpen, setFOpen] = React.useState(false)
-  const [fDepts, setFDepts] = React.useState<Record<string, boolean>>({})
-  const [busy, setBusy] = React.useState(false)
-  const [per, setPer] = React.useState("10")
-  const [page, setPage] = React.useState(1)
-  const [sel, setSel] = React.useState<Record<string, boolean>>({})
-  const [delAsk, setDelAsk] = React.useState<{ nik: string; name: string } | null>(null)
-  const selAllRef = React.useRef<HTMLInputElement>(null)
+  const [q, setQ] = React.useState("");
+  const [fOpen, setFOpen] = React.useState(false);
+  const [fDepts, setFDepts] = React.useState<Record<string, boolean>>({});
+  const [busy, setBusy] = React.useState(false);
+  const [per, setPer] = React.useState("10");
+  const [page, setPage] = React.useState(1);
+  const [sel, setSel] = React.useState<Record<string, boolean>>({});
+  const [delAsk, setDelAsk] = React.useState<{
+    nik: string;
+    name: string;
+  } | null>(null);
+  const selAllRef = React.useRef<HTMLInputElement>(null);
 
-  const fN = DEPTS.filter((d) => fDepts[d]).length
+  const fN = DEPTS.filter((d) => fDepts[d]).length;
 
   const filtered = empAll().filter((r) => {
-    const needle = q.trim().toLowerCase()
+    const needle = q.trim().toLowerCase();
     const okQ =
-      !needle || r.name.toLowerCase().includes(needle) || r.nik.includes(needle)
-    const okD = fN === 0 || !!fDepts[r.dept]
-    return okQ && okD
-  })
+      !needle ||
+      r.name.toLowerCase().includes(needle) ||
+      r.nik.includes(needle);
+    const okD = fN === 0 || !!fDepts[r.dept];
+    return okQ && okD;
+  });
 
-  const perN = parseInt(per, 10)
-  const total = filtered.length
-  const pageCount = Math.max(1, Math.ceil(total / perN))
-  const cur = Math.min(page, pageCount)
-  const shown = filtered.slice((cur - 1) * perN, cur * perN)
-  const start = total === 0 ? 0 : (cur - 1) * perN + 1
-  const end = Math.min(total, cur * perN)
+  const perN = parseInt(per, 10);
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / perN));
+  const cur = Math.min(page, pageCount);
+  const shown = filtered.slice((cur - 1) * perN, cur * perN);
+  const start = total === 0 ? 0 : (cur - 1) * perN + 1;
+  const end = Math.min(total, cur * perN);
 
-  const allShownSel = shown.length > 0 && shown.every((r) => sel[r.nik])
-  const someShownSel = shown.some((r) => sel[r.nik])
+  const allShownSel = shown.length > 0 && shown.every((r) => sel[r.nik]);
+  const someShownSel = shown.some((r) => sel[r.nik]);
 
   React.useEffect(() => {
     if (selAllRef.current)
-      selAllRef.current.indeterminate = !allShownSel && someShownSel
-  }, [allShownSel, someShownSel])
+      selAllRef.current.indeterminate = !allShownSel && someShownSel;
+  }, [allShownSel, someShownSel]);
 
   function toggleDept(d: string) {
-    setFDepts((prev) => ({ ...prev, [d]: !prev[d] }))
-    setPage(1)
+    setFDepts((prev) => ({ ...prev, [d]: !prev[d] }));
+    setPage(1);
   }
 
   function toggleSelAll() {
     setSel((prev) => {
-      const next = { ...prev }
-      for (const r of shown) next[r.nik] = !allShownSel
-      return next
-    })
+      const next = { ...prev };
+      for (const r of shown) next[r.nik] = !allShownSel;
+      return next;
+    });
   }
 
   function exportNow() {
@@ -113,25 +130,25 @@ export default function EmployeesPage() {
       "info",
       t.toastExportT,
       `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
-    )
+    );
   }
 
   function refresh() {
-    setBusy(true)
-    setTimeout(() => setBusy(false), 900)
+    setBusy(true);
+    setTimeout(() => setBusy(false), 900);
   }
 
   function resetFilters() {
-    setQ("")
-    setFDepts({})
-    setPage(1)
+    setQ("");
+    setFDepts({});
+    setPage(1);
   }
 
   function delDo() {
-    if (!delAsk) return
-    deleteEmployee(delAsk.nik)
-    pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`)
-    setDelAsk(null)
+    if (!delAsk) return;
+    deleteEmployee(delAsk.nik);
+    pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
+    setDelAsk(null);
   }
 
   function statusBadge(r: Employee) {
@@ -139,13 +156,13 @@ export default function EmployeesPage() {
       aktif: { v: "success", l: "Aktif" },
       cuti: { v: "neutral", l: t.stCuti },
       nonaktif: { v: "danger", l: t.stNonaktif },
-    }
-    const m = map[r.status]
+    };
+    const m = map[r.status];
     return (
       <Badge variant={m.v} dot>
         {m.l}
       </Badge>
-    )
+    );
   }
 
   return (
@@ -159,12 +176,12 @@ export default function EmployeesPage() {
               aria-label={t.searchEmp}
               value={q}
               onChange={(e) => {
-                setQ(e.target.value)
-                setPage(1)
+                setQ(e.target.value);
+                setPage(1);
               }}
               onClear={() => {
-                setQ("")
-                setPage(1)
+                setQ("");
+                setPage(1);
               }}
               clearLabel={t.clearSearch}
             />
@@ -234,7 +251,7 @@ export default function EmployeesPage() {
             </TableHeader>
             <TableBody>
               {shown.map((r) => {
-                const komps: Komp[] = r.komp ?? []
+                const komps: Komp[] = r.komp ?? [];
                 return (
                   <TableRow key={r.nik} selected={!!sel[r.nik]}>
                     <TableCell>
@@ -249,7 +266,10 @@ export default function EmployeesPage() {
                     <TableCell>
                       <NameCell
                         name={
-                          <Link href={`/employees/${r.nik}`} className="text-inherit">
+                          <Link
+                            href={`/employees/${r.nik}`}
+                            className="text-inherit"
+                          >
                             {r.name}
                           </Link>
                         }
@@ -286,21 +306,25 @@ export default function EmployeesPage() {
                         </IconButton>
                         <IconButton
                           aria-label={t.empChange}
-                          onClick={() => router.push(`/employees/${r.nik}/edit`)}
+                          onClick={() =>
+                            router.push(`/employees/${r.nik}/edit`)
+                          }
                         >
                           <Pencil />
                         </IconButton>
                         <IconButton
                           danger
                           aria-label={t.empDel}
-                          onClick={() => setDelAsk({ nik: r.nik, name: r.name })}
+                          onClick={() =>
+                            setDelAsk({ nik: r.nik, name: r.name })
+                          }
                         >
                           <Trash2 />
                         </IconButton>
                       </div>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })}
             </TableBody>
           </Table>
@@ -310,7 +334,11 @@ export default function EmployeesPage() {
             title={t.noResTitle}
             body={t.empEmptyB}
           >
-            <Button variant="secondary" className="mx-auto" onClick={resetFilters}>
+            <Button
+              variant="secondary"
+              className="mx-auto"
+              onClick={resetFilters}
+            >
               {t.empResetF}
             </Button>
           </StateBox>
@@ -328,14 +356,18 @@ export default function EmployeesPage() {
             per={per}
             perOptions={["5", "10", "25"]}
             onPer={(v) => {
-              setPer(v)
-              setPage(1)
+              setPer(v);
+              setPage(1);
             }}
           />
         </PanelFoot>
       </Panel>
 
-      <Dialog open={!!delAsk} onClose={() => setDelAsk(null)} labelledBy="del-t">
+      <Dialog
+        open={!!delAsk}
+        onClose={() => setDelAsk(null)}
+        labelledBy="del-t"
+      >
         <DialogIcon variant="danger">
           <Trash2 />
         </DialogIcon>
@@ -351,5 +383,5 @@ export default function EmployeesPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

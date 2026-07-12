@@ -8,8 +8,9 @@
 UI UNIVERSE didesain sebagai mock satu berkas (`UNIVERSE.dc.html` di proyek Claude Design
 "UNIVERSE Redesign", id `e06f0fb6-9a47-4907-bd63-90a0bb9ff2f5`) dengan CSS kelas global
 (`admin.css` + token `styles.css`). Implementasi produksi memakai Next.js 16 (App Router)
-+ Tailwind CSS v4, dan harus tetap setia pada desain (glassmorphism, tema gelap/terang,
-i18n id/en) sambil mudah dirawat.
+
+- Tailwind CSS v4, dan harus tetap setia pada desain (glassmorphism, tema gelap/terang,
+  i18n id/en) sambil mudah dirawat.
 
 ## Keputusan
 

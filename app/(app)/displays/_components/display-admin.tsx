@@ -1,59 +1,63 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Monitor, Plus, Eye, Pencil, Trash2 } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import { openDisplay } from "@/lib/open-display"
-import type { Display, DisplayKind } from "@/lib/data/settings-data"
-import {
-  PageTitle,
-  Panel,
-  Toolbar,
-  ToolbarTitle,
-  PanelFoot,
-  FootSum,
-  DNote,
-} from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  NameCell,
-} from "@/components/ui/table"
+import * as React from "react";
+import { Eye, Monitor, Pencil, Plus, Trash2 } from "lucide-react";
+
+import type { Display, DisplayKind } from "@/lib/data/settings-data";
+import { useI18n } from "@/lib/i18n";
+import { openDisplay } from "@/lib/open-display";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Field, FormGrid } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
+} from "@/components/ui/dialog";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  DNote,
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
+import {
+  NameCell,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 const CONTENT_LABELS: Record<DisplayKind, string> = {
   att: "Attendance",
   fleet: "Fleet",
   ftw: "Fit To Work",
   finger: "Fingerprint",
-}
+};
 
-const CONTENT_OPTS: Record<"att" | "fleet", { key: DisplayKind; label: string }[]> = {
+const CONTENT_OPTS: Record<
+  "att" | "fleet",
+  { key: DisplayKind; label: string }[]
+> = {
   att: [
     { key: "att", label: "Attendance" },
     { key: "ftw", label: "Fit To Work" },
     { key: "finger", label: "Monitoring Fingerprint" },
   ],
   fleet: [{ key: "fleet", label: "Status Unit" }],
-}
+};
 
 /* layar display sungguhan (route dark-only 1920×1080) — dibuka di tab baru, fullscreen */
 const DISPLAY_URLS: Record<DisplayKind, string> = {
@@ -61,60 +65,64 @@ const DISPLAY_URLS: Record<DisplayKind, string> = {
   fleet: "/display/fleet",
   ftw: "/display/fitwork",
   finger: "/display/fingerprint",
-}
+};
 
 export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const store = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const store = useAppStore();
 
-  const rows = kind === "att" ? store.dspAtt : store.dspFleet
-  const setRows = kind === "att" ? store.setDspAtt : store.setDspFleet
-  const runtextOpts = store.mdData.runtext.filter((e) => e.active).map((e) => e.name)
-  const contentOpts = CONTENT_OPTS[kind]
+  const rows = kind === "att" ? store.dspAtt : store.dspFleet;
+  const setRows = kind === "att" ? store.setDspAtt : store.setDspFleet;
+  const runtextOpts = store.mdData.runtext
+    .filter((e) => e.active)
+    .map((e) => e.name);
+  const contentOpts = CONTENT_OPTS[kind];
 
   /* dialog tambah/edit */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editing, setEditing] = React.useState<Display | null>(null)
-  const [fName, setFName] = React.useState("")
-  const [fLoc, setFLoc] = React.useState("")
-  const [fContent, setFContent] = React.useState<DisplayKind>(contentOpts[0].key)
-  const [fRuntext, setFRuntext] = React.useState("")
-  const [fActive, setFActive] = React.useState(true)
-  const [nameErr, setNameErr] = React.useState(false)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Display | null>(null);
+  const [fName, setFName] = React.useState("");
+  const [fLoc, setFLoc] = React.useState("");
+  const [fContent, setFContent] = React.useState<DisplayKind>(
+    contentOpts[0].key
+  );
+  const [fRuntext, setFRuntext] = React.useState("");
+  const [fActive, setFActive] = React.useState(true);
+  const [nameErr, setNameErr] = React.useState(false);
 
   /* dialog hapus */
-  const [delTarget, setDelTarget] = React.useState<Display | null>(null)
+  const [delTarget, setDelTarget] = React.useState<Display | null>(null);
 
-  const pageDisplayUrl = DISPLAY_URLS[kind]
+  const pageDisplayUrl = DISPLAY_URLS[kind];
 
   function openAdd() {
-    setEditing(null)
-    setFName("")
-    setFLoc("")
-    setFContent(contentOpts[0].key)
-    setFRuntext(runtextOpts[0] ?? "")
-    setFActive(true)
-    setNameErr(false)
-    setDlgOpen(true)
+    setEditing(null);
+    setFName("");
+    setFLoc("");
+    setFContent(contentOpts[0].key);
+    setFRuntext(runtextOpts[0] ?? "");
+    setFActive(true);
+    setNameErr(false);
+    setDlgOpen(true);
   }
 
   function openEdit(d: Display) {
-    setEditing(d)
-    setFName(d.name)
-    setFLoc(d.loc)
-    setFContent(d.content)
-    setFRuntext(d.runtext)
-    setFActive(d.active)
-    setNameErr(false)
-    setDlgOpen(true)
+    setEditing(d);
+    setFName(d.name);
+    setFLoc(d.loc);
+    setFContent(d.content);
+    setFRuntext(d.runtext);
+    setFActive(d.active);
+    setNameErr(false);
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!fName.trim()) {
-      setNameErr(true)
-      return
+      setNameErr(true);
+      return;
     }
     const data = {
       name: fName.trim(),
@@ -122,26 +130,29 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       content: fContent,
       runtext: fRuntext,
       active: fActive,
-    }
+    };
     if (editing) {
       setRows((prev) =>
         prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d))
-      )
-      pushToast("success", t.dspToastEdit)
+      );
+      pushToast("success", t.dspToastEdit);
     } else {
-      const prefix = kind === "att" ? "DSP-A" : "DSP-F"
-      const id = `${prefix}${String(rows.length + 1).padStart(2, "0")}`
-      setRows((prev) => [...prev, { id, online: true, hb: "baru saja", ...data }])
-      pushToast("success", t.dspToastAdd)
+      const prefix = kind === "att" ? "DSP-A" : "DSP-F";
+      const id = `${prefix}${String(rows.length + 1).padStart(2, "0")}`;
+      setRows((prev) => [
+        ...prev,
+        { id, online: true, hb: "baru saja", ...data },
+      ]);
+      pushToast("success", t.dspToastAdd);
     }
-    setDlgOpen(false)
+    setDlgOpen(false);
   }
 
   function delDo() {
-    if (!delTarget) return
-    setRows((prev) => prev.filter((d) => d.id !== delTarget.id))
-    pushToast("success", t.dspToastDel)
-    setDelTarget(null)
+    if (!delTarget) return;
+    setRows((prev) => prev.filter((d) => d.id !== delTarget.id));
+    pushToast("success", t.dspToastDel);
+    setDelTarget(null);
   }
 
   return (
@@ -210,7 +221,10 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                     >
                       <Eye />
                     </IconButton>
-                    <IconButton aria-label={t.udbEditT} onClick={() => openEdit(d)}>
+                    <IconButton
+                      aria-label={t.udbEditT}
+                      onClick={() => openEdit(d)}
+                    >
                       <Pencil />
                     </IconButton>
                     <IconButton
@@ -263,8 +277,8 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                 placeholder="TV Gate Utara"
                 value={fName}
                 onChange={(e) => {
-                  setFName(e.target.value)
-                  if (e.target.value.trim()) setNameErr(false)
+                  setFName(e.target.value);
+                  if (e.target.value.trim()) setNameErr(false);
                 }}
               />
             </Field>
@@ -289,7 +303,11 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                 ))}
               </Select>
             </Field>
-            <Field label={t.dspRuntext} htmlFor="dsp-runtext" helper={t.dspRuntextHelp}>
+            <Field
+              label={t.dspRuntext}
+              htmlFor="dsp-runtext"
+              helper={t.dspRuntextHelp}
+            >
               <Select
                 id="dsp-runtext"
                 value={fRuntext}
@@ -312,10 +330,16 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
             {t.stAktif}
           </ToggleRow>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
-            <Button type="submit">{editing ? t.udbSaveEdit : t.dspSaveAdd}</Button>
+            <Button type="submit">
+              {editing ? t.udbSaveEdit : t.dspSaveAdd}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -340,7 +364,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
           </Button>
         </DialogActions>
       </Dialog>
-
     </div>
-  )
+  );
 }

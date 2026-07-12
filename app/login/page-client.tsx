@@ -1,41 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, CircleAlert } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { Spinner } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { CircleAlert, Eye, EyeOff } from "lucide-react";
+
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
+import { Spinner } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { t } = useI18n()
-  const { appName, appDesc } = useAppStore()
-  const emailRef = React.useRef<HTMLInputElement>(null)
-  const pwRef = React.useRef<HTMLInputElement>(null)
-  const [showPw, setShowPw] = React.useState(false)
-  const [busy, setBusy] = React.useState(false)
-  const [err, setErr] = React.useState(false)
+  const router = useRouter();
+  const { t } = useI18n();
+  const { appName, appDesc } = useAppStore();
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const pwRef = React.useRef<HTMLInputElement>(null);
+  const [showPw, setShowPw] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState(false);
 
   function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const email = emailRef.current?.value.trim() || ""
-    const pw = pwRef.current?.value || ""
+    e.preventDefault();
+    const email = emailRef.current?.value.trim() || "";
+    const pw = pwRef.current?.value || "";
     if (!email.includes("@") || !pw) {
-      setErr(true)
-      emailRef.current?.focus()
-      return
+      setErr(true);
+      emailRef.current?.focus();
+      return;
     }
-    setErr(false)
-    setBusy(true)
+    setErr(false);
+    setBusy(true);
     setTimeout(() => {
       try {
-        localStorage.setItem("universe-auth", email)
+        localStorage.setItem("universe-auth", email);
       } catch {}
-      router.push("/dashboard")
-    }, 900)
+      router.push("/dashboard");
+    }, 900);
   }
 
   return (
@@ -45,9 +46,9 @@ export default function LoginPage() {
       <div className="pointer-events-none fixed -bottom-35 -left-20 z-0 size-120 rounded-full bg-(--blob-blue) blur-[130px]" />
       <div className="relative z-1 grid min-h-screen place-items-center p-6">
         <div className="w-[min(440px,100%)]">
-          <main className="glass-card w-full rounded-panel px-8 py-10">
+          <main className="w-full rounded-panel px-8 py-10 glass-card">
             <div className="mb-8 flex flex-col items-center gap-3 text-center">
-              <div className="grid size-16 place-items-center rounded-full bg-linear-[1.86deg] from-[#0054C7] to-[#00CFFE] text-[26px] font-bold text-white shadow-[0_0_0_3px_var(--ring-avatar),0_0_28px_rgba(0,212,255,.4)]">
+              <div className="grid size-16 place-items-center rounded-full bg-(image:--gradient-logo) text-[26px] font-bold text-white shadow-[0_0_0_3px_var(--ring-avatar),0_0_28px_rgba(0,212,255,.4)]">
                 U
               </div>
               <div>
@@ -110,7 +111,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-(--color-on-cta) shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) disabled:cursor-progress disabled:translate-y-0"
+                className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-(--color-on-cta) shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) disabled:translate-y-0 disabled:cursor-progress"
               >
                 {busy ? (
                   <Spinner className="size-4 border-[rgba(1,4,22,.3)] border-t-(--color-on-cta)" />
@@ -130,5 +131,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

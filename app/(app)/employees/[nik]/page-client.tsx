@@ -1,23 +1,31 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Pencil, Briefcase, IdCard, Heart, House } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import type { Employee } from "@/lib/data/employees"
-import { Panel, SectionTitle } from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { initialsOf } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Briefcase,
+  Heart,
+  House,
+  IdCard,
+  Pencil,
+} from "lucide-react";
+
+import type { Employee } from "@/lib/data/employees";
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
+import { initialsOf } from "@/components/ui/avatar";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Panel, SectionTitle } from "@/components/ui/panel";
 
 function Kv({ children }: { children: React.ReactNode }) {
   return (
     <dl className="grid grid-cols-[180px_1fr] gap-x-4 gap-y-3 text-sm">
       {children}
     </dl>
-  )
+  );
 }
 
 function KvRow({
@@ -25,9 +33,9 @@ function KvRow({
   mono,
   children,
 }: {
-  label: React.ReactNode
-  mono?: boolean
-  children?: React.ReactNode
+  label: React.ReactNode;
+  mono?: boolean;
+  children?: React.ReactNode;
 }) {
   return (
     <>
@@ -36,49 +44,50 @@ function KvRow({
         {children || <span className="text-(--text-tertiary)">—</span>}
       </dd>
     </>
-  )
+  );
 }
 
 function expTone(exp: string): string {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const d = new Date(`${exp}T00:00:00`)
-  if (d.getTime() < today.getTime()) return "text-(--color-danger-text)"
-  const days = (d.getTime() - today.getTime()) / 86400000
-  return days <= 60 ? "text-(--badge-warning-text)" : "text-(--text-tertiary)"
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(`${exp}T00:00:00`);
+  if (d.getTime() < today.getTime()) return "text-(--color-danger-text)";
+  const days = (d.getTime() - today.getTime()) / 86400000;
+  return days <= 60 ? "text-(--badge-warning-text)" : "text-(--text-tertiary)";
 }
 
 export default function EmployeeDetailPage({
   params,
 }: {
-  params: Promise<{ nik: string }>
+  params: Promise<{ nik: string }>;
 }) {
-  const { nik } = React.use(params)
-  const { t } = useI18n()
-  const { empAll } = useAppStore()
-  const router = useRouter()
+  const { nik } = React.use(params);
+  const { t } = useI18n();
+  const { empAll } = useAppStore();
+  const router = useRouter();
 
-  const emp = empAll().find((r) => r.nik === nik)
+  const emp = empAll().find((r) => r.nik === nik);
 
   React.useEffect(() => {
-    if (!emp) router.replace("/employees")
-  }, [emp, router])
+    if (!emp) router.replace("/employees");
+  }, [emp, router]);
 
-  if (!emp) return null
+  if (!emp) return null;
 
-  const komps = emp.komp ?? []
-  const statusMap: Record<Employee["status"], { v: BadgeVariant; l: string }> = {
-    aktif: { v: "success", l: "Aktif" },
-    cuti: { v: "neutral", l: t.stCuti },
-    nonaktif: { v: "danger", l: t.stNonaktif },
-  }
-  const st = statusMap[emp.status]
+  const komps = emp.komp ?? [];
+  const statusMap: Record<Employee["status"], { v: BadgeVariant; l: string }> =
+    {
+      aktif: { v: "success", l: "Aktif" },
+      cuti: { v: "neutral", l: t.stCuti },
+      nonaktif: { v: "danger", l: t.stNonaktif },
+    };
+  const st = statusMap[emp.status];
 
   return (
     <div className="flex flex-col gap-6">
       <Panel>
         <div className="flex flex-wrap items-center gap-6">
-          <div className="grid size-24 flex-none place-items-center rounded-card bg-linear-135 from-[#00D4FF] to-[#0091FF] text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+          <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
             {initialsOf(emp.name)}
           </div>
           <div className="min-w-65 flex-1">
@@ -98,7 +107,10 @@ export default function EmployeeDetailPage({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push("/employees")}>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/employees")}
+            >
               <ArrowLeft />
               {t.back}
             </Button>
@@ -141,7 +153,9 @@ export default function EmployeeDetailPage({
                 <div key={k.cls} className="flex items-center gap-3">
                   <Badge variant="info">{k.cls}</Badge>
                   <span className="text-sm font-medium">SIMPER {k.simper}</span>
-                  <span className={cn("ml-auto font-mono text-xs", expTone(k.exp))}>
+                  <span
+                    className={cn("ml-auto font-mono text-xs", expTone(k.exp))}
+                  >
                     s/d {k.exp}
                   </span>
                 </div>
@@ -190,5 +204,5 @@ export default function EmployeeDetailPage({
         </Panel>
       </div>
     </div>
-  )
+  );
 }

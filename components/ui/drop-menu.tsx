@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { Check } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 /* Menu jatuh header (hdrop/fmenu) — overlay nyaris opaque, posisi kanan-bawah trigger.
    Wrapper harus relative; klik di luar & Escape menutup. */
@@ -12,34 +13,34 @@ function DropMenuWrap({
   className,
   children,
 }: {
-  open: boolean
-  onClose: () => void
-  className?: string
-  children: React.ReactNode
+  open: boolean;
+  onClose: () => void;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const ref = React.useRef<HTMLDivElement>(null)
+  const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("click", onDoc)
-    document.addEventListener("keydown", onKey)
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("click", onDoc);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("click", onDoc)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open, onClose])
+      document.removeEventListener("click", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
 
   return (
     <div ref={ref} className={cn("relative", className)}>
       {children}
     </div>
-  )
+  );
 }
 
 function DropMenu({
@@ -48,7 +49,7 @@ function DropMenu({
   role = "menu",
   ...props
 }: React.ComponentProps<"div"> & { open: boolean }) {
-  if (!open) return null
+  if (!open) return null;
   return (
     <div
       role={role}
@@ -59,7 +60,7 @@ function DropMenu({
       )}
       {...props}
     />
-  )
+  );
 }
 
 /* Item menu radio dengan tanda centang kanan */
@@ -88,13 +89,10 @@ function DropMenuRadio({
         )}
       />
     </button>
-  )
+  );
 }
 
-function DropMenuItem({
-  className,
-  ...props
-}: React.ComponentProps<"button">) {
+function DropMenuItem({ className, ...props }: React.ComponentProps<"button">) {
   return (
     <button
       role="menuitem"
@@ -104,7 +102,7 @@ function DropMenuItem({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function DropMenuHeading({ className, ...props }: React.ComponentProps<"div">) {
@@ -116,7 +114,7 @@ function DropMenuHeading({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { DropMenuWrap, DropMenu, DropMenuRadio, DropMenuItem, DropMenuHeading }
+export { DropMenuWrap, DropMenu, DropMenuRadio, DropMenuItem, DropMenuHeading };

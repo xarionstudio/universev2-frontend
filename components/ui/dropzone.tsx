@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Dropzone unggah berkas — border putus-putus, ikon kaca, drag highlight */
 function Dropzone({
@@ -15,15 +16,15 @@ function Dropzone({
   className,
   "aria-label": ariaLabel,
 }: {
-  icon: React.ReactNode
-  title: React.ReactNode
-  hint?: React.ReactNode
-  onPick?: () => void
-  onDropFile?: (name: string) => void
-  dragging?: boolean
-  onDragChange?: (dragging: boolean) => void
-  className?: string
-  "aria-label"?: string
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  hint?: React.ReactNode;
+  onPick?: () => void;
+  onDropFile?: (name: string) => void;
+  dragging?: boolean;
+  onDragChange?: (dragging: boolean) => void;
+  className?: string;
+  "aria-label"?: string;
 }) {
   return (
     <div
@@ -33,24 +34,24 @@ function Dropzone({
       onClick={onPick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          onPick?.()
+          e.preventDefault();
+          onPick?.();
         }
       }}
       onDragOver={(e) => {
-        e.preventDefault()
-        onDragChange?.(true)
+        e.preventDefault();
+        onDragChange?.(true);
       }}
       onDragEnter={(e) => {
-        e.preventDefault()
-        onDragChange?.(true)
+        e.preventDefault();
+        onDragChange?.(true);
       }}
       onDragLeave={() => onDragChange?.(false)}
       onDrop={(e) => {
-        e.preventDefault()
-        onDragChange?.(false)
-        const name = e.dataTransfer.files?.[0]?.name
-        if (name) onDropFile?.(name)
+        e.preventDefault();
+        onDragChange?.(false);
+        const name = e.dataTransfer.files?.[0]?.name;
+        if (name) onDropFile?.(name);
       }}
       className={cn(
         "cursor-pointer rounded-card border-[1.5px] border-dashed border-(--border-input) bg-(--fill-input) p-6 text-center transition-[border-color,background-color] duration-150 hover:border-(--color-primary) hover:bg-[rgba(0,212,255,.07)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)",
@@ -63,10 +64,12 @@ function Dropzone({
       </div>
       <b className="block text-sm font-semibold">{title}</b>
       {hint ? (
-        <span className="mt-1 block text-xs text-(--text-tertiary)">{hint}</span>
+        <span className="mt-1 block text-xs text-(--text-tertiary)">
+          {hint}
+        </span>
       ) : null}
     </div>
-  )
+  );
 }
 
-export { Dropzone }
+export { Dropzone };

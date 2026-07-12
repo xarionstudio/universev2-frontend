@@ -1,182 +1,191 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { useToast } from "@/components/ui/toast"
-import { typeOfEgi } from "@/lib/data/units-db"
-import {
-  PageTitle,
-  Panel,
-  Toolbar,
-  ToolbarTitle,
-  ToolbarGroup,
-  PanelFoot,
-  FootSum,
-} from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select } from "@/components/ui/select"
-import { SearchInput } from "@/components/ui/search-input"
-import { Input } from "@/components/ui/input"
-import { Field, FormGrid } from "@/components/ui/field"
+import * as React from "react";
+import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react";
+
+import { typeOfEgi } from "@/lib/data/units-db";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Dropzone } from "@/components/ui/dropzone"
-import { Progress } from "@/components/ui/progress"
+} from "@/components/ui/dialog";
+import { Dropzone } from "@/components/ui/dropzone";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Progress } from "@/components/ui/progress";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
-import { StateBox } from "@/components/ui/state-box"
-import { Pagination } from "@/components/ui/pagination"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-type ImpState = { stage: "idle" | "progress" | "done"; pct: number; name: string }
+type ImpState = {
+  stage: "idle" | "progress" | "done";
+  pct: number;
+  name: string;
+};
 
 export default function UnitDbPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { udbAll, saveUdb } = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { udbAll, saveUdb } = useAppStore();
 
-  const [cat, setCat] = React.useState("")
-  const [prod, setProd] = React.useState("")
-  const [q, setQ] = React.useState("")
-  const [page, setPage] = React.useState(1)
-  const [per, setPer] = React.useState("10")
+  const [cat, setCat] = React.useState("");
+  const [prod, setProd] = React.useState("");
+  const [q, setQ] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [per, setPer] = React.useState("10");
 
   /* dialog tambah/edit */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editUid, setEditUid] = React.useState<string | null>(null)
-  const [fCode, setFCode] = React.useState("")
-  const [fEgi, setFEgi] = React.useState("")
-  const [fCls, setFCls] = React.useState("HD")
-  const [fProd, setFProd] = React.useState("CATERPILLAR")
-  const [errCode, setErrCode] = React.useState(false)
-  const [errEgi, setErrEgi] = React.useState(false)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editUid, setEditUid] = React.useState<string | null>(null);
+  const [fCode, setFCode] = React.useState("");
+  const [fEgi, setFEgi] = React.useState("");
+  const [fCls, setFCls] = React.useState("HD");
+  const [fProd, setFProd] = React.useState("CATERPILLAR");
+  const [errCode, setErrCode] = React.useState(false);
+  const [errEgi, setErrEgi] = React.useState(false);
 
   /* dialog import */
-  const [impOpen, setImpOpen] = React.useState(false)
-  const [imp, setImp] = React.useState<ImpState>({ stage: "idle", pct: 0, name: "" })
-  const [dragging, setDragging] = React.useState(false)
-  const impTimer = React.useRef<ReturnType<typeof setInterval> | null>(null)
+  const [impOpen, setImpOpen] = React.useState(false);
+  const [imp, setImp] = React.useState<ImpState>({
+    stage: "idle",
+    pct: 0,
+    name: "",
+  });
+  const [dragging, setDragging] = React.useState(false);
+  const impTimer = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   React.useEffect(() => {
     return () => {
-      if (impTimer.current) clearInterval(impTimer.current)
-    }
-  }, [])
+      if (impTimer.current) clearInterval(impTimer.current);
+    };
+  }, []);
 
-  const all = udbAll()
-  const classes = Array.from(new Set(all.map((u) => u.cls))).sort()
-  const products = Array.from(new Set(all.map((u) => u.product))).sort()
-  const egis = Array.from(new Set(all.map((u) => u.egi))).sort()
+  const all = udbAll();
+  const classes = Array.from(new Set(all.map((u) => u.cls))).sort();
+  const products = Array.from(new Set(all.map((u) => u.product))).sort();
+  const egis = Array.from(new Set(all.map((u) => u.egi))).sort();
 
-  const needle = q.trim().toLowerCase()
+  const needle = q.trim().toLowerCase();
   const filtered = all.filter((u) => {
-    if (cat && u.cls !== cat) return false
-    if (prod && u.product !== prod) return false
-    if (!needle) return true
+    if (cat && u.cls !== cat) return false;
+    if (prod && u.product !== prod) return false;
+    if (!needle) return true;
     return (
       u.code.toLowerCase().includes(needle) ||
       u.egi.toLowerCase().includes(needle) ||
       u.product.toLowerCase().includes(needle)
-    )
-  })
+    );
+  });
 
-  const perN = Number(per)
-  const pageCount = Math.max(1, Math.ceil(filtered.length / perN))
-  const p = Math.min(page, pageCount)
-  const rows = filtered.slice((p - 1) * perN, p * perN)
+  const perN = Number(per);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / perN));
+  const p = Math.min(page, pageCount);
+  const rows = filtered.slice((p - 1) * perN, p * perN);
   const range = filtered.length
     ? `${(p - 1) * perN + 1}–${Math.min(filtered.length, p * perN)}`
-    : "0"
+    : "0";
 
   function openAdd() {
-    setEditUid(null)
-    setFCode("")
-    setFEgi(egis[0] || "")
-    setFCls("HD")
-    setFProd("CATERPILLAR")
-    setErrCode(false)
-    setErrEgi(false)
-    setDlgOpen(true)
+    setEditUid(null);
+    setFCode("");
+    setFEgi(egis[0] || "");
+    setFCls("HD");
+    setFProd("CATERPILLAR");
+    setErrCode(false);
+    setErrEgi(false);
+    setDlgOpen(true);
   }
 
   function openEdit(uid: string) {
-    const u = all.find((x) => x.uid === uid)
-    if (!u) return
-    setEditUid(uid)
-    setFCode(u.code)
-    setFEgi(u.egi)
-    setFCls(u.cls)
-    setFProd(u.product)
-    setErrCode(false)
-    setErrEgi(false)
-    setDlgOpen(true)
+    const u = all.find((x) => x.uid === uid);
+    if (!u) return;
+    setEditUid(uid);
+    setFCode(u.code);
+    setFEgi(u.egi);
+    setFCls(u.cls);
+    setFProd(u.product);
+    setErrCode(false);
+    setErrEgi(false);
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
-    const code = fCode.trim()
-    const dupe = all.some((u) => u.code === code && u.uid !== editUid)
-    const badCode = !code || dupe
-    const badEgi = !fEgi
-    setErrCode(badCode)
-    setErrEgi(badEgi)
-    if (badCode || badEgi) return
-    saveUdb(editUid, { code, egi: fEgi, cls: fCls, product: fProd })
-    setDlgOpen(false)
+    e.preventDefault();
+    const code = fCode.trim();
+    const dupe = all.some((u) => u.code === code && u.uid !== editUid);
+    const badCode = !code || dupe;
+    const badEgi = !fEgi;
+    setErrCode(badCode);
+    setErrEgi(badEgi);
+    if (badCode || badEgi) return;
+    saveUdb(editUid, { code, egi: fEgi, cls: fCls, product: fProd });
+    setDlgOpen(false);
     pushToast(
       "success",
       editUid ? t.udbEditToastT : t.udbToastT,
       `${code} — ${fEgi} · ${fProd}`
-    )
+    );
   }
 
   function startImport(name: string) {
-    if (impTimer.current) clearInterval(impTimer.current)
-    setImp({ stage: "progress", pct: 0, name: name || "unit_import.xlsx" })
+    if (impTimer.current) clearInterval(impTimer.current);
+    setImp({ stage: "progress", pct: 0, name: name || "unit_import.xlsx" });
     impTimer.current = setInterval(() => {
       setImp((prev) => {
-        const pct = prev.pct + 15 + Math.random() * 12
+        const pct = prev.pct + 15 + Math.random() * 12;
         if (pct >= 100) {
-          if (impTimer.current) clearInterval(impTimer.current)
-          impTimer.current = null
-          return { ...prev, pct: 100, stage: "done" }
+          if (impTimer.current) clearInterval(impTimer.current);
+          impTimer.current = null;
+          return { ...prev, pct: 100, stage: "done" };
         }
-        return { ...prev, pct }
-      })
-    }, 130)
+        return { ...prev, pct };
+      });
+    }, 130);
   }
 
   function openImport() {
-    if (impTimer.current) clearInterval(impTimer.current)
-    impTimer.current = null
-    setImp({ stage: "idle", pct: 0, name: "" })
-    setDragging(false)
-    setImpOpen(true)
+    if (impTimer.current) clearInterval(impTimer.current);
+    impTimer.current = null;
+    setImp({ stage: "idle", pct: 0, name: "" });
+    setDragging(false);
+    setImpOpen(true);
   }
 
   function closeImport() {
-    if (impTimer.current) clearInterval(impTimer.current)
-    impTimer.current = null
-    setImpOpen(false)
+    if (impTimer.current) clearInterval(impTimer.current);
+    impTimer.current = null;
+    setImpOpen(false);
   }
 
   function doImport() {
-    setImpOpen(false)
-    pushToast("success", t.udbImpToastT, `10 ${t.udbImpToastD}`)
+    setImpOpen(false);
+    pushToast("success", t.udbImpToastT, `10 ${t.udbImpToastD}`);
   }
 
   const heads = [
@@ -188,7 +197,7 @@ export default function UnitDbPage() {
     t.thStatus,
     t.thLastUpd,
     t.thAct,
-  ]
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -202,8 +211,8 @@ export default function UnitDbPage() {
               wrapperClassName="w-[170px]"
               value={cat}
               onChange={(e) => {
-                setCat(e.target.value)
-                setPage(1)
+                setCat(e.target.value);
+                setPage(1);
               }}
               aria-label={t.allCats}
             >
@@ -218,8 +227,8 @@ export default function UnitDbPage() {
               wrapperClassName="w-[180px]"
               value={prod}
               onChange={(e) => {
-                setProd(e.target.value)
-                setPage(1)
+                setProd(e.target.value);
+                setPage(1);
               }}
               aria-label={t.allProds}
             >
@@ -236,13 +245,15 @@ export default function UnitDbPage() {
               aria-label={t.searchUnit}
               value={q}
               onChange={(e) => {
-                setQ(e.target.value)
-                setPage(1)
+                setQ(e.target.value);
+                setPage(1);
               }}
             />
             <Button
               variant="secondary"
-              onClick={() => pushToast("info", t.toastExportT, "unit_database.xlsx")}
+              onClick={() =>
+                pushToast("info", t.toastExportT, "unit_database.xlsx")
+              }
             >
               <Download />
               {t.export}
@@ -348,8 +359,8 @@ export default function UnitDbPage() {
             per={per}
             perOptions={["10", "25", "50"]}
             onPer={(v) => {
-              setPer(v)
-              setPage(1)
+              setPer(v);
+              setPage(1);
             }}
           />
         </PanelFoot>
@@ -433,10 +444,16 @@ export default function UnitDbPage() {
             </Field>
           </FormGrid>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
-            <Button type="submit">{editUid ? t.udbSaveEdit : t.udbAddDo}</Button>
+            <Button type="submit">
+              {editUid ? t.udbSaveEdit : t.udbAddDo}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -505,5 +522,5 @@ export default function UnitDbPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

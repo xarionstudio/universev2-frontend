@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Checkbox kit kontrol — 16px, centang dibuat dengan pseudo-border */
 function Checkbox({ className, ...props }: React.ComponentProps<"input">) {
@@ -12,7 +13,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<"input">) {
       className={cn(
         "relative size-4 flex-none cursor-pointer appearance-none rounded border-[1.5px] border-(--border-input) bg-(--fill-input) transition-colors",
         "checked:border-(--color-primary) checked:bg-(--color-primary)",
-        "checked:after:absolute checked:after:top-[2px] checked:after:right-[3.5px] checked:after:bottom-[2px] checked:after:left-[3.5px] checked:after:-rotate-45 checked:after:-translate-y-px checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-(--color-on-cta) checked:after:content-['']",
+        "checked:after:absolute checked:after:top-[2px] checked:after:right-[3.5px] checked:after:bottom-[2px] checked:after:left-[3.5px] checked:after:-translate-y-px checked:after:-rotate-45 checked:after:border-0 checked:after:border-b-2 checked:after:border-l-2 checked:after:border-solid checked:after:border-(--color-on-cta) checked:after:content-['']",
         "indeterminate:border-(--color-primary) indeterminate:bg-(--color-primary) indeterminate:after:absolute indeterminate:after:top-1.5 indeterminate:after:right-[3px] indeterminate:after:left-[3px] indeterminate:after:h-0.5 indeterminate:after:bg-(--color-on-cta) indeterminate:after:content-['']",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -20,7 +21,7 @@ function Checkbox({ className, ...props }: React.ComponentProps<"input">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 /* Baris toggle: checkbox + label satu baris */
@@ -40,7 +41,7 @@ function ToggleRow({
     >
       {children}
     </label>
-  )
+  );
 }
 
-export { Checkbox, ToggleRow }
+export { Checkbox, ToggleRow };

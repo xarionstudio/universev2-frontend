@@ -1,62 +1,63 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
-  Camera,
   Briefcase,
-  IdCard,
+  Camera,
   House,
-  Upload,
+  IdCard,
   Plus,
   Trash2,
   TriangleAlert,
-} from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import type { Employee, Komp } from "@/lib/data/employees"
-import { egiTypes } from "@/lib/data/units-db"
-import { PageTitle, Panel, SectionTitle } from "@/components/ui/panel"
-import { Field, FormGrid } from "@/components/ui/field"
-import { Input, Textarea } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Button, IconButton, Spinner } from "@/components/ui/button"
-import { Dropzone } from "@/components/ui/dropzone"
-import { initialsOf } from "@/components/ui/avatar"
+  Upload,
+} from "lucide-react";
+
+import type { Employee, Komp } from "@/lib/data/employees";
+import { egiTypes } from "@/lib/data/units-db";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { initialsOf } from "@/components/ui/avatar";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { Dropzone } from "@/components/ui/dropzone";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
+import { PageTitle, Panel, SectionTitle } from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toast";
 
 type Fields = {
-  nama: string
-  nik: string
-  company: string
-  dept: string
-  pos: string
-  equip: string
-  join: string
-  exp: string
-  license: string
-  mcu: string
-  medis: string
-  mess: string
-  kamar: string
-}
+  nama: string;
+  nik: string;
+  company: string;
+  dept: string;
+  pos: string;
+  equip: string;
+  join: string;
+  exp: string;
+  license: string;
+  mcu: string;
+  medis: string;
+  mess: string;
+  kamar: string;
+};
 
 export function EmployeeForm({ nik }: { nik?: string }) {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { empAll, saveEmployee } = useAppStore()
-  const router = useRouter()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { empAll, saveEmployee } = useAppStore();
+  const router = useRouter();
 
   const [record] = React.useState<Employee | undefined>(() =>
     nik ? empAll().find((r) => r.nik === nik) : undefined
-  )
+  );
 
   const [f, setF] = React.useState<Fields>(() => ({
     nama: record?.name ?? "",
@@ -72,76 +73,76 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     medis: record?.medis ?? "",
     mess: record?.mess ?? "",
     kamar: record?.kamar ?? "",
-  }))
+  }));
   const [kompRows, setKompRows] = React.useState<Komp[]>(() =>
     (record?.komp ?? []).map((k) => ({ ...k }))
-  )
-  const [dzLabel, setDzLabel] = React.useState<string | null>(null)
-  const [dragging, setDragging] = React.useState(false)
-  const [dirty, setDirty] = React.useState(false)
-  const [busy, setBusy] = React.useState(false)
+  );
+  const [dzLabel, setDzLabel] = React.useState<string | null>(null);
+  const [dragging, setDragging] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
   const [errors, setErrors] = React.useState<{
-    nama?: boolean
-    nik?: boolean
-    exp?: boolean
-  }>({})
-  const [dirtyDlg, setDirtyDlg] = React.useState(false)
-  const fileRef = React.useRef<HTMLInputElement>(null)
+    nama?: boolean;
+    nik?: boolean;
+    exp?: boolean;
+  }>({});
+  const [dirtyDlg, setDirtyDlg] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (nik && !record) router.replace("/employees")
-  }, [nik, record, router])
-  if (nik && !record) return null
+    if (nik && !record) router.replace("/employees");
+  }, [nik, record, router]);
+  if (nik && !record) return null;
 
   function up<K extends keyof Fields>(key: K, value: Fields[K]) {
-    setF((prev) => ({ ...prev, [key]: value }))
-    setDirty(true)
+    setF((prev) => ({ ...prev, [key]: value }));
+    setDirty(true);
   }
 
   function kompChange(i: number, key: keyof Komp, value: string) {
     setKompRows((rows) =>
       rows.map((r, idx) => (idx === i ? { ...r, [key]: value } : r))
-    )
-    setDirty(true)
+    );
+    setDirty(true);
   }
 
   function kompAdd() {
-    setKompRows((rows) => [...rows, { cls: "", simper: "", exp: "" }])
-    setDirty(true)
+    setKompRows((rows) => [...rows, { cls: "", simper: "", exp: "" }]);
+    setDirty(true);
   }
 
   function kompDel(i: number) {
-    setKompRows((rows) => rows.filter((_, idx) => idx !== i))
-    setDirty(true)
+    setKompRows((rows) => rows.filter((_, idx) => idx !== i));
+    setDirty(true);
   }
 
   function filePicked(name: string) {
-    setDzLabel(`${name} ${t.efDzReady}`)
-    setDirty(true)
+    setDzLabel(`${name} ${t.efDzReady}`);
+    setDirty(true);
   }
 
   function cancel() {
-    if (dirty) setDirtyDlg(true)
-    else router.back()
+    if (dirty) setDirtyDlg(true);
+    else router.back();
   }
 
   function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (busy) return
+    e.preventDefault();
+    if (busy) return;
     const errs = {
       nama: !f.nama.trim(),
       nik: !/^\d{9}$/.test(f.nik.trim()),
       exp: !!(f.exp && f.join && f.exp <= f.join),
-    }
-    setErrors(errs)
+    };
+    setErrors(errs);
     if (errs.nama || errs.nik || errs.exp) {
-      pushToast("error", t.toastFormErrT, t.toastFormErrD)
-      return
+      pushToast("error", t.toastFormErrT, t.toastFormErrD);
+      return;
     }
-    setBusy(true)
+    setBusy(true);
     setTimeout(() => {
-      const nikVal = f.nik.trim()
-      const name = f.nama.trim()
+      const nikVal = f.nik.trim();
+      const name = f.nama.trim();
       const base = nik
         ? {}
         : {
@@ -152,7 +153,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
             bpjs: "",
             hp: "",
             emg: "",
-          }
+          };
       saveEmployee(nik ?? null, {
         ...base,
         name,
@@ -169,11 +170,11 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         mess: f.mess,
         kamar: f.kamar,
         komp: kompRows.filter((k) => k.cls),
-      })
-      if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`)
-      else pushToast("success", t.toastAddT, `${name} — NIK ${nikVal}`)
-      router.push(`/employees/${nikVal}`)
-    }, 900)
+      });
+      if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`);
+      else pushToast("success", t.toastAddT, `${name} — NIK ${nikVal}`);
+      router.push(`/employees/${nikVal}`);
+    }, 900);
   }
 
   return (
@@ -191,7 +192,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
               {t.secPhoto}
             </SectionTitle>
             <div className="flex items-start gap-5">
-              <div className="grid size-24 flex-none place-items-center rounded-card bg-linear-135 from-[#00D4FF] to-[#0091FF] text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+              <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
                 {initialsOf(f.nama || record?.name || "")}
               </div>
               <Dropzone
@@ -211,8 +212,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                 accept="image/jpeg,image/png"
                 className="hidden"
                 onChange={(e) => {
-                  const name = e.target.files?.[0]?.name
-                  if (name) filePicked(name)
+                  const name = e.target.files?.[0]?.name;
+                  if (name) filePicked(name);
                 }}
               />
             </div>
@@ -349,7 +350,9 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                       <Input
                         value={k.simper}
                         placeholder={t.efKompSimperPh}
-                        onChange={(e) => kompChange(i, "simper", e.target.value)}
+                        onChange={(e) =>
+                          kompChange(i, "simper", e.target.value)
+                        }
                         aria-label="SIMPER"
                       />
                       <Input
@@ -443,7 +446,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
             </FormGrid>
           </Panel>
 
-          <div className="glass-panel sticky bottom-4 z-20 flex items-center justify-end gap-3 rounded-panel px-6 py-4">
+          <div className="sticky bottom-4 z-20 flex items-center justify-end gap-3 rounded-panel px-6 py-4 glass-panel">
             {dirty ? (
               <span className="mr-auto inline-flex items-center gap-1.5 text-xs text-(--text-tertiary)">
                 <span className="size-[7px] rounded-full bg-(--color-warning)" />
@@ -469,7 +472,11 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         </div>
       </form>
 
-      <Dialog open={dirtyDlg} onClose={() => setDirtyDlg(false)} labelledBy="dirty-t">
+      <Dialog
+        open={dirtyDlg}
+        onClose={() => setDirtyDlg(false)}
+        labelledBy="dirty-t"
+      >
         <DialogIcon variant="warning">
           <TriangleAlert />
         </DialogIcon>
@@ -485,5 +492,5 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

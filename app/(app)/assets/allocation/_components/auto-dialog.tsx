@@ -1,28 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CircleAlert, Wand2 } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { CircleAlert, Wand2 } from "lucide-react";
+
+import { useI18n } from "@/lib/i18n";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { validKomp, todayIso, type FaOp, type FaUnit } from "./fa"
+} from "@/components/ui/dialog";
+
+import { todayIso, validKomp, type FaOp, type FaUnit } from "./fa";
 
 export type FaProposal = {
-  code: string
-  nik: string
-  name: string
-  type: string
-  komp: string
-}
+  code: string;
+  nik: string;
+  name: string;
+  type: string;
+  komp: string;
+};
 
-type Skipped = { name: string; why: string }
+type Skipped = { name: string; why: string };
 
 /* Dialog preview auto-alokasi — usulan + daftar yang dilewati */
 export function AutoDialog({
@@ -33,57 +35,62 @@ export function AutoDialog({
   onClose,
   onApply,
 }: {
-  open: boolean
-  units: FaUnit[]
-  ops: FaOp[]
-  alloc: Record<string, string>
-  onClose: () => void
-  onApply: (proposals: FaProposal[]) => void
+  open: boolean;
+  units: FaUnit[];
+  ops: FaOp[];
+  alloc: Record<string, string>;
+  onClose: () => void;
+  onApply: (proposals: FaProposal[]) => void;
 }) {
-  const { t } = useI18n()
+  const { t } = useI18n();
 
   const { proposals, skipped } = React.useMemo(() => {
-    const proposals: FaProposal[] = []
-    const skipped: Skipped[] = []
-    if (!open) return { proposals, skipped }
-    const busy = new Set(Object.values(alloc))
-    const freeOps = ops.filter((o) => !busy.has(o.nik))
-    const freeUnits = units.filter((u) => u.status === "ready" && !alloc[u.code])
-    const taken = new Set<string>()
-    const today = todayIso()
+    const proposals: FaProposal[] = [];
+    const skipped: Skipped[] = [];
+    if (!open) return { proposals, skipped };
+    const busy = new Set(Object.values(alloc));
+    const freeOps = ops.filter((o) => !busy.has(o.nik));
+    const freeUnits = units.filter(
+      (u) => u.status === "ready" && !alloc[u.code]
+    );
+    const taken = new Set<string>();
+    const today = todayIso();
     /* operator kompetensi tunggal ditempatkan lebih dulu */
     const ordered = [...freeOps].sort(
       (a, b) => (a.komp?.length ?? 0) - (b.komp?.length ?? 0)
-    )
+    );
     for (const op of ordered) {
       if (op.ftw === "belum") {
-        skipped.push({ name: op.name, why: t.faWhyBelum })
-        continue
+        skipped.push({ name: op.name, why: t.faWhyBelum });
+        continue;
       }
       if (op.ftw === "kurang") {
-        skipped.push({ name: op.name, why: t.ftwStatKurang })
-        continue
+        skipped.push({ name: op.name, why: t.ftwStatKurang });
+        continue;
       }
       const unit = freeUnits.find(
         (u) => !taken.has(u.code) && validKomp(op, u.tegi)
-      )
+      );
       if (unit) {
-        taken.add(unit.code)
-        const k = validKomp(op, unit.tegi)!
+        taken.add(unit.code);
+        const k = validKomp(op, unit.tegi)!;
         proposals.push({
           code: unit.code,
           nik: op.nik,
           name: op.name,
           type: unit.type,
           komp: k.cls,
-        })
+        });
       } else {
-        const hasValid = (op.komp || []).some((k) => !k.exp || k.exp >= today)
-        skipped.push({ name: op.name, why: hasValid ? t.faWhyNoUnit : t.faWhyKomp })
+        const hasValid = (op.komp || []).some((k) => !k.exp || k.exp >= today);
+        skipped.push({
+          name: op.name,
+          why: hasValid ? t.faWhyNoUnit : t.faWhyKomp,
+        });
       }
     }
-    return { proposals, skipped }
-  }, [open, units, ops, alloc, t])
+    return { proposals, skipped };
+  }, [open, units, ops, alloc, t]);
 
   return (
     <Dialog
@@ -105,7 +112,9 @@ export function AutoDialog({
               key={p.code}
               className="flex items-center gap-3 rounded-icon px-3 py-2"
             >
-              <b className="w-[76px] flex-none font-mono text-[13px]">{p.code}</b>
+              <b className="w-[76px] flex-none font-mono text-[13px]">
+                {p.code}
+              </b>
               <div className="min-w-0 flex-1">
                 <b className="block text-[13px] font-semibold">{p.name}</b>
                 <span className="text-xs text-(--text-tertiary)">
@@ -152,5 +161,5 @@ export function AutoDialog({
         ) : null}
       </DialogActions>
     </Dialog>
-  )
+  );
 }

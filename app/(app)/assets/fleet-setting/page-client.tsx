@@ -1,103 +1,104 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, Pencil, Trash2, Truck } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { useToast } from "@/components/ui/toast"
-import type { Fleet } from "@/lib/data/fleet"
+import * as React from "react";
+import { Pencil, Plus, Trash2, Truck } from "lucide-react";
+
+import type { Fleet } from "@/lib/data/fleet";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogIcon,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input, Textarea } from "@/components/ui/input";
+import {
+  DNote,
+  FootSum,
   PageTitle,
   Panel,
   PanelFoot,
-  FootSum,
-  DNote,
-} from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select } from "@/components/ui/select"
-import { Input, Textarea } from "@/components/ui/input"
-import { Field, FormGrid } from "@/components/ui/field"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
+} from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogIcon,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
   NameCell,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 export default function FleetSettingPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { udbAll, mdData, fleets, setFleets } = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { udbAll, mdData, fleets, setFleets } = useAppStore();
 
   /* dialog tambah/edit */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editId, setEditId] = React.useState<string | null>(null)
-  const [fDigger, setFDigger] = React.useState("")
-  const [fBus, setFBus] = React.useState("")
-  const [fLoc, setFLoc] = React.useState("")
-  const [fUnits, setFUnits] = React.useState("")
-  const [fActive, setFActive] = React.useState(true)
-  const [errDigger, setErrDigger] = React.useState(false)
-  const [errUnits, setErrUnits] = React.useState("")
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editId, setEditId] = React.useState<string | null>(null);
+  const [fDigger, setFDigger] = React.useState("");
+  const [fBus, setFBus] = React.useState("");
+  const [fLoc, setFLoc] = React.useState("");
+  const [fUnits, setFUnits] = React.useState("");
+  const [fActive, setFActive] = React.useState(true);
+  const [errDigger, setErrDigger] = React.useState(false);
+  const [errUnits, setErrUnits] = React.useState("");
 
   /* dialog hapus */
-  const [delTarget, setDelTarget] = React.useState<Fleet | null>(null)
+  const [delTarget, setDelTarget] = React.useState<Fleet | null>(null);
 
-  const all = udbAll()
+  const all = udbAll();
   const diggerTypeOf = (code: string) => {
-    const u = all.find((x) => x.code === code)
-    return u ? `${u.egi} · ${u.product}` : "—"
-  }
+    const u = all.find((x) => x.code === code);
+    return u ? `${u.egi} · ${u.product}` : "—";
+  };
 
   const diggerOpts = Array.from(
     new Set(all.filter((u) => u.cls === "EX").map((u) => u.code))
   )
     .filter((code) => !fleets.some((f) => f.digger === code && f.id !== editId))
-    .sort()
-  const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name)
+    .sort();
+  const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name);
 
   function openAdd() {
-    setEditId(null)
-    setFDigger(diggerOpts[0] || "")
-    setFBus(busOpts[0] || "")
-    setFLoc("")
-    setFUnits("")
-    setFActive(true)
-    setErrDigger(false)
-    setErrUnits("")
-    setDlgOpen(true)
+    setEditId(null);
+    setFDigger(diggerOpts[0] || "");
+    setFBus(busOpts[0] || "");
+    setFLoc("");
+    setFUnits("");
+    setFActive(true);
+    setErrDigger(false);
+    setErrUnits("");
+    setDlgOpen(true);
   }
 
   function openEdit(f: Fleet) {
-    setEditId(f.id)
-    setFDigger(f.digger)
-    setFBus(f.bus)
-    setFLoc(f.loc)
-    setFUnits(f.units.join(", "))
-    setFActive(f.active)
-    setErrDigger(false)
-    setErrUnits("")
-    setDlgOpen(true)
+    setEditId(f.id);
+    setFDigger(f.digger);
+    setFBus(f.bus);
+    setFLoc(f.loc);
+    setFUnits(f.units.join(", "));
+    setFActive(f.active);
+    setErrDigger(false);
+    setErrUnits("");
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
-    const digger = fDigger.trim()
+    e.preventDefault();
+    const digger = fDigger.trim();
     const badDigger =
-      !digger || fleets.some((f) => f.digger === digger && f.id !== editId)
-    setErrDigger(badDigger)
+      !digger || fleets.some((f) => f.digger === digger && f.id !== editId);
+    setErrDigger(badDigger);
 
     const list = Array.from(
       new Set(
@@ -106,37 +107,43 @@ export default function FleetSettingPage() {
           .map((s) => s.trim().toUpperCase())
           .filter(Boolean)
       )
-    )
-    const known = new Set(all.map((u) => u.code.toUpperCase()))
-    const unknown = list.filter((c) => !known.has(c))
+    );
+    const known = new Set(all.map((u) => u.code.toUpperCase()));
+    const unknown = list.filter((c) => !known.has(c));
     const used = list.filter((c) =>
       fleets.some(
         (f) => f.id !== editId && f.units.some((x) => x.toUpperCase() === c)
       )
-    )
+    );
     const unitsErr = unknown.length
       ? `${t.flErrUnknown} ${unknown.join(", ")}`
       : used.length
         ? `${t.flErrUsed} ${used.join(", ")}`
-        : ""
-    setErrUnits(unitsErr)
-    if (badDigger || unitsErr) return
+        : "";
+    setErrUnits(unitsErr);
+    if (badDigger || unitsErr) return;
 
-    const data = { digger, loc: fLoc.trim(), bus: fBus, units: list, active: fActive }
+    const data = {
+      digger,
+      loc: fLoc.trim(),
+      bus: fBus,
+      units: list,
+      active: fActive,
+    };
     setFleets((prev) =>
       editId
         ? prev.map((f) => (f.id === editId ? { ...f, ...data } : f))
         : [...prev, { id: `fl-${Date.now()}`, ...data }]
-    )
-    setDlgOpen(false)
-    pushToast("success", editId ? t.flToastEdit : t.flToastAdd, digger)
+    );
+    setDlgOpen(false);
+    pushToast("success", editId ? t.flToastEdit : t.flToastAdd, digger);
   }
 
   function doDelete() {
-    if (!delTarget) return
-    setFleets((prev) => prev.filter((f) => f.id !== delTarget.id))
-    setDelTarget(null)
-    pushToast("success", t.flToastDel, delTarget.digger)
+    if (!delTarget) return;
+    setFleets((prev) => prev.filter((f) => f.id !== delTarget.id));
+    setDelTarget(null);
+    pushToast("success", t.flToastDel, delTarget.digger);
   }
 
   return (
@@ -167,7 +174,9 @@ export default function FleetSettingPage() {
                   <NameCell name={f.digger} sub={diggerTypeOf(f.digger)} />
                 </TableCell>
                 <TableCell>{f.loc}</TableCell>
-                <TableCell className="max-xl:hidden font-mono">{f.bus}</TableCell>
+                <TableCell className="font-mono max-xl:hidden">
+                  {f.bus}
+                </TableCell>
                 <TableCell>
                   <div className="flex max-w-[320px] flex-wrap gap-1">
                     {f.units.map((u) => (
@@ -190,7 +199,10 @@ export default function FleetSettingPage() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <IconButton aria-label={t.udbEditT} onClick={() => openEdit(f)}>
+                    <IconButton
+                      aria-label={t.udbEditT}
+                      onClick={() => openEdit(f)}
+                    >
                       <Pencil />
                     </IconButton>
                     <IconButton
@@ -305,16 +317,26 @@ export default function FleetSettingPage() {
             {t.stAktif}
           </ToggleRow>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
-            <Button type="submit">{editId ? t.udbSaveEdit : t.flSaveAdd}</Button>
+            <Button type="submit">
+              {editId ? t.udbSaveEdit : t.flSaveAdd}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
 
       {/* Dialog hapus fleet */}
-      <Dialog open={!!delTarget} onClose={() => setDelTarget(null)} labelledBy="fld-t">
+      <Dialog
+        open={!!delTarget}
+        onClose={() => setDelTarget(null)}
+        labelledBy="fld-t"
+      >
         <DialogIcon variant="danger">
           <Trash2 />
         </DialogIcon>
@@ -332,5 +354,5 @@ export default function FleetSettingPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

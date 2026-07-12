@@ -1,5 +1,6 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Kotak status kosong (statebox) — ikon kaca + judul + deskripsi + aksi opsional */
 function StateBox({
@@ -10,18 +11,18 @@ function StateBox({
   children,
   className,
 }: {
-  icon: React.ReactNode
-  iconClassName?: string
-  title: React.ReactNode
-  body?: React.ReactNode
-  children?: React.ReactNode
-  className?: string
+  icon: React.ReactNode;
+  iconClassName?: string;
+  title: React.ReactNode;
+  body?: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div className={cn("px-6 py-10 text-center", className)}>
       <div
-      className={cn(
-          "glass-card mx-auto mb-4 grid size-14 place-items-center rounded-icon [&_svg]:size-6",
+        className={cn(
+          "mx-auto mb-4 grid size-14 place-items-center rounded-icon glass-card [&_svg]:size-6",
           iconClassName
         )}
       >
@@ -35,7 +36,7 @@ function StateBox({
       ) : null}
       {children}
     </div>
-  )
+  );
 }
 
-export { StateBox }
+export { StateBox };

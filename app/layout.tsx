@@ -1,18 +1,20 @@
-import type { Metadata, Viewport } from "next"
-import { Instrument_Sans, Geist_Mono } from "next/font/google"
-import "./globals.css"
-import { Providers } from "@/components/providers/providers"
+import type { Metadata, Viewport } from "next";
+import { Geist_Mono, Instrument_Sans } from "next/font/google";
+
+import "./globals.css";
+
+import { Providers } from "@/components/providers/providers";
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
-})
+});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-})
+});
 
 export const metadata: Metadata = {
   title: {
@@ -23,22 +25,22 @@ export const metadata: Metadata = {
   applicationName: "UNIVERSE",
   // aplikasi internal — jangan diindeks mesin pencari
   robots: { index: false, follow: false },
-}
+};
 
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#EAF3FF" },
     { media: "(prefers-color-scheme: dark)", color: "#010416" },
   ],
-}
+};
 
 // Resolver tema (System|Terang|Gelap) — dijalankan sebelum paint agar tidak flash
-const themeInit = `(function(){try{var p=localStorage.getItem('universe-theme')||'system';var l=window.matchMedia('(prefers-color-scheme: light)').matches;document.documentElement.setAttribute('data-theme',p==='system'?(l?'light':'dark'):p);}catch(e){}})()`
+const themeInit = `(function(){try{var p=localStorage.getItem('universe-theme')||'system';var l=window.matchMedia('(prefers-color-scheme: light)').matches;document.documentElement.setAttribute('data-theme',p==='system'?(l?'light':'dark'):p);}catch(e){}})()`;
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html
@@ -51,5 +53,5 @@ export default function RootLayout({
         <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

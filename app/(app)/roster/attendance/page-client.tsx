@@ -1,29 +1,39 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { Download, Search } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { attData, type AttStatus } from "@/lib/data/attendance"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, ToolbarGroup, PanelFoot, FootSum, Fresh } from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { SearchInput } from "@/components/ui/search-input"
-import { StateBox } from "@/components/ui/state-box"
+import * as React from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Download, Search } from "lucide-react";
+
+import { attData, type AttStatus } from "@/lib/data/attendance";
+import { useI18n } from "@/lib/i18n";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  NameCell,
+  FootSum,
+  Fresh,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
   IOCell,
-} from "@/components/ui/table"
+  NameCell,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 const stBadge: Record<AttStatus, BadgeVariant> = {
   hadir: "success",
@@ -31,32 +41,33 @@ const stBadge: Record<AttStatus, BadgeVariant> = {
   belum: "neutral",
   unfit: "danger",
   off: "neutral",
-}
+};
 
 function AttendanceInner() {
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const searchParams = useSearchParams()
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const searchParams = useSearchParams();
 
-  const initialDate = searchParams.get("date") || new Date().toISOString().slice(0, 10)
-  const [from, setFrom] = React.useState(initialDate)
-  const [to, setTo] = React.useState(initialDate)
-  const [status, setStatus] = React.useState("")
-  const [dept, setDept] = React.useState("")
-  const [q, setQ] = React.useState("")
-  const [freshTime, setFreshTime] = React.useState("")
+  const initialDate =
+    searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = React.useState(initialDate);
+  const [to, setTo] = React.useState(initialDate);
+  const [status, setStatus] = React.useState("");
+  const [dept, setDept] = React.useState("");
+  const [q, setQ] = React.useState("");
+  const [freshTime, setFreshTime] = React.useState("");
 
   const updateFresh = React.useCallback(() => {
-    const d = new Date()
+    const d = new Date();
     setFreshTime(
       `${d.getHours() < 10 ? "0" : ""}${d.getHours()}:${d.getMinutes() < 10 ? "0" : ""}${d.getMinutes()} WITA`
-    )
-  }, [])
+    );
+  }, []);
 
   React.useEffect(() => {
-    const id = setTimeout(updateFresh, 0)
-    return () => clearTimeout(id)
-  }, [updateFresh])
+    const id = setTimeout(updateFresh, 0);
+    return () => clearTimeout(id);
+  }, [updateFresh]);
 
   const stLabel = (s: AttStatus) =>
     s === "hadir"
@@ -67,19 +78,21 @@ function AttendanceInner() {
           ? t.bBelum
           : s === "unfit"
             ? t.bUnfit
-            : t.bOff
+            : t.bOff;
 
   const rows = attData(lang).filter((r) => {
-    if (from && (r.date ?? "") < from) return false
-    if (to && (r.date ?? "") > to) return false
-    if (status && r.st !== status) return false
-    if (dept && r.dept !== dept) return false
-    const needle = q.trim().toLowerCase()
-    if (!needle) return true
-    return r.name.toLowerCase().includes(needle) || r.nik.includes(needle)
-  })
+    if (from && (r.date ?? "") < from) return false;
+    if (to && (r.date ?? "") > to) return false;
+    if (status && r.st !== status) return false;
+    if (dept && r.dept !== dept) return false;
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    return r.name.toLowerCase().includes(needle) || r.nik.includes(needle);
+  });
 
-  const presentN = rows.filter((r) => r.st === "hadir" || r.st === "terlambat").length
+  const presentN = rows.filter(
+    (r) => r.st === "hadir" || r.st === "terlambat"
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,7 +116,10 @@ function AttendanceInner() {
           <ToolbarTitle>{t.attLog}</ToolbarTitle>
           <ToolbarGroup>
             <div className="flex items-center gap-2">
-              <label htmlFor="att-from" className="text-xs text-(--text-tertiary)">
+              <label
+                htmlFor="att-from"
+                className="text-xs text-(--text-tertiary)"
+              >
                 {t.lblDate}
               </label>
               <Input
@@ -157,7 +173,9 @@ function AttendanceInner() {
             />
             <Button
               variant="secondary"
-              onClick={() => pushToast("success", t.toastExportT, t.toastExportD)}
+              onClick={() =>
+                pushToast("success", t.toastExportT, t.toastExportD)
+              }
             >
               <Download />
               {t.export}
@@ -184,7 +202,9 @@ function AttendanceInner() {
                   <TableCell>
                     <NameCell name={r.name} sub={r.nik} />
                   </TableCell>
-                  <TableCell className="font-mono whitespace-nowrap">{r.dLabel}</TableCell>
+                  <TableCell className="font-mono whitespace-nowrap">
+                    {r.dLabel}
+                  </TableCell>
                   <TableCell className="max-xl:hidden">{r.dept}</TableCell>
                   <TableCell>
                     <Badge variant="info">{r.code}</Badge>
@@ -214,12 +234,13 @@ function AttendanceInner() {
 
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{rows.length}</b> {t.attSumLog} · <b>{presentN}</b> {t.attSumD}
+            {t.attSumA} <b>{rows.length}</b> {t.attSumLog} · <b>{presentN}</b>{" "}
+            {t.attSumD}
           </FootSum>
         </PanelFoot>
       </Panel>
     </div>
-  )
+  );
 }
 
 export default function AttendancePage() {
@@ -227,5 +248,5 @@ export default function AttendancePage() {
     <React.Suspense>
       <AttendanceInner />
     </React.Suspense>
-  )
+  );
 }

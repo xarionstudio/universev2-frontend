@@ -1,6 +1,7 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
   "inline-flex items-center gap-1.5 rounded-chip border px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap",
@@ -13,7 +14,7 @@ const badgeVariants = cva(
           "border-(--badge-warning-border) bg-(--badge-warning-fill) text-(--badge-warning-text)",
         danger:
           "border-(--badge-danger-border) bg-(--badge-danger-fill) text-(--badge-danger-text)",
-        info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.12)] text-(--color-primary-bright)",
+        info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.12)] text-primary-bright",
         neutral:
           "border-(--badge-neutral-border) bg-(--badge-neutral-fill) text-(--badge-neutral-text)",
       },
@@ -22,14 +23,14 @@ const badgeVariants = cva(
       variant: "neutral",
     },
   }
-)
+);
 
 export type BadgeVariant = NonNullable<
   VariantProps<typeof badgeVariants>["variant"]
->
+>;
 
 export type BadgeProps = React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { dot?: boolean }
+  VariantProps<typeof badgeVariants> & { dot?: boolean };
 
 function Badge({ className, variant, dot, children, ...props }: BadgeProps) {
   return (
@@ -43,7 +44,7 @@ function Badge({ className, variant, dot, children, ...props }: BadgeProps) {
       ) : null}
       {children}
     </span>
-  )
+  );
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };

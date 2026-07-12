@@ -1,69 +1,90 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { CalendarDays, Plus, Search } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import type { ApRow } from "@/lib/data/roster"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, ToolbarGroup, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { Select } from "@/components/ui/select"
-import { SearchInput } from "@/components/ui/search-input"
-import { StateBox } from "@/components/ui/state-box"
-import { Dialog, DialogIcon, DialogTitle, DialogBody, DialogActions } from "@/components/ui/dialog"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { CalendarDays, Plus, Search } from "lucide-react";
+
+import type { ApRow } from "@/lib/data/roster";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogIcon,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-type Group = { sid: string; rows: ApRow[] }
+type Group = { sid: string; rows: ApRow[] };
 
 const stBadge: Record<ApRow["status"], BadgeVariant> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
-}
+};
 
 export default function RosterRevisionPage() {
-  const { t, lang } = useI18n()
-  const { apRows } = useAppStore()
-  const router = useRouter()
-  const en = lang === "en"
+  const { t, lang } = useI18n();
+  const { apRows } = useAppStore();
+  const router = useRouter();
+  const en = lang === "en";
 
-  const [st, setSt] = React.useState("")
-  const [q, setQ] = React.useState("")
-  const [detailSid, setDetailSid] = React.useState<string | null>(null)
+  const [st, setSt] = React.useState("");
+  const [q, setQ] = React.useState("");
+  const [detailSid, setDetailSid] = React.useState<string | null>(null);
 
   const stLabel = (s: ApRow["status"]) =>
-    s === "pending" ? t.stPending : s === "approved" ? t.stApproved : t.stRejected
+    s === "pending"
+      ? t.stPending
+      : s === "approved"
+        ? t.stApproved
+        : t.stRejected;
 
   /* kelompokkan per sid — urutan sesuai kemunculan pertama */
   const groups = React.useMemo(() => {
-    const map = new Map<string, Group>()
+    const map = new Map<string, Group>();
     for (const r of apRows) {
-      const g = map.get(r.sid)
-      if (g) g.rows.push(r)
-      else map.set(r.sid, { sid: r.sid, rows: [r] })
+      const g = map.get(r.sid);
+      if (g) g.rows.push(r);
+      else map.set(r.sid, { sid: r.sid, rows: [r] });
     }
-    return Array.from(map.values())
-  }, [apRows])
+    return Array.from(map.values());
+  }, [apRows]);
 
   const shown = groups.filter((g) => {
-    if (st && !g.rows.some((r) => r.status === st)) return false
-    const needle = q.trim().toLowerCase()
-    if (!needle) return true
-    return g.rows.some((r) => r.name.toLowerCase().includes(needle))
-  })
+    if (st && !g.rows.some((r) => r.status === st)) return false;
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    return g.rows.some((r) => r.name.toLowerCase().includes(needle));
+  });
 
-  const pendingN = apRows.filter((r) => r.status === "pending").length
-  const detail = detailSid ? groups.find((g) => g.sid === detailSid) : undefined
+  const pendingN = apRows.filter((r) => r.status === "pending").length;
+  const detail = detailSid
+    ? groups.find((g) => g.sid === detailSid)
+    : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,14 +126,18 @@ export default function RosterRevisionPage() {
               <tr>
                 <TableHead className="w-[170px]">{t.thSubmission}</TableHead>
                 <TableHead>{t.thEmp}</TableHead>
-                <TableHead className="w-[150px] max-xl:hidden">{t.thWhen}</TableHead>
+                <TableHead className="w-[150px] max-xl:hidden">
+                  {t.thWhen}
+                </TableHead>
                 <TableHead className="w-[180px]">{t.thStatus}</TableHead>
                 <TableHead className="w-[90px]">{t.thAct}</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
               {shown.map((g) => {
-                const statuses = Array.from(new Set(g.rows.map((r) => r.status)))
+                const statuses = Array.from(
+                  new Set(g.rows.map((r) => r.status))
+                );
                 return (
                   <TableRow key={g.sid}>
                     <TableCell>
@@ -137,12 +162,16 @@ export default function RosterRevisionPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="secondary" size="sm" onClick={() => setDetailSid(g.sid)}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setDetailSid(g.sid)}
+                      >
                         {t.rvDetail}
                       </Button>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })}
             </TableBody>
           </Table>
@@ -156,7 +185,8 @@ export default function RosterRevisionPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.apSumA} <b>{shown.length}</b> {t.rvSumB} · <b>{pendingN}</b> {t.apSumC}
+            {t.apSumA} <b>{shown.length}</b> {t.rvSumB} · <b>{pendingN}</b>{" "}
+            {t.apSumC}
           </FootSum>
         </PanelFoot>
       </Panel>
@@ -184,7 +214,9 @@ export default function RosterRevisionPage() {
                 <div key={i} className="border-b border-(--divider) py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <b className="text-sm">{r.name}</b>
-                    <span className="font-mono text-xs text-(--text-tertiary)">{r.nik}</span>
+                    <span className="font-mono text-xs text-(--text-tertiary)">
+                      {r.nik}
+                    </span>
                     <Badge variant={stBadge[r.status]} dot className="ml-auto">
                       {stLabel(r.status)}
                     </Badge>
@@ -207,5 +239,5 @@ export default function RosterRevisionPage() {
         ) : null}
       </Dialog>
     </div>
-  )
+  );
 }

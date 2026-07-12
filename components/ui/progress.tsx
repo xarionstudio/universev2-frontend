@@ -1,14 +1,9 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Bar progres upload (prog) */
-function Progress({
-  value,
-  className,
-}: {
-  value: number
-  className?: string
-}) {
+function Progress({ value, className }: { value: number; className?: string }) {
   return (
     <div
       data-slot="progress"
@@ -19,7 +14,7 @@ function Progress({
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
-  )
+  );
 }
 
-export { Progress }
+export { Progress };

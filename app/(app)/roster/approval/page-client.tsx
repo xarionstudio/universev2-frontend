@@ -1,81 +1,102 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CheckCircle2, PenLine, RefreshCw, TriangleAlert } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import type { ApRow } from "@/lib/data/roster"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, ToolbarGroup, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { Field } from "@/components/ui/field"
-import { Textarea } from "@/components/ui/input"
-import { Segmented, SegmentedButton } from "@/components/ui/segmented"
-import { StateBox } from "@/components/ui/state-box"
-import { Dialog, DialogIcon, DialogTitle, DialogBody, DialogActions } from "@/components/ui/dialog"
+import * as React from "react";
+import { CheckCircle2, PenLine, RefreshCw, TriangleAlert } from "lucide-react";
+
+import type { ApRow } from "@/lib/data/roster";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogIcon,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/input";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { StateBox } from "@/components/ui/state-box";
+import {
   NameCell,
-} from "@/components/ui/table"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-type Filter = "pending" | "approved" | "rejected" | "all"
+type Filter = "pending" | "approved" | "rejected" | "all";
 
 const stBadge: Record<ApRow["status"], BadgeVariant> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
-}
+};
 
 export default function RosterApprovalPage() {
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const { userName, apRows, setApRows } = useAppStore()
-  const en = lang === "en"
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const { userName, apRows, setApRows } = useAppStore();
+  const en = lang === "en";
 
-  const [filter, setFilter] = React.useState<Filter>("pending")
-  const [busy, setBusy] = React.useState(false)
-  const [noteFor, setNoteFor] = React.useState<number | null>(null)
-  const [note, setNote] = React.useState("")
-  const [noFor, setNoFor] = React.useState<number | null>(null)
-  const [reason, setReason] = React.useState("")
+  const [filter, setFilter] = React.useState<Filter>("pending");
+  const [busy, setBusy] = React.useState(false);
+  const [noteFor, setNoteFor] = React.useState<number | null>(null);
+  const [note, setNote] = React.useState("");
+  const [noFor, setNoFor] = React.useState<number | null>(null);
+  const [reason, setReason] = React.useState("");
 
   const stLabel = (s: ApRow["status"]) =>
-    s === "pending" ? t.stPending : s === "approved" ? t.stApproved : t.stRejected
+    s === "pending"
+      ? t.stPending
+      : s === "approved"
+        ? t.stApproved
+        : t.stRejected;
 
-  const pendingN = apRows.filter((r) => r.status === "pending").length
+  const pendingN = apRows.filter((r) => r.status === "pending").length;
   const list = apRows
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => filter === "all" || r.status === filter)
+    .filter(({ r }) => filter === "all" || r.status === filter);
 
   function refresh() {
-    setBusy(true)
-    setTimeout(() => setBusy(false), 900)
+    setBusy(true);
+    setTimeout(() => setBusy(false), 900);
   }
 
   function decide(i: number | null, ok: boolean, extra?: string) {
-    if (i === null || i === undefined) return
-    const r = apRows[i]
-    if (!r) return
-    const who = userName.trim().split(/\s+/).slice(0, 2).join(" ")
-    const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`
+    if (i === null || i === undefined) return;
+    const r = apRows[i];
+    if (!r) return;
+    const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
+    const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
     setApRows((prev) =>
       prev.map((row, j) =>
-        j === i ? { ...row, status: ok ? "approved" : "rejected", byId: by, byEn: by } : row
+        j === i
+          ? { ...row, status: ok ? "approved" : "rejected", byId: by, byEn: by }
+          : row
       )
-    )
-    const what = (en ? r.whatEn : r.whatId).split(" · ")[0]
-    if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`)
-    else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`)
+    );
+    const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
+    if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
+    else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);
   }
 
-  const noteRow = noteFor !== null ? apRows[noteFor] : undefined
-  const noRow = noFor !== null ? apRows[noFor] : undefined
+  const noteRow = noteFor !== null ? apRows[noteFor] : undefined;
+  const noRow = noFor !== null ? apRows[noFor] : undefined;
 
   const segs: { f: Filter; label: React.ReactNode }[] = [
     {
@@ -89,7 +110,7 @@ export default function RosterApprovalPage() {
     { f: "approved", label: t.segApproved },
     { f: "rejected", label: t.segRejected },
     { f: "all", label: t.segAll },
-  ]
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,7 +155,9 @@ export default function RosterApprovalPage() {
                   <TableCell>
                     <NameCell name={r.name} sub={r.nik} />
                   </TableCell>
-                  <TableCell className="max-w-[360px]">{en ? r.whatEn : r.whatId}</TableCell>
+                  <TableCell className="max-w-[360px]">
+                    {en ? r.whatEn : r.whatId}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-(--text-secondary)">
                     {en ? r.whenEn : r.whenId}
                   </TableCell>
@@ -153,8 +176,8 @@ export default function RosterApprovalPage() {
                           variant="secondary"
                           size="sm"
                           onClick={() => {
-                            setNote("")
-                            setNoteFor(i)
+                            setNote("");
+                            setNoteFor(i);
                           }}
                         >
                           {t.btnNote}
@@ -163,8 +186,8 @@ export default function RosterApprovalPage() {
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            setReason("")
-                            setNoFor(i)
+                            setReason("");
+                            setNoFor(i);
                           }}
                         >
                           {t.btnNo}
@@ -190,12 +213,17 @@ export default function RosterApprovalPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.apSumA} <b>{list.length}</b> {t.apSumB} · <b>{pendingN}</b> {t.apSumC}
+            {t.apSumA} <b>{list.length}</b> {t.apSumB} · <b>{pendingN}</b>{" "}
+            {t.apSumC}
           </FootSum>
         </PanelFoot>
       </Panel>
 
-      <Dialog open={noteFor !== null} onClose={() => setNoteFor(null)} labelledBy="note-t">
+      <Dialog
+        open={noteFor !== null}
+        onClose={() => setNoteFor(null)}
+        labelledBy="note-t"
+      >
         <DialogIcon variant="info">
           <PenLine />
         </DialogIcon>
@@ -217,8 +245,8 @@ export default function RosterApprovalPage() {
           </Button>
           <Button
             onClick={() => {
-              decide(noteFor, true, note.trim() || undefined)
-              setNoteFor(null)
+              decide(noteFor, true, note.trim() || undefined);
+              setNoteFor(null);
             }}
           >
             {t.btnOk}
@@ -226,7 +254,11 @@ export default function RosterApprovalPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={noFor !== null} onClose={() => setNoFor(null)} labelledBy="no-t">
+      <Dialog
+        open={noFor !== null}
+        onClose={() => setNoFor(null)}
+        labelledBy="no-t"
+      >
         <DialogIcon variant="warning">
           <TriangleAlert />
         </DialogIcon>
@@ -234,7 +266,13 @@ export default function RosterApprovalPage() {
           {t.noDlgT1} {noRow?.name}?
         </DialogTitle>
         <DialogBody>{t.noDlgB}</DialogBody>
-        <Field label={t.lblWhy} htmlFor="ap-reason" required helper={t.helpWhy} className="mt-4">
+        <Field
+          label={t.lblWhy}
+          htmlFor="ap-reason"
+          required
+          helper={t.helpWhy}
+          className="mt-4"
+        >
           <Textarea
             id="ap-reason"
             placeholder={t.phWhy}
@@ -250,8 +288,8 @@ export default function RosterApprovalPage() {
             variant="destructive"
             disabled={!reason.trim()}
             onClick={() => {
-              decide(noFor, false, reason.trim())
-              setNoFor(null)
+              decide(noFor, false, reason.trim());
+              setNoFor(null);
             }}
           >
             {t.btnNoDo}
@@ -259,5 +297,5 @@ export default function RosterApprovalPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

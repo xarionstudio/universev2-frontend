@@ -1,54 +1,61 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Wand2 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { useToast } from "@/components/ui/toast"
-import { typeOfEgi } from "@/lib/data/units-db"
-import { ftwTodayMap } from "@/lib/data/employees"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Wand2 } from "lucide-react";
+
+import { ftwTodayMap } from "@/lib/data/employees";
+import { typeOfEgi } from "@/lib/data/units-db";
+import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
+import { Avatar, initialsOf } from "@/components/ui/avatar";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import { DNote, FootSum, PageTitle, Panel } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { useToast } from "@/components/ui/toast";
+
+import { AllocDialog } from "./_components/alloc-dialog";
+import { AutoDialog, type FaProposal } from "./_components/auto-dialog";
 import {
-  PageTitle,
-  Panel,
-  FootSum,
-  DNote,
-} from "@/components/ui/panel"
-import { Button } from "@/components/ui/button"
-import { Badge, type BadgeVariant } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { SearchInput } from "@/components/ui/search-input"
-import { Segmented, SegmentedButton } from "@/components/ui/segmented"
-import { Avatar, initialsOf } from "@/components/ui/avatar"
-import { Pagination } from "@/components/ui/pagination"
-import { AllocDialog } from "./_components/alloc-dialog"
-import { AutoDialog, type FaProposal } from "./_components/auto-dialog"
-import { displayKomp, ftwBadgeOf, type FaOp, type FaUnit } from "./_components/fa"
+  displayKomp,
+  ftwBadgeOf,
+  type FaOp,
+  type FaUnit,
+} from "./_components/fa";
 
-type Shift = "pagi" | "malam"
-type Filter = "all" | "unalloc" | "alloc" | "issue"
+type Shift = "pagi" | "malam";
+type Filter = "all" | "unalloc" | "alloc" | "issue";
 
-const stBadge: Record<FaUnit["status"], { variant: BadgeVariant; label: string }> = {
+const stBadge: Record<
+  FaUnit["status"],
+  { variant: BadgeVariant; label: string }
+> = {
   ready: { variant: "success", label: "Ready" },
   breakdown: { variant: "danger", label: "Breakdown" },
   standby: { variant: "warning", label: "Standby" },
-}
+};
 
 export default function FleetAllocationPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const router = useRouter()
-  const { udbAll, empAll, faAlloc, setFaAlloc, fleets } = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const router = useRouter();
+  const { udbAll, empAll, faAlloc, setFaAlloc, fleets } = useAppStore();
 
-  const [faDate, setFaDate] = React.useState(() => new Date().toISOString().slice(0, 10))
-  const [shift, setShift] = React.useState<Shift>("pagi")
-  const [filter, setFilter] = React.useState<Filter>("all")
-  const [q, setQ] = React.useState("")
-  const [page, setPage] = React.useState(1)
-  const [per, setPer] = React.useState("6")
-  const [allocFor, setAllocFor] = React.useState<FaUnit | null>(null)
-  const [autoOpen, setAutoOpen] = React.useState(false)
+  const [faDate, setFaDate] = React.useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [shift, setShift] = React.useState<Shift>("pagi");
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const [q, setQ] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [per, setPer] = React.useState("6");
+  const [allocFor, setAllocFor] = React.useState<FaUnit | null>(null);
+  const [autoOpen, setAutoOpen] = React.useState(false);
 
   const faUnits: FaUnit[] = React.useMemo(
     () =>
@@ -62,7 +69,7 @@ export default function FleetAllocationPage() {
           status: u.breakdown ? "breakdown" : u.standby ? "standby" : "ready",
         })),
     [udbAll]
-  )
+  );
 
   const ops: FaOp[] = React.useMemo(
     () =>
@@ -70,71 +77,79 @@ export default function FleetAllocationPage() {
         .filter((r) => r.status === "aktif" && r.komp && r.komp.length)
         .map((r) => ({ ...r, ftw: ftwTodayMap[r.nik] || "belum" })),
     [empAll]
-  )
+  );
 
-  const alloc = faAlloc[shift]
-  const opByNik = React.useMemo(() => new Map(ops.map((o) => [o.nik, o])), [ops])
+  const alloc = faAlloc[shift];
+  const opByNik = React.useMemo(
+    () => new Map(ops.map((o) => [o.nik, o])),
+    [ops]
+  );
 
   function kindOf(u: FaUnit): "bd" | "none" | "warn" | "ok" {
-    if (u.status === "breakdown") return "bd"
-    const nik = alloc[u.code]
-    const op = nik ? opByNik.get(nik) : undefined
-    if (!op) return "none"
-    return op.ftw !== "fit" ? "warn" : "ok"
+    if (u.status === "breakdown") return "bd";
+    const nik = alloc[u.code];
+    const op = nik ? opByNik.get(nik) : undefined;
+    if (!op) return "none";
+    return op.ftw !== "fit" ? "warn" : "ok";
   }
 
-  const needle = q.trim().toLowerCase()
+  const needle = q.trim().toLowerCase();
   const filtered = faUnits.filter((u) => {
-    const kind = kindOf(u)
-    if (filter === "unalloc" && kind !== "none") return false
-    if (filter === "alloc" && kind !== "ok") return false
-    if (filter === "issue" && kind !== "warn" && kind !== "bd") return false
-    if (!needle) return true
+    const kind = kindOf(u);
+    if (filter === "unalloc" && kind !== "none") return false;
+    if (filter === "alloc" && kind !== "ok") return false;
+    if (filter === "issue" && kind !== "warn" && kind !== "bd") return false;
+    if (!needle) return true;
     return (
       u.code.toLowerCase().includes(needle) ||
       u.type.toLowerCase().includes(needle) ||
       u.loc.toLowerCase().includes(needle)
-    )
-  })
+    );
+  });
 
-  const perN = Number(per)
-  const pageCount = Math.max(1, Math.ceil(filtered.length / perN))
-  const p = Math.min(page, pageCount)
-  const cards = filtered.slice((p - 1) * perN, p * perN)
+  const perN = Number(per);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / perN));
+  const p = Math.min(page, pageCount);
+  const cards = filtered.slice((p - 1) * perN, p * perN);
   const range = filtered.length
     ? `${(p - 1) * perN + 1}–${Math.min(filtered.length, p * perN)}`
-    : "0"
+    : "0";
 
-  const allocN = faUnits.filter((u) => opByNik.has(alloc[u.code] ?? "")).length
-  const shiftLabel = shift === "pagi" ? t.faShiftPagi : t.faShiftMalam
+  const allocN = faUnits.filter((u) => opByNik.has(alloc[u.code] ?? "")).length;
+  const shiftLabel = shift === "pagi" ? t.faShiftPagi : t.faShiftMalam;
 
   function assign(unit: FaUnit, op: FaOp) {
     setFaAlloc((prev) => ({
       ...prev,
       [shift]: { ...prev[shift], [unit.code]: op.nik },
-    }))
-    setAllocFor(null)
-    pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD)
+    }));
+    setAllocFor(null);
+    pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD);
   }
 
   function release(unit: FaUnit) {
-    const op = opByNik.get(alloc[unit.code] ?? "")
+    const op = opByNik.get(alloc[unit.code] ?? "");
     setFaAlloc((prev) => {
-      const next = { ...prev[shift] }
-      delete next[unit.code]
-      return { ...prev, [shift]: next }
-    })
-    if (op) pushToast("info", `${op.name} ${t.faToastRelT} ${unit.code}`, t.faToastRelD)
+      const next = { ...prev[shift] };
+      delete next[unit.code];
+      return { ...prev, [shift]: next };
+    });
+    if (op)
+      pushToast(
+        "info",
+        `${op.name} ${t.faToastRelT} ${unit.code}`,
+        t.faToastRelD
+      );
   }
 
   function applyAuto(proposals: FaProposal[]) {
     setFaAlloc((prev) => {
-      const next = { ...prev[shift] }
-      for (const pr of proposals) next[pr.code] = pr.nik
-      return { ...prev, [shift]: next }
-    })
-    setAutoOpen(false)
-    pushToast("success", `${proposals.length} ${t.faAutoToastT}`)
+      const next = { ...prev[shift] };
+      for (const pr of proposals) next[pr.code] = pr.nik;
+      return { ...prev, [shift]: next };
+    });
+    setAutoOpen(false);
+    pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
   }
 
   return (
@@ -149,7 +164,10 @@ export default function FleetAllocationPage() {
             aria-label={t.lblDate}
           />
           <Segmented role="group" aria-label="Shift">
-            <SegmentedButton active={shift === "pagi"} onClick={() => setShift("pagi")}>
+            <SegmentedButton
+              active={shift === "pagi"}
+              onClick={() => setShift("pagi")}
+            >
               {t.faShiftPagi}
             </SegmentedButton>
             <SegmentedButton
@@ -168,8 +186,11 @@ export default function FleetAllocationPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-(--text-secondary)">
-          <b className="font-semibold text-(--text-primary)">{allocN}</b> {t.faAllocOf}{" "}
-          <b className="font-semibold text-(--text-primary)">{faUnits.length}</b>{" "}
+          <b className="font-semibold text-(--text-primary)">{allocN}</b>{" "}
+          {t.faAllocOf}{" "}
+          <b className="font-semibold text-(--text-primary)">
+            {faUnits.length}
+          </b>{" "}
           {t.faAllocUnits}
         </span>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -186,8 +207,8 @@ export default function FleetAllocationPage() {
                 key={f}
                 active={filter === f}
                 onClick={() => {
-                  setFilter(f)
-                  setPage(1)
+                  setFilter(f);
+                  setPage(1);
                 }}
               >
                 {label}
@@ -200,8 +221,8 @@ export default function FleetAllocationPage() {
             aria-label={t.searchUnit}
             value={q}
             onChange={(e) => {
-              setQ(e.target.value)
-              setPage(1)
+              setQ(e.target.value);
+              setPage(1);
             }}
           />
         </div>
@@ -209,19 +230,19 @@ export default function FleetAllocationPage() {
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
         {cards.map((u) => {
-          const kind = kindOf(u)
-          const op = opByNik.get(alloc[u.code] ?? "")
+          const kind = kindOf(u);
+          const op = opByNik.get(alloc[u.code] ?? "");
           const fleet = fleets.find(
             (f) => f.digger === u.code || f.units.includes(u.code)
-          )
-          const komp = op ? displayKomp(op, u.tegi) : null
-          const ftw = op ? ftwBadgeOf(op, t) : null
-          const st = stBadge[u.status]
+          );
+          const komp = op ? displayKomp(op, u.tegi) : null;
+          const ftw = op ? ftwBadgeOf(op, t) : null;
+          const st = stBadge[u.status];
           return (
             <div
               key={u.code}
               className={cn(
-                "glass-card flex flex-col gap-4 rounded-card p-5",
+                "flex flex-col gap-4 rounded-card p-5 glass-card",
                 kind === "warn" &&
                   "border-[rgba(252,60,59,.45)] shadow-[0_0_20px_rgba(252,60,59,.18),0_20px_80px_rgba(0,0,0,.5)]"
               )}
@@ -241,7 +262,9 @@ export default function FleetAllocationPage() {
               {fleet ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="info">Fleet {fleet.digger}</Badge>
-                  <span className="text-xs text-(--text-tertiary)">{fleet.loc}</span>
+                  <span className="text-xs text-(--text-tertiary)">
+                    {fleet.loc}
+                  </span>
                 </div>
               ) : null}
 
@@ -271,7 +294,9 @@ export default function FleetAllocationPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge variant="info">
-                      {komp ? `${komp.cls} · SIMPER ${komp.simper}` : t.faKompNone}
+                      {komp
+                        ? `${komp.cls} · SIMPER ${komp.simper}`
+                        : t.faKompNone}
                     </Badge>
                     {ftw ? (
                       <Badge variant={ftw.variant} dot>
@@ -343,14 +368,15 @@ export default function FleetAllocationPage() {
                 )}
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
       <Panel className="px-6 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{filtered.length}</b> {t.udbSumB}
+            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{filtered.length}</b>{" "}
+            {t.udbSumB}
           </FootSum>
           <Pagination
             page={p}
@@ -359,8 +385,8 @@ export default function FleetAllocationPage() {
             per={per}
             perOptions={["6", "12", "24", "48"]}
             onPer={(v) => {
-              setPer(v)
-              setPage(1)
+              setPer(v);
+              setPage(1);
             }}
           />
         </div>
@@ -375,7 +401,7 @@ export default function FleetAllocationPage() {
         alloc={alloc}
         onClose={() => setAllocFor(null)}
         onAssign={(op) => {
-          if (allocFor) assign(allocFor, op)
+          if (allocFor) assign(allocFor, op);
         }}
       />
 
@@ -388,5 +414,5 @@ export default function FleetAllocationPage() {
         onApply={applyAuto}
       />
     </div>
-  )
+  );
 }

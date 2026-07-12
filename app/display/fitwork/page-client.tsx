@@ -1,18 +1,41 @@
-"use client"
+"use client";
 
-import { CheckCircle2, Clock, AlertTriangle } from "lucide-react"
-import { displayFtwRows } from "@/lib/data/display-screens"
-import { DisplayShell } from "../_components/display-shell"
-import { DisplayTable, DisplayBadge, DisplayNameCell } from "../_components/display-table"
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+
+import { displayFtwRows } from "@/lib/data/display-screens";
+
+import { DisplayShell } from "../_components/display-shell";
+import {
+  DisplayBadge,
+  DisplayNameCell,
+  DisplayTable,
+} from "../_components/display-table";
 
 export default function DisplayFitworkPage() {
   return (
     <DisplayShell
       title="Fit To Work — Shift Pagi"
       stats={[
-        { icon: <CheckCircle2 className="text-(--badge-success-text)" />, iconClass: "bg-(--badge-success-fill) border-(--badge-success-border)", value: "231", label: "Fit" },
-        { icon: <Clock className="text-(--badge-warning-text)" />, iconClass: "bg-(--badge-warning-fill) border-(--badge-warning-border)", value: "9", label: "Belum Lapor" },
-        { icon: <AlertTriangle className="text-(--color-danger-text)" />, iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)", value: "2", label: "Kurang Tidur" },
+        {
+          icon: <CheckCircle2 className="text-(--badge-success-text)" />,
+          iconClass:
+            "bg-(--badge-success-fill) border-(--badge-success-border)",
+          value: "231",
+          label: "Fit",
+        },
+        {
+          icon: <Clock className="text-(--badge-warning-text)" />,
+          iconClass:
+            "bg-(--badge-warning-fill) border-(--badge-warning-border)",
+          value: "9",
+          label: "Belum Lapor",
+        },
+        {
+          icon: <AlertTriangle className="text-(--color-danger-text)" />,
+          iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
+          value: "2",
+          label: "Kurang Tidur",
+        },
       ]}
     >
       <DisplayTable
@@ -42,5 +65,5 @@ export default function DisplayFitworkPage() {
         }))}
       />
     </DisplayShell>
-  )
+  );
 }

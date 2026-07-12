@@ -1,5 +1,6 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Shimmer skeleton (sk) */
 function Skeleton({ className, ...props }: React.ComponentProps<"span">) {
@@ -7,12 +8,12 @@ function Skeleton({ className, ...props }: React.ComponentProps<"span">) {
     <span
       data-slot="skeleton"
       className={cn(
-        "animate-shimmer block rounded-[7px] bg-[linear-gradient(90deg,var(--sk-base)_25%,var(--sk-hi)_50%,var(--sk-base)_75%)] bg-[length:200%_100%]",
+        "block animate-shimmer rounded-[7px] bg-[linear-gradient(90deg,var(--sk-base)_25%,var(--sk-hi)_50%,var(--sk-base)_75%)] bg-size-[200%_100%]",
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Skeleton }
+export { Skeleton };

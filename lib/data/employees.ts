@@ -1,46 +1,319 @@
 /* Data karyawan (master) + kompetensi alat berat per operator — dari desain */
 
-export type Komp = { cls: string; simper: string; exp: string }
+export type Komp = { cls: string; simper: string; exp: string };
 
 export type Employee = {
-  name: string
-  nik: string
-  dept: string
-  pos: string
-  simper: string
-  simperExp: string
-  status: "aktif" | "cuti" | "nonaktif"
-  company: string
-  equip: string
-  join: string
-  exp: string
-  license: string
-  mcu: string
-  medis: string
-  blood: string
-  bpjs: string
-  mess: string
-  kamar: string
-  hp: string
-  emg: string
-  komp?: Komp[]
-}
+  name: string;
+  nik: string;
+  dept: string;
+  pos: string;
+  simper: string;
+  simperExp: string;
+  status: "aktif" | "cuti" | "nonaktif";
+  company: string;
+  equip: string;
+  join: string;
+  exp: string;
+  license: string;
+  mcu: string;
+  medis: string;
+  blood: string;
+  bpjs: string;
+  mess: string;
+  kamar: string;
+  hp: string;
+  emg: string;
+  komp?: Komp[];
+};
 
 export const employees: Employee[] = [
-  { name: "First Angel Paustine", nik: "503264133", dept: "Operation", pos: "Operator Dump Truck", simper: "DT Kelas A", simperExp: "2027-03-14", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "Dump Truck 777D", join: "2022-03-14", exp: "2027-03-14", license: "SIM B2 Umum", mcu: "Fit — 12 Feb 2026", medis: "Tidak ada catatan khusus.", blood: "O+", bpjs: "0001234567890", mess: "Mess Karang Joang — Blok C", kamar: "C-214", hp: "+62 812-5501-2233", emg: "Maria Paustine — +62 811-4400-9876" },
-  { name: "Rahmat Hidayat", nik: "503264134", dept: "SDI", pos: "Admin Roster", simper: "", simperExp: "", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "", join: "2021-06-01", exp: "", license: "", mcu: "Fit — 20 Jan 2026", medis: "Tidak ada catatan khusus.", blood: "A+", bpjs: "0001234567891", mess: "", kamar: "", hp: "+62 813-2201-4455", emg: "Sari Hidayat — +62 812-9911-2200" },
-  { name: "Budi Santoso", nik: "503264135", dept: "HRGA", pos: "Operator Excavator", simper: "EX Kelas B", simperExp: "2026-08-02", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "Excavator PC200", join: "2023-01-10", exp: "2026-12-31", license: "SIM B2 Umum", mcu: "Fit — 05 Mar 2026", medis: "Tidak ada catatan khusus.", blood: "B+", bpjs: "0001234567892", mess: "Mess Karang Joang — Blok A", kamar: "A-102", hp: "+62 811-7788-3344", emg: "Wati Santoso — +62 813-5566-7788" },
-  { name: "Siti Nurhaliza", nik: "503264136", dept: "Operation", pos: "Operator Dump Truck", simper: "DT Kelas A", simperExp: "2026-07-28", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "Dump Truck 785C", join: "2022-09-05", exp: "2027-09-05", license: "SIM B2 Umum", mcu: "Fit — 18 Feb 2026", medis: "Tidak ada catatan khusus.", blood: "O-", bpjs: "0001234567893", mess: "Mess KM 12 — Blok B", kamar: "B-021", hp: "+62 812-3344-5566", emg: "Ahmad Nur — +62 811-2233-4455" },
-  { name: "Andi Prasetyo", nik: "503264137", dept: "Plant", pos: "Mekanik", simper: "", simperExp: "", status: "aktif", company: "PT Unggul Mitra Energi", equip: "", join: "2020-11-15", exp: "", license: "", mcu: "Fit — 22 Apr 2026", medis: "Tidak ada catatan khusus.", blood: "AB+", bpjs: "0001234567894", mess: "Mess Karang Joang — Blok C", kamar: "C-108", hp: "+62 813-6677-8899", emg: "Rina Prasetyo — +62 812-4455-6677" },
-  { name: "Dewi Lestari", nik: "503264138", dept: "SDI", pos: "Staff Administrasi", simper: "", simperExp: "", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "", join: "2023-04-03", exp: "2026-10-03", license: "", mcu: "Fit — 09 Jan 2026", medis: "Tidak ada catatan khusus.", blood: "A-", bpjs: "0001234567895", mess: "", kamar: "", hp: "+62 811-9900-1122", emg: "Bambang Lestari — +62 813-8899-0011" },
-  { name: "Joko Widodo S.", nik: "503264139", dept: "Operation", pos: "Operator Grader", simper: "GR Kelas A", simperExp: "2027-01-19", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "Grader 16M", join: "2021-08-20", exp: "2026-08-20", license: "SIM B2 Umum", mcu: "Fit — 14 Mar 2026", medis: "Tidak ada catatan khusus.", blood: "B-", bpjs: "0001234567896", mess: "Mess Karang Joang — Blok A", kamar: "A-215", hp: "+62 812-1122-3344", emg: "Sri Widodo — +62 811-5544-3322" },
-  { name: "Rina Marlina", nik: "503264140", dept: "HRGA", pos: "Staff HR", simper: "", simperExp: "", status: "cuti", company: "PT Unggul Dinamika Utama", equip: "", join: "2022-02-14", exp: "", license: "", mcu: "Fit — 28 Feb 2026", medis: "Tidak ada catatan khusus.", blood: "O+", bpjs: "0001234567897", mess: "", kamar: "", hp: "+62 813-4433-2211", emg: "Dodi Marlin — +62 812-6655-4433" },
-  { name: "Agus Salim", nik: "503264141", dept: "Plant", pos: "Welder", simper: "", simperExp: "", status: "aktif", company: "PT Unggul Mitra Energi", equip: "", join: "2019-07-22", exp: "", license: "", mcu: "Fit dengan catatan — 02 Mei 2026", medis: "Riwayat asma ringan.", blood: "A+", bpjs: "0001234567898", mess: "Mess KM 12 — Blok B", kamar: "B-114", hp: "+62 811-3322-1100", emg: "Fitri Salim — +62 813-2211-0099" },
-  { name: "Maya Sari", nik: "503264142", dept: "Operation", pos: "Operator Water Truck", simper: "WT Kelas B", simperExp: "2026-11-05", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "Water Truck 773E", join: "2023-10-30", exp: "2026-10-30", license: "SIM B2 Umum", mcu: "Fit — 25 Jan 2026", medis: "Tidak ada catatan khusus.", blood: "B+", bpjs: "0001234567899", mess: "Mess Karang Joang — Blok C", kamar: "C-311", hp: "+62 812-9988-7766", emg: "Hasan Sari — +62 811-8877-6655" },
-  { name: "Hendra Gunawan", nik: "503264143", dept: "Plant", pos: "Mekanik Senior", simper: "", simperExp: "", status: "aktif", company: "PT Unggul Mitra Energi", equip: "", join: "2018-05-12", exp: "", license: "", mcu: "Fit — 11 Feb 2026", medis: "Tidak ada catatan khusus.", blood: "O+", bpjs: "0001234567900", mess: "Mess Karang Joang — Blok A", kamar: "A-007", hp: "+62 813-7766-5544", emg: "Lia Gunawan — +62 812-5544-3322" },
-  { name: "Lina Kartika", nik: "503264144", dept: "SDI", pos: "Admin Fit To Work", simper: "", simperExp: "", status: "nonaktif", company: "PT Unggul Dinamika Utama", equip: "", join: "2022-12-01", exp: "2026-06-01", license: "", mcu: "Unfit sementara — 30 Jun 2026", medis: "Pemulihan pasca operasi.", blood: "AB-", bpjs: "0001234567901", mess: "", kamar: "", hp: "+62 811-6655-4433", emg: "Tono Kartika — +62 813-3322-1100" },
-  { name: "Rizky Ananda", nik: "503264150", dept: "Operation", pos: "Operator HD / Excavator", simper: "HD Kelas A", simperExp: "2027-05-20", status: "aktif", company: "PT Unggul Dinamika Utama", equip: "HD785-7 · PC2000", join: "2021-02-08", exp: "2027-02-08", license: "SIM B2 Umum", mcu: "Fit — 03 Mar 2026", medis: "Tidak ada catatan khusus.", blood: "O+", bpjs: "0001234567902", mess: "Mess KM 12 — Blok B", kamar: "B-207", hp: "+62 812-7788-9900", emg: "Nur Ananda — +62 813-1100-2233" },
-]
+  {
+    name: "First Angel Paustine",
+    nik: "503264133",
+    dept: "Operation",
+    pos: "Operator Dump Truck",
+    simper: "DT Kelas A",
+    simperExp: "2027-03-14",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "Dump Truck 777D",
+    join: "2022-03-14",
+    exp: "2027-03-14",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 12 Feb 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "O+",
+    bpjs: "0001234567890",
+    mess: "Mess Karang Joang — Blok C",
+    kamar: "C-214",
+    hp: "+62 812-5501-2233",
+    emg: "Maria Paustine — +62 811-4400-9876",
+  },
+  {
+    name: "Rahmat Hidayat",
+    nik: "503264134",
+    dept: "SDI",
+    pos: "Admin Roster",
+    simper: "",
+    simperExp: "",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "",
+    join: "2021-06-01",
+    exp: "",
+    license: "",
+    mcu: "Fit — 20 Jan 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "A+",
+    bpjs: "0001234567891",
+    mess: "",
+    kamar: "",
+    hp: "+62 813-2201-4455",
+    emg: "Sari Hidayat — +62 812-9911-2200",
+  },
+  {
+    name: "Budi Santoso",
+    nik: "503264135",
+    dept: "HRGA",
+    pos: "Operator Excavator",
+    simper: "EX Kelas B",
+    simperExp: "2026-08-02",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "Excavator PC200",
+    join: "2023-01-10",
+    exp: "2026-12-31",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 05 Mar 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "B+",
+    bpjs: "0001234567892",
+    mess: "Mess Karang Joang — Blok A",
+    kamar: "A-102",
+    hp: "+62 811-7788-3344",
+    emg: "Wati Santoso — +62 813-5566-7788",
+  },
+  {
+    name: "Siti Nurhaliza",
+    nik: "503264136",
+    dept: "Operation",
+    pos: "Operator Dump Truck",
+    simper: "DT Kelas A",
+    simperExp: "2026-07-28",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "Dump Truck 785C",
+    join: "2022-09-05",
+    exp: "2027-09-05",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 18 Feb 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "O-",
+    bpjs: "0001234567893",
+    mess: "Mess KM 12 — Blok B",
+    kamar: "B-021",
+    hp: "+62 812-3344-5566",
+    emg: "Ahmad Nur — +62 811-2233-4455",
+  },
+  {
+    name: "Andi Prasetyo",
+    nik: "503264137",
+    dept: "Plant",
+    pos: "Mekanik",
+    simper: "",
+    simperExp: "",
+    status: "aktif",
+    company: "PT Unggul Mitra Energi",
+    equip: "",
+    join: "2020-11-15",
+    exp: "",
+    license: "",
+    mcu: "Fit — 22 Apr 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "AB+",
+    bpjs: "0001234567894",
+    mess: "Mess Karang Joang — Blok C",
+    kamar: "C-108",
+    hp: "+62 813-6677-8899",
+    emg: "Rina Prasetyo — +62 812-4455-6677",
+  },
+  {
+    name: "Dewi Lestari",
+    nik: "503264138",
+    dept: "SDI",
+    pos: "Staff Administrasi",
+    simper: "",
+    simperExp: "",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "",
+    join: "2023-04-03",
+    exp: "2026-10-03",
+    license: "",
+    mcu: "Fit — 09 Jan 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "A-",
+    bpjs: "0001234567895",
+    mess: "",
+    kamar: "",
+    hp: "+62 811-9900-1122",
+    emg: "Bambang Lestari — +62 813-8899-0011",
+  },
+  {
+    name: "Joko Widodo S.",
+    nik: "503264139",
+    dept: "Operation",
+    pos: "Operator Grader",
+    simper: "GR Kelas A",
+    simperExp: "2027-01-19",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "Grader 16M",
+    join: "2021-08-20",
+    exp: "2026-08-20",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 14 Mar 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "B-",
+    bpjs: "0001234567896",
+    mess: "Mess Karang Joang — Blok A",
+    kamar: "A-215",
+    hp: "+62 812-1122-3344",
+    emg: "Sri Widodo — +62 811-5544-3322",
+  },
+  {
+    name: "Rina Marlina",
+    nik: "503264140",
+    dept: "HRGA",
+    pos: "Staff HR",
+    simper: "",
+    simperExp: "",
+    status: "cuti",
+    company: "PT Unggul Dinamika Utama",
+    equip: "",
+    join: "2022-02-14",
+    exp: "",
+    license: "",
+    mcu: "Fit — 28 Feb 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "O+",
+    bpjs: "0001234567897",
+    mess: "",
+    kamar: "",
+    hp: "+62 813-4433-2211",
+    emg: "Dodi Marlin — +62 812-6655-4433",
+  },
+  {
+    name: "Agus Salim",
+    nik: "503264141",
+    dept: "Plant",
+    pos: "Welder",
+    simper: "",
+    simperExp: "",
+    status: "aktif",
+    company: "PT Unggul Mitra Energi",
+    equip: "",
+    join: "2019-07-22",
+    exp: "",
+    license: "",
+    mcu: "Fit dengan catatan — 02 Mei 2026",
+    medis: "Riwayat asma ringan.",
+    blood: "A+",
+    bpjs: "0001234567898",
+    mess: "Mess KM 12 — Blok B",
+    kamar: "B-114",
+    hp: "+62 811-3322-1100",
+    emg: "Fitri Salim — +62 813-2211-0099",
+  },
+  {
+    name: "Maya Sari",
+    nik: "503264142",
+    dept: "Operation",
+    pos: "Operator Water Truck",
+    simper: "WT Kelas B",
+    simperExp: "2026-11-05",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "Water Truck 773E",
+    join: "2023-10-30",
+    exp: "2026-10-30",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 25 Jan 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "B+",
+    bpjs: "0001234567899",
+    mess: "Mess Karang Joang — Blok C",
+    kamar: "C-311",
+    hp: "+62 812-9988-7766",
+    emg: "Hasan Sari — +62 811-8877-6655",
+  },
+  {
+    name: "Hendra Gunawan",
+    nik: "503264143",
+    dept: "Plant",
+    pos: "Mekanik Senior",
+    simper: "",
+    simperExp: "",
+    status: "aktif",
+    company: "PT Unggul Mitra Energi",
+    equip: "",
+    join: "2018-05-12",
+    exp: "",
+    license: "",
+    mcu: "Fit — 11 Feb 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "O+",
+    bpjs: "0001234567900",
+    mess: "Mess Karang Joang — Blok A",
+    kamar: "A-007",
+    hp: "+62 813-7766-5544",
+    emg: "Lia Gunawan — +62 812-5544-3322",
+  },
+  {
+    name: "Lina Kartika",
+    nik: "503264144",
+    dept: "SDI",
+    pos: "Admin Fit To Work",
+    simper: "",
+    simperExp: "",
+    status: "nonaktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "",
+    join: "2022-12-01",
+    exp: "2026-06-01",
+    license: "",
+    mcu: "Unfit sementara — 30 Jun 2026",
+    medis: "Pemulihan pasca operasi.",
+    blood: "AB-",
+    bpjs: "0001234567901",
+    mess: "",
+    kamar: "",
+    hp: "+62 811-6655-4433",
+    emg: "Tono Kartika — +62 813-3322-1100",
+  },
+  {
+    name: "Rizky Ananda",
+    nik: "503264150",
+    dept: "Operation",
+    pos: "Operator HD / Excavator",
+    simper: "HD Kelas A",
+    simperExp: "2027-05-20",
+    status: "aktif",
+    company: "PT Unggul Dinamika Utama",
+    equip: "HD785-7 · PC2000",
+    join: "2021-02-08",
+    exp: "2027-02-08",
+    license: "SIM B2 Umum",
+    mcu: "Fit — 03 Mar 2026",
+    medis: "Tidak ada catatan khusus.",
+    blood: "O+",
+    bpjs: "0001234567902",
+    mess: "Mess KM 12 — Blok B",
+    kamar: "B-207",
+    hp: "+62 812-7788-9900",
+    emg: "Nur Ananda — +62 813-1100-2233",
+  },
+];
 
 /* kompetensi per Type EGI (grup model, ikut spreadsheet) — bukan per eq. class */
 export const kompMap: Record<string, Komp[]> = {
@@ -56,10 +329,10 @@ export const kompMap: Record<string, Komp[]> = {
     { cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-05-20" },
     { cls: "PC 2000", simper: "Kelas B", exp: "2027-05-20" },
   ],
-}
+};
 
 export function withKomp(list: Employee[]): Employee[] {
-  return list.map((r) => (r.komp ? r : { ...r, komp: kompMap[r.nik] || [] }))
+  return list.map((r) => (r.komp ? r : { ...r, komp: kompMap[r.nik] || [] }));
 }
 
 /* status fit-to-work hari ini per operator (dipakai alokasi) */
@@ -70,4 +343,4 @@ export const ftwTodayMap: Record<string, "fit" | "kurang" | "belum"> = {
   "503264139": "belum",
   "503264142": "fit",
   "503264150": "fit",
-}
+};

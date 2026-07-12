@@ -1,18 +1,40 @@
-"use client"
+"use client";
 
-import { Users, CheckCircle2, AlertTriangle } from "lucide-react"
-import { displayAttRows } from "@/lib/data/display-screens"
-import { DisplayShell } from "../_components/display-shell"
-import { DisplayTable, DisplayBadge, DisplayNameCell } from "../_components/display-table"
+import { AlertTriangle, CheckCircle2, Users } from "lucide-react";
+
+import { displayAttRows } from "@/lib/data/display-screens";
+
+import { DisplayShell } from "../_components/display-shell";
+import {
+  DisplayBadge,
+  DisplayNameCell,
+  DisplayTable,
+} from "../_components/display-table";
 
 export default function DisplayAttendancePage() {
   return (
     <DisplayShell
       title="Attendance — Shift Pagi"
       stats={[
-        { icon: <Users className="text-[#7AE6FF]" />, iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]", value: "238", label: "Sudah Absen" },
-        { icon: <CheckCircle2 className="text-(--badge-success-text)" />, iconClass: "bg-(--badge-success-fill) border-(--badge-success-border)", value: "231", label: "Fit To Work" },
-        { icon: <AlertTriangle className="text-(--color-danger-text)" />, iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)", value: "16", label: "Perlu Perhatian" },
+        {
+          icon: <Users className="text-(--color-primary-bright)" />,
+          iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
+          value: "238",
+          label: "Sudah Absen",
+        },
+        {
+          icon: <CheckCircle2 className="text-(--badge-success-text)" />,
+          iconClass:
+            "bg-(--badge-success-fill) border-(--badge-success-border)",
+          value: "231",
+          label: "Fit To Work",
+        },
+        {
+          icon: <AlertTriangle className="text-(--color-danger-text)" />,
+          iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
+          value: "16",
+          label: "Perlu Perhatian",
+        },
       ]}
     >
       <DisplayTable
@@ -41,5 +63,5 @@ export default function DisplayAttendancePage() {
         }))}
       />
     </DisplayShell>
-  )
+  );
 }

@@ -26,9 +26,24 @@
   --text-disabled: rgba(255, 255, 255, 0.38);
 
   /* ---- Kaca 3 tingkat: latar → panel → mengambang ---- */
-  --gradient-admin: linear-gradient(180deg, #001239 59.86%, #0740a1 99.95%, #000c27 100%);
-  --gradient-kiosk: linear-gradient(323.42deg, #010416 31.83%, #0052bd 56.19%, #00051b 68.32%);
-  --gradient-auth: linear-gradient(318deg, #010416 24%, #003a8c 58%, #00051b 88%);
+  --gradient-admin: linear-gradient(
+    180deg,
+    #001239 59.86%,
+    #0740a1 99.95%,
+    #000c27 100%
+  );
+  --gradient-kiosk: linear-gradient(
+    323.42deg,
+    #010416 31.83%,
+    #0052bd 56.19%,
+    #00051b 68.32%
+  );
+  --gradient-auth: linear-gradient(
+    318deg,
+    #010416 24%,
+    #003a8c 58%,
+    #00051b 88%
+  );
   --blob-cyan: rgba(0, 212, 255, 0.15);
   --blob-blue: rgba(0, 102, 255, 0.18);
   --glass-1-fill: rgba(255, 255, 255, 0.06);
@@ -38,14 +53,18 @@
   --glass-2-fill: rgba(255, 255, 255, 0.1);
   --glass-2-border: rgba(255, 255, 255, 0.18);
   --glass-2-blur: 25px;
-  --shadow-card-glow: 0 0 20px rgba(0, 212, 255, 0.15), 0 20px 80px rgba(0, 0, 0, 0.5);
+  --shadow-card-glow:
+    0 0 20px rgba(0, 212, 255, 0.15), 0 20px 80px rgba(0, 0, 0, 0.5);
   --overlay-fill: rgba(2, 10, 34, 0.92);
-  --shadow-modal: 0 0 24px rgba(0, 212, 255, 0.12), 0 32px 96px rgba(0, 0, 0, 0.6);
+  --shadow-modal:
+    0 0 24px rgba(0, 212, 255, 0.12), 0 32px 96px rgba(0, 0, 0, 0.6);
   --gradient-cta: linear-gradient(135deg, #00d4ff 0%, #0091ff 100%);
   --gradient-cta-hover: linear-gradient(135deg, #33ddff 0%, #1fa4ff 100%);
+  --gradient-logo: linear-gradient(1.86deg, #0054c7, #00cffe);
   --color-on-cta: #001239;
   --glow-cta: 0 8px 24px rgba(0, 212, 255, 0.35);
-  --glow-pill: 0 0 30px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 212, 255, 0.25);
+  --glow-pill:
+    0 0 30px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 212, 255, 0.25);
   --border-input: rgba(255, 255, 255, 0.4);
   --fill-input: rgba(14, 31, 54, 0.6);
 
@@ -63,8 +82,16 @@
   --scrim: rgba(1, 4, 22, 0.6);
   --sk-base: rgba(255, 255, 255, 0.08);
   --sk-hi: rgba(255, 255, 255, 0.16);
-  --gradient-thead: linear-gradient(90deg, rgba(37, 99, 235, 0.35), rgba(0, 84, 199, 0.28));
-  --gradient-nav-active: linear-gradient(90deg, rgba(0, 212, 255, 0.25), rgba(37, 99, 235, 0.15));
+  --gradient-thead: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.35),
+    rgba(0, 84, 199, 0.28)
+  );
+  --gradient-nav-active: linear-gradient(
+    90deg,
+    rgba(0, 212, 255, 0.25),
+    rgba(37, 99, 235, 0.15)
+  );
 
   /* ---- Badge status ---- */
   --badge-success-fill: rgba(23, 206, 100, 0.16);
@@ -99,7 +126,12 @@
 [data-theme="light"] {
   --color-bg: #eaf3ff;
   --gradient-admin: linear-gradient(180deg, #eaf3ff 40%, #bfd9ff 100%);
-  --gradient-auth: linear-gradient(318deg, #dfedff 24%, #9cc4ff 58%, #eaf3ff 88%);
+  --gradient-auth: linear-gradient(
+    318deg,
+    #dfedff 24%,
+    #9cc4ff 58%,
+    #eaf3ff 88%
+  );
   --blob-cyan: rgba(0, 170, 255, 0.3);
   --blob-blue: rgba(0, 102, 255, 0.22);
 
@@ -114,13 +146,16 @@
   --shadow-panel: 0 16px 48px rgba(10, 27, 58, 0.1);
   --glass-2-fill: rgba(255, 255, 255, 0.72);
   --glass-2-border: rgba(10, 27, 58, 0.14);
-  --shadow-card-glow: 0 0 20px rgba(0, 140, 255, 0.08), 0 20px 80px rgba(10, 27, 58, 0.14);
+  --shadow-card-glow:
+    0 0 20px rgba(0, 140, 255, 0.08), 0 20px 80px rgba(10, 27, 58, 0.14);
   --overlay-fill: rgba(255, 255, 255, 0.97);
-  --shadow-modal: 0 0 24px rgba(0, 140, 255, 0.08), 0 32px 96px rgba(10, 27, 58, 0.22);
+  --shadow-modal:
+    0 0 24px rgba(0, 140, 255, 0.08), 0 32px 96px rgba(10, 27, 58, 0.22);
 
   --gradient-cta-hover: linear-gradient(135deg, #00c2ee 0%, #0084ee 100%);
   --glow-cta: 0 8px 24px rgba(0, 150, 220, 0.28);
-  --glow-pill: 0 0 30px rgba(10, 27, 58, 0.12), inset 0 0 15px rgba(0, 212, 255, 0.18);
+  --glow-pill:
+    0 0 30px rgba(10, 27, 58, 0.12), inset 0 0 15px rgba(0, 212, 255, 0.18);
   --border-input: rgba(10, 27, 58, 0.3);
   --fill-input: rgba(255, 255, 255, 0.7);
 
@@ -153,8 +188,16 @@
   --scrim: rgba(10, 27, 58, 0.4);
   --sk-base: rgba(10, 27, 58, 0.08);
   --sk-hi: rgba(10, 27, 58, 0.16);
-  --gradient-thead: linear-gradient(90deg, rgba(37, 99, 235, 0.2), rgba(0, 84, 199, 0.13));
-  --gradient-nav-active: linear-gradient(90deg, rgba(0, 212, 255, 0.3), rgba(37, 99, 235, 0.14));
+  --gradient-thead: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.2),
+    rgba(0, 84, 199, 0.13)
+  );
+  --gradient-nav-active: linear-gradient(
+    90deg,
+    rgba(0, 212, 255, 0.3),
+    rgba(37, 99, 235, 0.14)
+  );
 }
 
 :root,

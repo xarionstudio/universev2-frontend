@@ -1,159 +1,178 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
-  Plus,
-  Upload,
-  Download,
-  Pencil,
   Ban,
   CheckCircle2,
-  UserPlus,
+  Download,
+  Pencil,
+  Plus,
   Search,
-} from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import type { UmUser } from "@/lib/data/users"
-import { downloadCsv } from "./_lib/csv"
-import { PageTitle, Panel, Toolbar, ToolbarGroup, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { SearchInput } from "@/components/ui/search-input"
-import { Select } from "@/components/ui/select"
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  NameCell,
-} from "@/components/ui/table"
+  Upload,
+  UserPlus,
+} from "lucide-react";
+
+import type { UmUser } from "@/lib/data/users";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Field } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
-import { StateBox } from "@/components/ui/state-box"
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
+import {
+  NameCell,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
+
+import { downloadCsv } from "./_lib/csv";
 
 export default function UsersPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { umUsers, setUmUsers, umRoles, empAll } = useAppStore()
-  const impRef = React.useRef<HTMLInputElement>(null)
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { umUsers, setUmUsers, umRoles, empAll } = useAppStore();
+  const impRef = React.useRef<HTMLInputElement>(null);
 
-  const [q, setQ] = React.useState("")
-  const [statusF, setStatusF] = React.useState("all")
-  const [roleF, setRoleF] = React.useState("all")
+  const [q, setQ] = React.useState("");
+  const [statusF, setStatusF] = React.useState("all");
+  const [roleF, setRoleF] = React.useState("all");
 
   /* dialog tambah/edit user */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editing, setEditing] = React.useState<UmUser | null>(null)
-  const [fEmail, setFEmail] = React.useState("")
-  const [fKar, setFKar] = React.useState("")
-  const [fRoles, setFRoles] = React.useState<Record<string, boolean>>({})
-  const [fActive, setFActive] = React.useState(true)
-  const [err, setErr] = React.useState(false)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<UmUser | null>(null);
+  const [fEmail, setFEmail] = React.useState("");
+  const [fKar, setFKar] = React.useState("");
+  const [fRoles, setFRoles] = React.useState<Record<string, boolean>>({});
+  const [fActive, setFActive] = React.useState(true);
+  const [err, setErr] = React.useState(false);
 
   /* dialog nonaktifkan */
-  const [offTarget, setOffTarget] = React.useState<UmUser | null>(null)
+  const [offTarget, setOffTarget] = React.useState<UmUser | null>(null);
 
-  const roleName = (id: string) => umRoles.find((r) => r.id === id)?.name ?? id
-  const karOpts = empAll().map((e) => `${e.name} — ${e.nik}`)
+  const roleName = (id: string) => umRoles.find((r) => r.id === id)?.name ?? id;
+  const karOpts = empAll().map((e) => `${e.name} — ${e.nik}`);
 
   const rows = umUsers.filter((u) => {
-    const needle = q.toLowerCase()
+    const needle = q.toLowerCase();
     if (
       needle &&
       !u.email.toLowerCase().includes(needle) &&
       !(u.kar ?? "").toLowerCase().includes(needle) &&
       !u.roles.some((r) => roleName(r).toLowerCase().includes(needle))
     )
-      return false
-    if (statusF === "on" && !u.on) return false
-    if (statusF === "off" && u.on) return false
-    if (roleF !== "all" && !u.roles.includes(roleF)) return false
-    return true
-  })
-  const activeN = umUsers.filter((u) => u.on).length
+      return false;
+    if (statusF === "on" && !u.on) return false;
+    if (statusF === "off" && u.on) return false;
+    if (roleF !== "all" && !u.roles.includes(roleF)) return false;
+    return true;
+  });
+  const activeN = umUsers.filter((u) => u.on).length;
 
   function openAdd() {
-    setEditing(null)
-    setFEmail("")
-    setFKar("")
-    setFRoles({})
-    setFActive(true)
-    setErr(false)
-    setDlgOpen(true)
+    setEditing(null);
+    setFEmail("");
+    setFKar("");
+    setFRoles({});
+    setFActive(true);
+    setErr(false);
+    setDlgOpen(true);
   }
 
   function openEdit(u: UmUser) {
-    setEditing(u)
-    setFEmail(u.email)
-    setFKar(u.kar ? `${u.kar} — ${u.nik}` : "")
-    setFRoles(Object.fromEntries(u.roles.map((r) => [r, true])))
-    setFActive(u.on)
-    setErr(false)
-    setDlgOpen(true)
+    setEditing(u);
+    setFEmail(u.email);
+    setFKar(u.kar ? `${u.kar} — ${u.nik}` : "");
+    setFRoles(Object.fromEntries(u.roles.map((r) => [r, true])));
+    setFActive(u.on);
+    setErr(false);
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
-    const roles = Object.keys(fRoles).filter((r) => fRoles[r])
-    const email = fEmail.trim()
+    e.preventDefault();
+    const roles = Object.keys(fRoles).filter((r) => fRoles[r]);
+    const email = fEmail.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || roles.length === 0) {
-      setErr(true)
-      return
+      setErr(true);
+      return;
     }
-    const [kar, nik] = fKar ? fKar.split(" — ") : [null, null]
-    const data = { email, kar, nik, roles, on: fActive }
+    const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
+    const data = { email, kar, nik, roles, on: fActive };
     if (editing) {
-      setUmUsers((prev) => prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u)))
-      pushToast("success", t.umToastUserEdit, email)
+      setUmUsers((prev) =>
+        prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
+      );
+      pushToast("success", t.umToastUserEdit, email);
     } else {
-      setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }])
-      pushToast("success", t.umToastInvite, `${email} — ${t.umToastInviteD}`)
+      setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }]);
+      pushToast("success", t.umToastInvite, `${email} — ${t.umToastInviteD}`);
     }
-    setDlgOpen(false)
+    setDlgOpen(false);
   }
 
   function offDo() {
-    if (!offTarget) return
+    if (!offTarget) return;
     setUmUsers((prev) =>
       prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
-    )
-    pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`)
-    setOffTarget(null)
+    );
+    pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
+    setOffTarget(null);
   }
 
   function onDo(u: UmUser) {
-    setUmUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, on: true } : x)))
-    pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`)
+    setUmUsers((prev) =>
+      prev.map((x) => (x.id === u.id ? { ...x, on: true } : x))
+    );
+    pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`);
   }
 
   function exportCsv() {
-    const head = "email;karyawan;nik;roles;status"
+    const head = "email;karyawan;nik;roles;status";
     const body = umUsers
       .map((u) =>
-        [u.email, u.kar ?? "", u.nik ?? "", u.roles.map(roleName).join(","), u.on ? "aktif" : "nonaktif"].join(";")
+        [
+          u.email,
+          u.kar ?? "",
+          u.nik ?? "",
+          u.roles.map(roleName).join(","),
+          u.on ? "aktif" : "nonaktif",
+        ].join(";")
       )
-      .join("\n")
-    const name = `users_${new Date().toISOString().slice(0, 10)}.csv`
-    downloadCsv(name, `${head}\n${body}`)
-    pushToast("success", t.umToastExp, name)
+      .join("\n");
+    const name = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCsv(name, `${head}\n${body}`);
+    pushToast("success", t.umToastExp, name);
   }
 
   function importChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    pushToast("success", t.umToastImp, `${file.name} — 3 ${t.umToastImpD}`)
-    e.target.value = ""
+    const file = e.target.files?.[0];
+    if (!file) return;
+    pushToast("success", t.umToastImp, `${file.name} — 3 ${t.umToastImpD}`);
+    e.target.value = "";
   }
 
   return (
@@ -231,7 +250,10 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {rows.map((u) => (
-                <TableRow key={u.id} className={u.on ? undefined : "opacity-60"}>
+                <TableRow
+                  key={u.id}
+                  className={u.on ? undefined : "opacity-60"}
+                >
                   <TableCell>
                     <b className="font-semibold">{u.email}</b>
                   </TableCell>
@@ -258,7 +280,10 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <IconButton aria-label={t.udbEditT} onClick={() => openEdit(u)}>
+                      <IconButton
+                        aria-label={t.udbEditT}
+                        onClick={() => openEdit(u)}
+                      >
                         <Pencil />
                       </IconButton>
                       {u.on ? (
@@ -289,8 +314,8 @@ export default function UsersPage() {
         )}
         <PanelFoot>
           <FootSum>
-            {t.showing} <b>{rows.length}</b> {t.umOf} <b>{umUsers.length}</b> user ·{" "}
-            <b>{activeN}</b> {t.umActiveSum}
+            {t.showing} <b>{rows.length}</b> {t.umOf} <b>{umUsers.length}</b>{" "}
+            user · <b>{activeN}</b> {t.umActiveSum}
           </FootSum>
         </PanelFoot>
       </Panel>
@@ -347,7 +372,10 @@ export default function UsersPage() {
                   <Checkbox
                     checked={!!fRoles[r.id]}
                     onChange={(e) =>
-                      setFRoles((prev) => ({ ...prev, [r.id]: e.target.checked }))
+                      setFRoles((prev) => ({
+                        ...prev,
+                        [r.id]: e.target.checked,
+                      }))
                     }
                   />
                   {r.name}
@@ -364,7 +392,11 @@ export default function UsersPage() {
             {t.stAktif}
           </ToggleRow>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
             <Button type="submit">
@@ -395,5 +427,5 @@ export default function UsersPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

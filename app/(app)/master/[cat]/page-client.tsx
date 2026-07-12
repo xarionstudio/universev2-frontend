@@ -1,126 +1,134 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { notFound, useParams } from "next/navigation"
-import { Plus, Pencil, Rows3, Search, Trash2 } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useAppStore } from "@/components/providers/app-store"
-import { useToast } from "@/components/ui/toast"
-import { mdCats, mdCatLabels, type MdCat, type MdEntry } from "@/lib/data/master-data"
+import * as React from "react";
+import { notFound, useParams } from "next/navigation";
+import { Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
+
 import {
-  PageTitle,
-  Panel,
-  Toolbar,
-  ToolbarTitle,
-  ToolbarGroup,
-  PanelFoot,
-  FootSum,
-} from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { SearchInput } from "@/components/ui/search-input"
-import { Select } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Field } from "@/components/ui/field"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
+  mdCatLabels,
+  mdCats,
+  type MdCat,
+  type MdEntry,
+} from "@/lib/data/master-data";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
 import {
   Table,
-  TableHeader,
-  TableHead,
   TableBody,
-  TableRow,
   TableCell,
-} from "@/components/ui/table"
-import { StateBox } from "@/components/ui/state-box"
-import { Pagination } from "@/components/ui/pagination"
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-type ColKey = "name" | "a" | "b"
-type SortKey = ColKey | "active"
+type ColKey = "name" | "a" | "b";
+type SortKey = ColKey | "active";
 type ColDef = {
-  key: ColKey
-  label: string
-  kind?: "text" | "time" | "select" | "color"
-  opts?: string[]
-}
+  key: ColKey;
+  label: string;
+  kind?: "text" | "time" | "select" | "color";
+  opts?: string[];
+};
 
-const runtextTargets = ["Semua kiosk", "Display Attendance", "Display Fleet"]
-const runtextColors = ["Cyan", "Oranye", "Putih", "Merah"]
+const runtextTargets = ["Semua kiosk", "Display Attendance", "Display Fleet"];
+const runtextColors = ["Cyan", "Oranye", "Putih", "Merah"];
 const colorVal: Record<string, string> = {
   Cyan: "#00D4FF",
   Oranye: "#E99B2A",
   Putih: "#FFFFFF",
   Merah: "#FC3C3B",
-}
+};
 
 export default function MasterDataPage() {
-  const params = useParams<{ cat: string }>()
-  const cat = params.cat as MdCat
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const { mdData, setMdData } = useAppStore()
+  const params = useParams<{ cat: string }>();
+  const cat = params.cat as MdCat;
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const { mdData, setMdData } = useAppStore();
 
-  const [q, setQ] = React.useState("")
-  const [page, setPage] = React.useState(1)
-  const [per, setPer] = React.useState("10")
-  const [sort, setSort] = React.useState<{ key: SortKey; dir: 1 | -1 } | null>(null)
+  const [q, setQ] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [per, setPer] = React.useState("10");
+  const [sort, setSort] = React.useState<{ key: SortKey; dir: 1 | -1 } | null>(
+    null
+  );
 
   /* dialog tambah/edit */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editId, setEditId] = React.useState<string | null>(null)
-  const [fName, setFName] = React.useState("")
-  const [fA, setFA] = React.useState("")
-  const [fB, setFB] = React.useState("")
-  const [fActive, setFActive] = React.useState(true)
-  const [errName, setErrName] = React.useState(false)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editId, setEditId] = React.useState<string | null>(null);
+  const [fName, setFName] = React.useState("");
+  const [fA, setFA] = React.useState("");
+  const [fB, setFB] = React.useState("");
+  const [fActive, setFActive] = React.useState(true);
+  const [errName, setErrName] = React.useState(false);
 
   /* dialog hapus */
-  const [delTarget, setDelTarget] = React.useState<MdEntry | null>(null)
+  const [delTarget, setDelTarget] = React.useState<MdEntry | null>(null);
 
-  if (!mdCats.includes(cat)) notFound()
+  if (!mdCats.includes(cat)) notFound();
 
-  const en = lang === "en"
-  const catLabel = mdCatLabels[cat][lang]
+  const en = lang === "en";
+  const catLabel = mdCatLabels[cat][lang];
 
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {
       case "egi":
       case "product":
-        return [{ key: "name", label: t.mdNama }]
+        return [{ key: "name", label: t.mdNama }];
       case "eqclass":
         return [
           { key: "name", label: "Kode" },
           { key: "a", label: t.mdDesc },
-        ]
+        ];
       case "area":
         return [
           { key: "name", label: t.mdNama },
           { key: "a", label: t.thCat },
-        ]
+        ];
       case "tempudo":
         return [
           { key: "name", label: "Kode" },
           { key: "a", label: t.thLoc },
           { key: "b", label: t.thType },
-        ]
+        ];
       case "bus":
         return [
           { key: "name", label: "Kode" },
           { key: "a", label: en ? "Type" : "Tipe" },
           { key: "b", label: t.mdJam, kind: "time" },
-        ]
+        ];
       case "lokasiex":
         return [
           { key: "name", label: "Excavator" },
           { key: "a", label: "Bus" },
           { key: "b", label: "Tempudo" },
-        ]
+        ];
       case "runtext":
         return [
           { key: "name", label: en ? "Text" : "Teks" },
@@ -131,98 +139,100 @@ export default function MasterDataPage() {
             kind: "color",
             opts: runtextColors,
           },
-        ]
+        ];
     }
-  }, [cat, t, en])
+  }, [cat, t, en]);
 
-  const entries = mdData[cat]
-  const needle = q.trim().toLowerCase()
+  const entries = mdData[cat];
+  const needle = q.trim().toLowerCase();
   const filtered = entries.filter((r) => {
-    if (!needle) return true
+    if (!needle) return true;
     return (
       r.name.toLowerCase().includes(needle) ||
       r.a.toLowerCase().includes(needle) ||
       r.b.toLowerCase().includes(needle)
-    )
-  })
+    );
+  });
 
   const sorted = sort
     ? [...filtered].sort((x, y) => {
         if (sort.key === "active")
-          return (Number(x.active) - Number(y.active)) * sort.dir
-        return x[sort.key].localeCompare(y[sort.key]) * sort.dir
+          return (Number(x.active) - Number(y.active)) * sort.dir;
+        return x[sort.key].localeCompare(y[sort.key]) * sort.dir;
       })
-    : filtered
+    : filtered;
 
-  const perN = Number(per)
-  const pageCount = Math.max(1, Math.ceil(sorted.length / perN))
-  const p = Math.min(page, pageCount)
-  const rows = sorted.slice((p - 1) * perN, p * perN)
+  const perN = Number(per);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / perN));
+  const p = Math.min(page, pageCount);
+  const rows = sorted.slice((p - 1) * perN, p * perN);
   const range = sorted.length
     ? `${(p - 1) * perN + 1}–${Math.min(sorted.length, p * perN)}`
-    : "0"
+    : "0";
 
   function toggleSort(key: SortKey) {
     setSort((prev) =>
-      prev?.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }
-    )
+      prev?.key === key
+        ? { key, dir: prev.dir === 1 ? -1 : 1 }
+        : { key, dir: 1 }
+    );
   }
 
   function openAdd() {
-    setEditId(null)
-    setFName("")
-    setFA(cols.find((c) => c.key === "a")?.opts?.[0] ?? "")
-    setFB(cols.find((c) => c.key === "b")?.opts?.[0] ?? "")
-    setFActive(true)
-    setErrName(false)
-    setDlgOpen(true)
+    setEditId(null);
+    setFName("");
+    setFA(cols.find((c) => c.key === "a")?.opts?.[0] ?? "");
+    setFB(cols.find((c) => c.key === "b")?.opts?.[0] ?? "");
+    setFActive(true);
+    setErrName(false);
+    setDlgOpen(true);
   }
 
   function openEdit(r: MdEntry) {
-    setEditId(r.id)
-    setFName(r.name)
-    setFA(r.a)
-    setFB(r.b)
-    setFActive(r.active)
-    setErrName(false)
-    setDlgOpen(true)
+    setEditId(r.id);
+    setFName(r.name);
+    setFA(r.a);
+    setFB(r.b);
+    setFActive(r.active);
+    setErrName(false);
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
-    const name = fName.trim()
+    e.preventDefault();
+    const name = fName.trim();
     if (!name) {
-      setErrName(true)
-      return
+      setErrName(true);
+      return;
     }
-    const data = { name, a: fA, b: fB, active: fActive }
+    const data = { name, a: fA, b: fB, active: fActive };
     setMdData((prev) => ({
       ...prev,
       [cat]: editId
         ? prev[cat].map((r) => (r.id === editId ? { ...r, ...data } : r))
         : [...prev[cat], { id: `${cat}-${Date.now()}`, ...data }],
-    }))
-    setDlgOpen(false)
-    pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name)
+    }));
+    setDlgOpen(false);
+    pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
   }
 
   function doDelete() {
-    if (!delTarget) return
+    if (!delTarget) return;
     setMdData((prev) => ({
       ...prev,
       [cat]: prev[cat].filter((r) => r.id !== delTarget.id),
-    }))
-    setDelTarget(null)
-    pushToast("success", t.mdDelToastT, delTarget.name)
+    }));
+    setDelTarget(null);
+    pushToast("success", t.mdDelToastT, delTarget.name);
   }
 
   function fieldValue(key: ColKey) {
-    return key === "name" ? fName : key === "a" ? fA : fB
+    return key === "name" ? fName : key === "a" ? fA : fB;
   }
   function setFieldValue(key: ColKey, v: string) {
-    if (key === "name") setFName(v)
-    else if (key === "a") setFA(v)
-    else setFB(v)
+    if (key === "name") setFName(v);
+    else if (key === "a") setFA(v);
+    else setFB(v);
   }
 
   return (
@@ -238,8 +248,8 @@ export default function MasterDataPage() {
               aria-label={t.mdSearchPh}
               value={q}
               onChange={(e) => {
-                setQ(e.target.value)
-                setPage(1)
+                setQ(e.target.value);
+                setPage(1);
               }}
             />
             <Button onClick={openAdd}>
@@ -254,18 +264,25 @@ export default function MasterDataPage() {
             <TableHeader>
               <tr>
                 {[
-                  ...cols.map((c) => ({ key: c.key as SortKey, label: c.label })),
+                  ...cols.map((c) => ({
+                    key: c.key as SortKey,
+                    label: c.label,
+                  })),
                   { key: "active" as SortKey, label: t.thStatus },
                 ].map((h) => (
                   <TableHead key={h.key}>
                     <button
                       type="button"
                       onClick={() => toggleSort(h.key)}
-                      className="inline-flex cursor-pointer items-center gap-1 text-inherit uppercase [font:inherit] [letter-spacing:inherit]"
+                      className="inline-flex cursor-pointer items-center gap-1 [letter-spacing:inherit] text-inherit uppercase [font:inherit]"
                     >
                       {h.label}
                       <span className="font-mono">
-                        {sort?.key === h.key ? (sort.dir === 1 ? "↑" : "↓") : ""}
+                        {sort?.key === h.key
+                          ? sort.dir === 1
+                            ? "↑"
+                            : "↓"
+                          : ""}
                       </span>
                     </button>
                   </TableHead>
@@ -289,7 +306,9 @@ export default function MasterDataPage() {
                       ) : c.key === "name" ? (
                         <span className="font-semibold">{r.name}</span>
                       ) : (
-                        <span className="text-(--text-secondary)">{r[c.key]}</span>
+                        <span className="text-(--text-secondary)">
+                          {r[c.key]}
+                        </span>
                       )}
                     </TableCell>
                   ))}
@@ -306,7 +325,10 @@ export default function MasterDataPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <IconButton aria-label={t.mdEditT} onClick={() => openEdit(r)}>
+                      <IconButton
+                        aria-label={t.mdEditT}
+                        onClick={() => openEdit(r)}
+                      >
                         <Pencil />
                       </IconButton>
                       <IconButton
@@ -332,8 +354,8 @@ export default function MasterDataPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{sorted.length}</b> {t.mdSumB} —{" "}
-            {catLabel}
+            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{sorted.length}</b>{" "}
+            {t.mdSumB} — {catLabel}
           </FootSum>
           <Pagination
             page={p}
@@ -342,15 +364,19 @@ export default function MasterDataPage() {
             per={per}
             perOptions={["10", "25", "50"]}
             onPer={(v) => {
-              setPer(v)
-              setPage(1)
+              setPer(v);
+              setPage(1);
             }}
           />
         </PanelFoot>
       </Panel>
 
       {/* Dialog tambah/edit entri */}
-      <Dialog open={dlgOpen} onClose={() => setDlgOpen(false)} labelledBy="md-t">
+      <Dialog
+        open={dlgOpen}
+        onClose={() => setDlgOpen(false)}
+        labelledBy="md-t"
+      >
         <DialogIcon variant="info">
           <Rows3 />
         </DialogIcon>
@@ -405,16 +431,26 @@ export default function MasterDataPage() {
             {t.stAktif}
           </ToggleRow>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
-            <Button type="submit">{editId ? t.udbSaveEdit : t.mdSaveAdd}</Button>
+            <Button type="submit">
+              {editId ? t.udbSaveEdit : t.mdSaveAdd}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
 
       {/* Dialog hapus entri */}
-      <Dialog open={!!delTarget} onClose={() => setDelTarget(null)} labelledBy="mdd-t">
+      <Dialog
+        open={!!delTarget}
+        onClose={() => setDelTarget(null)}
+        labelledBy="mdd-t"
+      >
         <DialogIcon variant="danger">
           <Trash2 />
         </DialogIcon>
@@ -432,5 +468,5 @@ export default function MasterDataPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

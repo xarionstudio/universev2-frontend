@@ -1,37 +1,50 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, Upload, Download, Pencil, Trash2, Lock } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import type { Dict } from "@/lib/i18n/id"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import { umModules, type UmModule, type UmPerm, type UmRole } from "@/lib/data/users"
-import { downloadCsv } from "../users/_lib/csv"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, ToolbarGroup } from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { SearchInput } from "@/components/ui/search-input"
-import { Select } from "@/components/ui/select"
-import { Segmented, SegmentedButton } from "@/components/ui/segmented"
+import * as React from "react";
+import { Download, Lock, Pencil, Plus, Trash2, Upload } from "lucide-react";
+
 import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table"
+  umModules,
+  type UmModule,
+  type UmPerm,
+  type UmRole,
+} from "@/lib/data/users";
+import { useI18n } from "@/lib/i18n";
+import type { Dict } from "@/lib/i18n/id";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Field, FormGrid } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  PageTitle,
+  Panel,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
+import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
+
+import { downloadCsv } from "../users/_lib/csv";
 
 /* Label modul RBAC = label menu di sidebar */
 const MODULE_LABEL_KEYS: Record<UmModule, keyof Dict> = {
@@ -44,115 +57,121 @@ const MODULE_LABEL_KEYS: Record<UmModule, keyof Dict> = {
   master: "navMaster",
   users: "navUsers",
   settings: "navSettings",
-}
+};
 
 const emptyPerms = () =>
-  Object.fromEntries(umModules.map((m) => [m, "none"])) as Record<UmModule, UmPerm>
+  Object.fromEntries(umModules.map((m) => [m, "none"])) as Record<
+    UmModule,
+    UmPerm
+  >;
 
 export default function RolesPage() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { umRoles, setUmRoles, umUsers } = useAppStore()
-  const impRef = React.useRef<HTMLInputElement>(null)
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { umRoles, setUmRoles, umUsers } = useAppStore();
+  const impRef = React.useRef<HTMLInputElement>(null);
 
-  const [q, setQ] = React.useState("")
-  const [rbacSel, setRbacSel] = React.useState("r2")
+  const [q, setQ] = React.useState("");
+  const [rbacSel, setRbacSel] = React.useState("r2");
 
   /* dialog tambah/edit role */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editing, setEditing] = React.useState<UmRole | null>(null)
-  const [fName, setFName] = React.useState("")
-  const [fDesc, setFDesc] = React.useState("")
-  const [fPerms, setFPerms] = React.useState<Record<UmModule, UmPerm>>(emptyPerms)
-  const [nameErr, setNameErr] = React.useState(false)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<UmRole | null>(null);
+  const [fName, setFName] = React.useState("");
+  const [fDesc, setFDesc] = React.useState("");
+  const [fPerms, setFPerms] =
+    React.useState<Record<UmModule, UmPerm>>(emptyPerms);
+  const [nameErr, setNameErr] = React.useState(false);
 
   /* dialog hapus role */
-  const [delTarget, setDelTarget] = React.useState<UmRole | null>(null)
+  const [delTarget, setDelTarget] = React.useState<UmRole | null>(null);
 
   const userCount = (roleId: string) =>
-    umUsers.filter((u) => u.roles.includes(roleId)).length
+    umUsers.filter((u) => u.roles.includes(roleId)).length;
 
   const rows = umRoles.filter(
     (r) =>
       !q ||
       r.name.toLowerCase().includes(q.toLowerCase()) ||
       r.desc.toLowerCase().includes(q.toLowerCase())
-  )
-  const rbacRole = umRoles.find((r) => r.id === rbacSel) ?? umRoles[0]
-  const locked = !!editing?.locked
+  );
+  const rbacRole = umRoles.find((r) => r.id === rbacSel) ?? umRoles[0];
+  const locked = !!editing?.locked;
 
   const permStr = (r: UmRole) => {
-    const vals = Object.values(r.perms)
-    const m = vals.filter((p) => p === "manage").length
-    const v = vals.filter((p) => p === "view").length
-    return `${m} ${t.umPManage.toLowerCase()} · ${v} ${t.umPView.toLowerCase()}`
-  }
+    const vals = Object.values(r.perms);
+    const m = vals.filter((p) => p === "manage").length;
+    const v = vals.filter((p) => p === "view").length;
+    return `${m} ${t.umPManage.toLowerCase()} · ${v} ${t.umPView.toLowerCase()}`;
+  };
 
   function openAdd() {
-    setEditing(null)
-    setFName("")
-    setFDesc("")
-    setFPerms(emptyPerms())
-    setNameErr(false)
-    setDlgOpen(true)
+    setEditing(null);
+    setFName("");
+    setFDesc("");
+    setFPerms(emptyPerms());
+    setNameErr(false);
+    setDlgOpen(true);
   }
 
   function openEdit(r: UmRole) {
-    setEditing(r)
-    setFName(r.name)
-    setFDesc(r.desc)
-    setFPerms({ ...r.perms })
-    setNameErr(false)
-    setDlgOpen(true)
+    setEditing(r);
+    setFName(r.name);
+    setFDesc(r.desc);
+    setFPerms({ ...r.perms });
+    setNameErr(false);
+    setDlgOpen(true);
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!fName.trim()) {
-      setNameErr(true)
-      return
+      setNameErr(true);
+      return;
     }
-    const data = { name: fName.trim(), desc: fDesc.trim(), perms: fPerms }
+    const data = { name: fName.trim(), desc: fDesc.trim(), perms: fPerms };
     if (editing) {
       setUmRoles((prev) =>
         prev.map((r) => (r.id === editing.id ? { ...r, ...data } : r))
-      )
-      pushToast("success", t.umToastRoleEdit, data.name)
+      );
+      pushToast("success", t.umToastRoleEdit, data.name);
     } else {
       setUmRoles((prev) => [
         ...prev,
         { id: `r${prev.length + 1}`, locked: false, ...data },
-      ])
-      pushToast("success", t.umToastRoleAdd, data.name)
+      ]);
+      pushToast("success", t.umToastRoleAdd, data.name);
     }
-    setDlgOpen(false)
+    setDlgOpen(false);
   }
 
   function delDo() {
-    if (!delTarget) return
-    setUmRoles((prev) => prev.filter((r) => r.id !== delTarget.id))
-    pushToast("success", t.umToastRoleDel, delTarget.name)
-    setDelTarget(null)
+    if (!delTarget) return;
+    setUmRoles((prev) => prev.filter((r) => r.id !== delTarget.id));
+    pushToast("success", t.umToastRoleDel, delTarget.name);
+    setDelTarget(null);
   }
 
   function exportCsv() {
-    const head = ["role", "deskripsi", ...umModules].join(";")
+    const head = ["role", "deskripsi", ...umModules].join(";");
     const body = umRoles
-      .map((r) => [r.name, r.desc, ...umModules.map((m) => r.perms[m])].join(";"))
-      .join("\n")
-    const name = `roles_${new Date().toISOString().slice(0, 10)}.csv`
-    downloadCsv(name, `${head}\n${body}`)
-    pushToast("success", t.umToastExp, name)
+      .map((r) =>
+        [r.name, r.desc, ...umModules.map((m) => r.perms[m])].join(";")
+      )
+      .join("\n");
+    const name = `roles_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCsv(name, `${head}\n${body}`);
+    pushToast("success", t.umToastExp, name);
   }
 
   function importChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    pushToast("success", t.umToastImp, `${file.name} — 1 ${t.umToastImpD}`)
-    e.target.value = ""
+    const file = e.target.files?.[0];
+    if (!file) return;
+    pushToast("success", t.umToastImp, `${file.name} — 1 ${t.umToastImpD}`);
+    e.target.value = "";
   }
 
-  const delUsed = delTarget ? userCount(delTarget.id) : 0
+  const delUsed = delTarget ? userCount(delTarget.id) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -176,7 +195,10 @@ export default function RolesPage() {
               />
             </ToolbarGroup>
             <ToolbarGroup>
-              <Button variant="secondary" onClick={() => impRef.current?.click()}>
+              <Button
+                variant="secondary"
+                onClick={() => impRef.current?.click()}
+              >
                 <Upload />
                 Import
               </Button>
@@ -216,7 +238,10 @@ export default function RolesPage() {
                   <TableCell className="font-mono">{userCount(r.id)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <IconButton aria-label={t.udbEditT} onClick={() => openEdit(r)}>
+                      <IconButton
+                        aria-label={t.udbEditT}
+                        onClick={() => openEdit(r)}
+                      >
                         <Pencil />
                       </IconButton>
                       {!r.locked ? (
@@ -255,14 +280,16 @@ export default function RolesPage() {
           </Toolbar>
           <div className="flex flex-col gap-2">
             {umModules.map((m) => {
-              const perm = rbacRole.perms[m]
+              const perm = rbacRole.perms[m];
               return (
                 <div
                   key={m}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
-                    perm === "manage" && "bg-[rgba(0,212,255,.10)] text-(--text-primary)",
-                    perm === "view" && "bg-(--fill-subtle) text-(--text-secondary)",
+                    perm === "manage" &&
+                      "bg-[rgba(0,212,255,.10)] text-(--text-primary)",
+                    perm === "view" &&
+                      "bg-(--fill-subtle) text-(--text-secondary)",
                     perm === "none" && "text-(--text-disabled)"
                   )}
                 >
@@ -278,7 +305,7 @@ export default function RolesPage() {
                         : t.umPNone}
                   </Badge>
                 </div>
-              )
+              );
             })}
           </div>
           <p className="mt-4 text-xs leading-normal text-(--text-secondary)">
@@ -316,8 +343,8 @@ export default function RolesPage() {
                 disabled={locked}
                 value={fName}
                 onChange={(e) => {
-                  setFName(e.target.value)
-                  if (e.target.value.trim()) setNameErr(false)
+                  setFName(e.target.value);
+                  if (e.target.value.trim()) setNameErr(false);
                 }}
               />
             </Field>
@@ -332,7 +359,9 @@ export default function RolesPage() {
           <div className="mt-5">
             <div className="mb-3 flex items-center justify-between">
               <label className="text-sm font-medium">{t.umMatrixT}</label>
-              <span className="text-xs text-(--text-tertiary)">{t.umMatrixHint}</span>
+              <span className="text-xs text-(--text-tertiary)">
+                {t.umMatrixHint}
+              </span>
             </div>
             <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
               {umModules.map((m) => (
@@ -357,7 +386,9 @@ export default function RolesPage() {
                         active={fPerms[m] === p}
                         disabled={locked}
                         className="px-2.5 py-1 text-xs disabled:cursor-not-allowed"
-                        onClick={() => setFPerms((prev) => ({ ...prev, [m]: p }))}
+                        onClick={() =>
+                          setFPerms((prev) => ({ ...prev, [m]: p }))
+                        }
                       >
                         {label}
                       </SegmentedButton>
@@ -367,11 +398,17 @@ export default function RolesPage() {
               ))}
             </div>
             {locked ? (
-              <p className="mt-3 text-xs text-(--text-tertiary)">{t.umLockedNote}</p>
+              <p className="mt-3 text-xs text-(--text-tertiary)">
+                {t.umLockedNote}
+              </p>
             ) : null}
           </div>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
             {!locked ? (
@@ -394,7 +431,9 @@ export default function RolesPage() {
         </DialogIcon>
         <DialogTitle id="umrd-t">{`${t.umRoleDelT} "${delTarget?.name ?? ""}"?`}</DialogTitle>
         <DialogBody>
-          {delUsed > 0 ? `${t.umRoleDelBlocked} ${delUsed} user.` : t.umRoleDelB}
+          {delUsed > 0
+            ? `${t.umRoleDelBlocked} ${delUsed} user.`
+            : t.umRoleDelB}
         </DialogBody>
         <DialogActions>
           <Button variant="ghost" onClick={() => setDelTarget(null)}>
@@ -408,5 +447,5 @@ export default function RolesPage() {
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }

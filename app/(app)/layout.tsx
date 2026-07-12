@@ -1,26 +1,30 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { ShellProvider } from "@/components/layout/shell-context"
-import { Sidebar } from "@/components/layout/sidebar"
-import { Topbar } from "@/components/layout/topbar"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+
+import { ShellProvider } from "@/components/layout/shell-context";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Topbar } from "@/components/layout/topbar";
 
 /* Shell admin: blob glow + sidebar + topbar + konten */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const [ready, setReady] = React.useState(false)
+  const router = useRouter();
+  const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    let authed = false
-    try {
-      authed = !!localStorage.getItem("universe-auth")
-    } catch {}
-    if (!authed) router.replace("/login")
-    else setReady(true)
-  }, [router])
+    const id = setTimeout(() => {
+      let authed = false;
+      try {
+        authed = !!localStorage.getItem("universe-auth");
+      } catch {}
+      if (!authed) router.replace("/login");
+      else setReady(true);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [router]);
 
-  if (!ready) return null
+  if (!ready) return null;
 
   return (
     <ShellProvider>
@@ -31,10 +35,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col gap-6">
             <Topbar />
-            <div className="flex max-w-360 flex-1 flex-col gap-6">{children}</div>
+            <div className="flex max-w-360 flex-1 flex-col gap-6">
+              {children}
+            </div>
           </div>
         </div>
       </div>
     </ShellProvider>
-  )
+  );
 }

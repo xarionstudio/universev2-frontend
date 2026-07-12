@@ -1,84 +1,110 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Upload } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster"
-import { PageTitle, Panel, Toolbar, ToolbarTitle, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button, Spinner } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Dropzone } from "@/components/ui/dropzone"
-import { Progress } from "@/components/ui/progress"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Download, Upload } from "lucide-react";
+
+import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster";
+import { useI18n } from "@/lib/i18n";
+import { Badge } from "@/components/ui/badge";
+import { Button, Spinner } from "@/components/ui/button";
+import { Dropzone } from "@/components/ui/dropzone";
+import {
+  FootSum,
+  PageTitle,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
-  TableHeader,
-  TableHead,
   TableBody,
-  TableRow,
   TableCell,
-} from "@/components/ui/table"
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-type Stage = "idle" | "progress" | "validating" | "results"
+type Stage = "idle" | "progress" | "validating" | "results";
 
 export default function RosterUploadPage() {
-  const { t, lang } = useI18n()
-  const { pushToast } = useToast()
-  const router = useRouter()
+  const { t, lang } = useI18n();
+  const { pushToast } = useToast();
+  const router = useRouter();
 
-  const [stage, setStage] = React.useState<Stage>("idle")
-  const [pct, setPct] = React.useState(0)
-  const [upName, setUpName] = React.useState("roster_juli_2026.xlsx")
-  const [dragging, setDragging] = React.useState(false)
-  const [importBusy, setImportBusy] = React.useState(false)
+  const [stage, setStage] = React.useState<Stage>("idle");
+  const [pct, setPct] = React.useState(0);
+  const [upName, setUpName] = React.useState("roster_juli_2026.xlsx");
+  const [dragging, setDragging] = React.useState(false);
+  const [importBusy, setImportBusy] = React.useState(false);
 
-  const fileRef = React.useRef<HTMLInputElement>(null)
-  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   React.useEffect(() => {
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [])
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const startUpload = React.useCallback((name?: string) => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    setUpName(name || "roster_juli_2026.xlsx")
-    setStage("progress")
-    setPct(0)
+    if (timerRef.current) clearInterval(timerRef.current);
+    setUpName(name || "roster_juli_2026.xlsx");
+    setStage("progress");
+    setPct(0);
     timerRef.current = setInterval(() => {
       setPct((prev) => {
-        const p = prev + 12 + Math.random() * 10
+        const p = prev + 12 + Math.random() * 10;
         if (p >= 100) {
-          if (timerRef.current) clearInterval(timerRef.current)
-          timerRef.current = null
-          setStage("validating")
-          setTimeout(() => setStage("results"), 700)
-          return 100
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = null;
+          setStage("validating");
+          setTimeout(() => setStage("results"), 700);
+          return 100;
         }
-        return p
-      })
-    }, 150)
-  }, [])
+        return p;
+      });
+    }, 150);
+  }, []);
 
   function doImport() {
-    setImportBusy(true)
+    setImportBusy(true);
     setTimeout(() => {
-      setImportBusy(false)
-      pushToast("success", t.toastImportT, t.toastImportD)
-    }, 1200)
+      setImportBusy(false);
+      pushToast("success", t.toastImportT, t.toastImportD);
+    }, 1200);
   }
 
-  const preview = React.useMemo(() => upPreviewData(), [])
-  const errors = upErrorRows(lang)
-  const legendGroups = legendGroupsFor(lang)
+  const preview = React.useMemo(() => upPreviewData(), []);
+  const errors = upErrorRows(lang);
+  const legendGroups = legendGroupsFor(lang);
 
   const vchips = [
-    { n: t.n2140, label: t.vValid, bg: "var(--badge-success-fill)", border: "var(--badge-success-border)", color: "var(--badge-success-text)" },
-    { n: "3", label: t.vDup, bg: "var(--badge-warning-fill)", border: "var(--badge-warning-border)", color: "var(--badge-warning-text)" },
-    { n: "5", label: t.vErr, bg: "var(--badge-danger-fill)", border: "var(--badge-danger-border)", color: "var(--color-danger-text)" },
-  ]
+    {
+      n: t.n2140,
+      label: t.vValid,
+      bg: "var(--badge-success-fill)",
+      border: "var(--badge-success-border)",
+      color: "var(--badge-success-text)",
+    },
+    {
+      n: "3",
+      label: t.vDup,
+      bg: "var(--badge-warning-fill)",
+      border: "var(--badge-warning-border)",
+      color: "var(--badge-warning-text)",
+    },
+    {
+      n: "5",
+      label: t.vErr,
+      bg: "var(--badge-danger-fill)",
+      border: "var(--badge-danger-border)",
+      color: "var(--color-danger-text)",
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,7 +116,9 @@ export default function RosterUploadPage() {
           </Button>
           <Button
             variant="secondary"
-            onClick={() => pushToast("success", t.toastTemplateT, t.toastTemplateD)}
+            onClick={() =>
+              pushToast("success", t.toastTemplateT, t.toastTemplateD)
+            }
           >
             <Download />
             {t.upTemplate}
@@ -115,16 +143,18 @@ export default function RosterUploadPage() {
           accept=".xlsx"
           className="hidden"
           onChange={(e) => {
-            const name = e.target.files?.[0]?.name
-            if (name) startUpload(name)
-            e.target.value = ""
+            const name = e.target.files?.[0]?.name;
+            if (name) startUpload(name);
+            e.target.value = "";
           }}
         />
         {stage === "progress" || stage === "validating" ? (
           <div className="mt-5">
             <div className="mb-2 flex justify-between text-sm">
               <span className="font-semibold">{upName}</span>
-              <span className="font-mono text-(--text-secondary)">{Math.round(pct)}%</span>
+              <span className="font-mono text-(--text-secondary)">
+                {Math.round(pct)}%
+              </span>
             </div>
             <Progress value={pct} />
             <p className="mt-2 text-xs text-(--text-tertiary)">
@@ -141,7 +171,9 @@ export default function RosterUploadPage() {
               <ToolbarTitle>
                 {t.upPrevTitle} — {upName}
               </ToolbarTitle>
-              <span className="text-xs text-(--text-tertiary)">{t.upPrevHint}</span>
+              <span className="text-xs text-(--text-tertiary)">
+                {t.upPrevHint}
+              </span>
             </Toolbar>
             <div className="overflow-x-auto pb-2">
               <Table className="min-w-[1600px]">
@@ -150,7 +182,10 @@ export default function RosterUploadPage() {
                     <TableHead className="w-[110px]">NIK</TableHead>
                     <TableHead className="w-[190px]">{t.thNama}</TableHead>
                     {preview.days.map((d) => (
-                      <TableHead key={d} className="px-1.5 py-3 text-center font-mono">
+                      <TableHead
+                        key={d}
+                        className="px-1.5 py-3 text-center font-mono"
+                      >
                         {d}
                       </TableHead>
                     ))}
@@ -159,8 +194,12 @@ export default function RosterUploadPage() {
                 <TableBody>
                   {preview.rows.map((r) => (
                     <TableRow key={r.nik}>
-                      <TableCell className="font-mono whitespace-nowrap">{r.nik}</TableCell>
-                      <TableCell className="font-semibold whitespace-nowrap">{r.name}</TableCell>
+                      <TableCell className="font-mono whitespace-nowrap">
+                        {r.nik}
+                      </TableCell>
+                      <TableCell className="font-semibold whitespace-nowrap">
+                        {r.name}
+                      </TableCell>
                       {r.codes.map((c, i) => (
                         <TableCell
                           key={i}
@@ -196,7 +235,10 @@ export default function RosterUploadPage() {
                   style={{ background: c.bg, borderColor: c.border }}
                 >
                   <div>
-                    <div className="text-xl font-bold tabular-nums" style={{ color: c.color }}>
+                    <div
+                      className="text-xl font-bold tabular-nums"
+                      style={{ color: c.color }}
+                    >
                       {c.n}
                     </div>
                     <div className="text-xs" style={{ color: c.color }}>
@@ -281,5 +323,5 @@ export default function RosterUploadPage() {
         ))}
       </Panel>
     </div>
-  )
+  );
 }

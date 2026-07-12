@@ -327,23 +327,23 @@ GD5008|GD|GD825A-2|KOMATSU|AS|2025-07-16|system
 LV28|LV|TRITON DC GLS MT|MITSUBISHI|AS|2025-07-16|system
 MH02|MH|K460 6x6 - MH|RENAULT|A|2025-07-16|system
 VC4008|CM|BW220D-5|BOMAG|A|2025-07-16|system
-WT2001|WT|FM260TI|HINO|A|2025-07-16|system`
+WT2001|WT|FM260TI|HINO|A|2025-07-16|system`;
 
 export type UnitDb = {
-  uid: string
-  code: string
-  cls: string
-  egi: string
-  product: string
-  active: boolean
-  standby: boolean
-  breakdown: boolean
-  upd: string
-  by: string
-}
+  uid: string;
+  code: string;
+  cls: string;
+  egi: string;
+  product: string;
+  active: boolean;
+  standby: boolean;
+  breakdown: boolean;
+  upd: string;
+  by: string;
+};
 
 export const unitsDb: UnitDb[] = raw.split("\n").map((s, i) => {
-  const p = s.split("|")
+  const p = s.split("|");
   return {
     uid: `u${i}`,
     code: p[0],
@@ -355,38 +355,56 @@ export const unitsDb: UnitDb[] = raw.split("\n").map((s, i) => {
     breakdown: p[4].includes("B"),
     upd: p[5] || "",
     by: p[6] || "",
-  }
-})
+  };
+});
 
 /* mapping model unit (kolom EGI database) → Type EGI (grup kompetensi, ikut spreadsheet) */
 export function typeOfEgi(egi: string): string {
-  const e = (egi || "").toUpperCase()
-  if (/785|777/.test(e)) return "HD 785 / 777"
-  if (/465|773|TR60/.test(e)) return "HD 465 / 773"
-  if (/SYZ ?440|SYZ ?320/.test(e)) return "SANY SYZ 440"
-  if (/SKT130/.test(e)) return "SKT130"
-  if (/2600/.test(e)) return "PC 2600"
-  if (/2000/.test(e)) return "PC 2000"
-  if (/1250/.test(e)) return "PC 1250"
-  if (/1200/.test(e)) return "PC 1200"
-  if (/6020/.test(e)) return "PC 6020"
-  if (/870/.test(e)) return "PC 870"
-  if (/ZX470|470/.test(e)) return "PC 470"
-  if (/ZX350|350/.test(e)) return "PC 350"
-  if (/ZX200|PC ?200|200-LA/.test(e)) return "PC 200"
-  if (/D375|D9/.test(e)) return "D9-375"
-  if (/D155|D8/.test(e)) return "D8-155"
-  if (/D6|D85SS/.test(e)) return "D6-D85SS"
-  if (/- ?MH/.test(e)) return "MANHAUL"
-  if (/- ?WT|FM260/.test(e)) return "WATER TRUCK"
-  if (/R100E/.test(e)) return "VOLVO"
-  if (/P4[16]0/.test(e)) return "SCANIA P410"
-  return "SPARE"
+  const e = (egi || "").toUpperCase();
+  if (/785|777/.test(e)) return "HD 785 / 777";
+  if (/465|773|TR60/.test(e)) return "HD 465 / 773";
+  if (/SYZ ?440|SYZ ?320/.test(e)) return "SANY SYZ 440";
+  if (/SKT130/.test(e)) return "SKT130";
+  if (/2600/.test(e)) return "PC 2600";
+  if (/2000/.test(e)) return "PC 2000";
+  if (/1250/.test(e)) return "PC 1250";
+  if (/1200/.test(e)) return "PC 1200";
+  if (/6020/.test(e)) return "PC 6020";
+  if (/870/.test(e)) return "PC 870";
+  if (/ZX470|470/.test(e)) return "PC 470";
+  if (/ZX350|350/.test(e)) return "PC 350";
+  if (/ZX200|PC ?200|200-LA/.test(e)) return "PC 200";
+  if (/D375|D9/.test(e)) return "D9-375";
+  if (/D155|D8/.test(e)) return "D8-155";
+  if (/D6|D85SS/.test(e)) return "D6-D85SS";
+  if (/- ?MH/.test(e)) return "MANHAUL";
+  if (/- ?WT|FM260/.test(e)) return "WATER TRUCK";
+  if (/R100E/.test(e)) return "VOLVO";
+  if (/P4[16]0/.test(e)) return "SCANIA P410";
+  return "SPARE";
 }
 
 /* daftar type EGI resmi (dari master type aplikasi lama) */
 export const egiTypes = [
-  "D6-D85SS", "D8-155", "D9-375", "HD 465 / 773", "HD 785 / 777", "MANHAUL",
-  "PC 1200", "PC 1250", "PC 200", "PC 2000", "PC 2600", "PC 350", "PC 470", "PC 6020",
-  "PC 870", "SANY SYZ 440", "SCANIA P410", "SKT130", "SPARE", "VOLVO", "WATER TRUCK",
-]
+  "D6-D85SS",
+  "D8-155",
+  "D9-375",
+  "HD 465 / 773",
+  "HD 785 / 777",
+  "MANHAUL",
+  "PC 1200",
+  "PC 1250",
+  "PC 200",
+  "PC 2000",
+  "PC 2600",
+  "PC 350",
+  "PC 470",
+  "PC 6020",
+  "PC 870",
+  "SANY SYZ 440",
+  "SCANIA P410",
+  "SKT130",
+  "SPARE",
+  "VOLVO",
+  "WATER TRUCK",
+];

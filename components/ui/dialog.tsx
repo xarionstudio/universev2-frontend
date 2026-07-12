@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+
+import { cn } from "@/lib/utils";
 
 /* Dialog G2-overlay: scrim blur + kartu nyaris opaque.
    Tutup lewat klik scrim atau Escape (ditangani provider halaman). */
@@ -12,27 +13,27 @@ function Dialog({
   labelledBy,
   children,
 }: {
-  open: boolean
-  onClose: () => void
-  className?: string
-  labelledBy?: string
-  children: React.ReactNode
+  open: boolean;
+  onClose: () => void;
+  className?: string;
+  labelledBy?: string;
+  children: React.ReactNode;
 }) {
   React.useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
-  }, [open, onClose])
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <div
       role="presentation"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) onClose();
       }}
       className="fixed inset-0 z-100 grid place-items-center bg-(--scrim) p-6 backdrop-blur-[6px]"
     >
@@ -48,7 +49,7 @@ function Dialog({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 /* Ikon dialog 44px — varian info (cyan) / warning / danger */
@@ -57,9 +58,9 @@ function DialogIcon({
   className,
   children,
 }: {
-  variant?: "info" | "warning" | "danger"
-  className?: string
-  children: React.ReactNode
+  variant?: "info" | "warning" | "danger";
+  className?: string;
+  children: React.ReactNode;
 }) {
   const styles = {
     info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.14)] [&_svg]:text-(--color-primary-bright)",
@@ -67,7 +68,7 @@ function DialogIcon({
       "border-(--badge-warning-border) bg-(--badge-warning-fill) [&_svg]:text-(--badge-warning-text)",
     danger:
       "border-(--badge-danger-border) bg-(--badge-danger-fill) [&_svg]:text-(--color-danger-text)",
-  }[variant]
+  }[variant];
   return (
     <div
       className={cn(
@@ -78,7 +79,7 @@ function DialogIcon({
     >
       {children}
     </div>
-  )
+  );
 }
 
 function DialogTitle({ className, ...props }: React.ComponentProps<"h3">) {
@@ -88,7 +89,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<"h3">) {
       className={cn("text-xl leading-snug font-semibold", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DialogBody({ className, ...props }: React.ComponentProps<"p">) {
@@ -101,7 +102,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"p">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function DialogActions({ className, ...props }: React.ComponentProps<"div">) {
@@ -111,7 +112,7 @@ function DialogActions({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("mt-6 flex justify-end gap-2", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Dialog, DialogIcon, DialogTitle, DialogBody, DialogActions }
+export { Dialog, DialogIcon, DialogTitle, DialogBody, DialogActions };

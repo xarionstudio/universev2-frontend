@@ -1,6 +1,7 @@
-import * as React from "react"
-import { CircleAlert } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { CircleAlert } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 /* Field kit kontrol: label (+ tanda wajib), kontrol, helper / pesan error.
    Saat error=true: border kontrol merah, helper diganti pesan error. */
@@ -15,12 +16,12 @@ function Field({
   children,
   ...props
 }: React.ComponentProps<"div"> & {
-  label?: React.ReactNode
-  htmlFor?: string
-  required?: boolean
-  helper?: React.ReactNode
-  error?: boolean
-  errorMessage?: React.ReactNode
+  label?: React.ReactNode;
+  htmlFor?: string;
+  required?: boolean;
+  helper?: React.ReactNode;
+  error?: boolean;
+  errorMessage?: React.ReactNode;
 }) {
   return (
     <div
@@ -37,7 +38,9 @@ function Field({
       {label !== undefined ? (
         <label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
-          {required ? <span className="text-(--color-danger-text)"> *</span> : null}
+          {required ? (
+            <span className="text-(--color-danger-text)"> *</span>
+          ) : null}
         </label>
       ) : null}
       {children}
@@ -50,7 +53,7 @@ function Field({
         <span className="text-xs text-(--text-tertiary)">{helper}</span>
       ) : null}
     </div>
-  )
+  );
 }
 
 /* Grid form 2 kolom — .full untuk bentang penuh via className="col-span-full" */
@@ -58,10 +61,13 @@ function FormGrid({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="form-grid"
-      className={cn("grid grid-cols-2 gap-x-6 gap-y-5 max-md:grid-cols-1", className)}
+      className={cn(
+        "grid grid-cols-2 gap-x-6 gap-y-5 max-md:grid-cols-1",
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
-export { Field, FormGrid }
+export { Field, FormGrid };

@@ -1,19 +1,37 @@
-"use client"
+"use client";
 
-import { Wifi, WifiOff, Fingerprint } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { displayMachines } from "@/lib/data/display-screens"
-import { DisplayShell } from "../_components/display-shell"
-import { DisplayBadge } from "../_components/display-table"
+import { Fingerprint, Wifi, WifiOff } from "lucide-react";
+
+import { displayMachines } from "@/lib/data/display-screens";
+import { cn } from "@/lib/utils";
+
+import { DisplayShell } from "../_components/display-shell";
+import { DisplayBadge } from "../_components/display-table";
 
 export default function DisplayFingerprintPage() {
   return (
     <DisplayShell
       title="Mesin Fingerprint"
       stats={[
-        { icon: <Wifi className="text-(--badge-success-text)" />, iconClass: "bg-(--badge-success-fill) border-(--badge-success-border)", value: "10", label: "Online" },
-        { icon: <WifiOff className="text-(--color-danger-text)" />, iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)", value: "2", label: "Offline" },
-        { icon: <Fingerprint className="text-[#7AE6FF]" />, iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]", value: "1.208", label: "Scan Hari Ini" },
+        {
+          icon: <Wifi className="text-(--badge-success-text)" />,
+          iconClass:
+            "bg-(--badge-success-fill) border-(--badge-success-border)",
+          value: "10",
+          label: "Online",
+        },
+        {
+          icon: <WifiOff className="text-(--color-danger-text)" />,
+          iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
+          value: "2",
+          label: "Offline",
+        },
+        {
+          icon: <Fingerprint className="text-(--color-primary-bright)" />,
+          iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
+          value: "1.208",
+          label: "Scan Hari Ini",
+        },
       ]}
     >
       {/* grid mesin — offline selalu di urutan teratas & menonjol */}
@@ -22,7 +40,7 @@ export default function DisplayFingerprintPage() {
           <div
             key={m.id}
             className={cn(
-              "glass-card flex flex-col gap-3.5 rounded-panel p-7",
+              "flex flex-col gap-3.5 rounded-panel p-7 glass-card",
               !m.online &&
                 "border-[rgba(252,60,59,.55)] shadow-[0_0_28px_rgba(252,60,59,.25),0_20px_80px_rgba(0,0,0,.5)]"
             )}
@@ -71,5 +89,5 @@ export default function DisplayFingerprintPage() {
         ))}
       </div>
     </DisplayShell>
-  )
+  );
 }

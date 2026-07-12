@@ -1,54 +1,55 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { id, type Dict } from "./id"
-import { en } from "./en"
+import * as React from "react";
 
-export type Lang = "id" | "en"
+import { en } from "./en";
+import { id, type Dict } from "./id";
 
-const dicts: Record<Lang, Dict> = { id, en }
+export type Lang = "id" | "en";
+
+const dicts: Record<Lang, Dict> = { id, en };
 
 type I18nContextValue = {
-  lang: Lang
-  t: Dict
-  setLang: (lang: Lang) => void
-}
+  lang: Lang;
+  t: Dict;
+  setLang: (lang: Lang) => void;
+};
 
 const I18nContext = React.createContext<I18nContextValue>({
   lang: "id",
   t: id,
   setLang: () => {},
-})
+});
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = React.useState<Lang>("id")
+  const [lang, setLangState] = React.useState<Lang>("id");
 
   React.useEffect(() => {
     const id = setTimeout(() => {
       try {
-        const saved = localStorage.getItem("universe-lang") as Lang | null
-        if (saved === "en" || saved === "id") setLangState(saved)
+        const saved = localStorage.getItem("universe-lang") as Lang | null;
+        if (saved === "en" || saved === "id") setLangState(saved);
       } catch {}
-    }, 0)
-    return () => clearTimeout(id)
-  }, [])
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   const setLang = React.useCallback((next: Lang) => {
-    setLangState(next)
-    document.documentElement.lang = next
+    setLangState(next);
+    document.documentElement.lang = next;
     try {
-      localStorage.setItem("universe-lang", next)
+      localStorage.setItem("universe-lang", next);
     } catch {}
-  }, [])
+  }, []);
 
   const value = React.useMemo(
     () => ({ lang, t: dicts[lang], setLang }),
     [lang, setLang]
-  )
+  );
 
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {
-  return React.useContext(I18nContext)
+  return React.useContext(I18nContext);
 }

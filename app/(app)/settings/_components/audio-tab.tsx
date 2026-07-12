@@ -1,105 +1,112 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Plus, Pencil, Trash2, Volume2, Music } from "lucide-react"
-import { useI18n } from "@/lib/i18n"
-import { useToast } from "@/components/ui/toast"
-import { useAppStore } from "@/components/providers/app-store"
-import type { Audio, DisplayKind } from "@/lib/data/settings-data"
-import { Panel, Toolbar, ToolbarTitle, PanelFoot, FootSum } from "@/components/ui/panel"
-import { Button, IconButton } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table"
+import * as React from "react";
+import { Music, Pencil, Plus, Trash2, Volume2 } from "lucide-react";
+
+import type { Audio, DisplayKind } from "@/lib/data/settings-data";
+import { useI18n } from "@/lib/i18n";
+import { useAppStore } from "@/components/providers/app-store";
+import { Badge } from "@/components/ui/badge";
+import { Button, IconButton } from "@/components/ui/button";
+import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
+  DialogActions,
+  DialogBody,
   DialogIcon,
   DialogTitle,
-  DialogBody,
-  DialogActions,
-} from "@/components/ui/dialog"
-import { Field, FormGrid } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { Dropzone } from "@/components/ui/dropzone"
-import { Checkbox, ToggleRow } from "@/components/ui/checkbox"
+} from "@/components/ui/dialog";
+import { Dropzone } from "@/components/ui/dropzone";
+import { Field, FormGrid } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  FootSum,
+  Panel,
+  PanelFoot,
+  Toolbar,
+  ToolbarTitle,
+} from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
-const FREQS: Audio["freq"][] = ["sekali", "harian", "perjam", "per30"]
-const DISPLAY_KINDS: DisplayKind[] = ["att", "fleet", "ftw", "finger"]
+const FREQS: Audio["freq"][] = ["sekali", "harian", "perjam", "per30"];
+const DISPLAY_KINDS: DisplayKind[] = ["att", "fleet", "ftw", "finger"];
 
 export function AudioTab() {
-  const { t } = useI18n()
-  const { pushToast } = useToast()
-  const { audios, setAudios } = useAppStore()
+  const { t } = useI18n();
+  const { pushToast } = useToast();
+  const { audios, setAudios } = useAppStore();
 
   const freqLabel: Record<Audio["freq"], string> = {
     sekali: t.auFreqOnce,
     harian: t.auFreqDaily,
     perjam: t.auFreqHourly,
     per30: t.auFreq30,
-  }
+  };
   const dispLabel: Record<DisplayKind, string> = {
     att: t.navDispAtt,
     fleet: t.navDispFleet,
     ftw: "Display Fit To Work",
     finger: "Monitoring Fingerprint",
-  }
+  };
 
   /* dialog tambah/edit */
-  const [dlgOpen, setDlgOpen] = React.useState(false)
-  const [editing, setEditing] = React.useState<Audio | null>(null)
-  const [fTitle, setFTitle] = React.useState("")
-  const [fWhen, setFWhen] = React.useState("06:00")
-  const [fFreq, setFFreq] = React.useState<Audio["freq"]>("sekali")
-  const [fFile, setFFile] = React.useState("")
-  const [fDisplays, setFDisplays] = React.useState<DisplayKind[]>([])
-  const [fActive, setFActive] = React.useState(true)
-  const [titleErr, setTitleErr] = React.useState(false)
-  const [dragging, setDragging] = React.useState(false)
-  const fileRef = React.useRef<HTMLInputElement>(null)
+  const [dlgOpen, setDlgOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Audio | null>(null);
+  const [fTitle, setFTitle] = React.useState("");
+  const [fWhen, setFWhen] = React.useState("06:00");
+  const [fFreq, setFFreq] = React.useState<Audio["freq"]>("sekali");
+  const [fFile, setFFile] = React.useState("");
+  const [fDisplays, setFDisplays] = React.useState<DisplayKind[]>([]);
+  const [fActive, setFActive] = React.useState(true);
+  const [titleErr, setTitleErr] = React.useState(false);
+  const [dragging, setDragging] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   /* dialog hapus */
-  const [delTarget, setDelTarget] = React.useState<Audio | null>(null)
+  const [delTarget, setDelTarget] = React.useState<Audio | null>(null);
 
   function openAdd() {
-    setEditing(null)
-    setFTitle("")
-    setFWhen("06:00")
-    setFFreq("sekali")
-    setFFile("")
-    setFDisplays([])
-    setFActive(true)
-    setTitleErr(false)
-    setDlgOpen(true)
+    setEditing(null);
+    setFTitle("");
+    setFWhen("06:00");
+    setFFreq("sekali");
+    setFFile("");
+    setFDisplays([]);
+    setFActive(true);
+    setTitleErr(false);
+    setDlgOpen(true);
   }
 
   function openEdit(a: Audio) {
-    setEditing(a)
-    setFTitle(a.title)
-    setFWhen(a.when)
-    setFFreq(a.freq)
-    setFFile(a.file)
-    setFDisplays([...a.displays])
-    setFActive(a.active)
-    setTitleErr(false)
-    setDlgOpen(true)
+    setEditing(a);
+    setFTitle(a.title);
+    setFWhen(a.when);
+    setFFreq(a.freq);
+    setFFile(a.file);
+    setFDisplays([...a.displays]);
+    setFActive(a.active);
+    setTitleErr(false);
+    setDlgOpen(true);
   }
 
   function toggleDisplay(k: DisplayKind, on: boolean) {
-    setFDisplays((prev) => (on ? [...prev, k] : prev.filter((d) => d !== k)))
+    setFDisplays((prev) => (on ? [...prev, k] : prev.filter((d) => d !== k)));
   }
 
   function save(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!fTitle.trim()) {
-      setTitleErr(true)
-      return
+      setTitleErr(true);
+      return;
     }
     const data = {
       title: fTitle.trim(),
@@ -108,24 +115,24 @@ export function AudioTab() {
       file: fFile || "audio.mp3",
       displays: fDisplays,
       active: fActive,
-    }
+    };
     if (editing) {
       setAudios((prev) =>
         prev.map((a) => (a.id === editing.id ? { ...a, ...data } : a))
-      )
-      pushToast("success", t.auToastEdit)
+      );
+      pushToast("success", t.auToastEdit);
     } else {
-      setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }])
-      pushToast("success", t.auToastAdd)
+      setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
+      pushToast("success", t.auToastAdd);
     }
-    setDlgOpen(false)
+    setDlgOpen(false);
   }
 
   function delDo() {
-    if (!delTarget) return
-    setAudios((prev) => prev.filter((a) => a.id !== delTarget.id))
-    pushToast("success", t.auToastDel)
-    setDelTarget(null)
+    if (!delTarget) return;
+    setAudios((prev) => prev.filter((a) => a.id !== delTarget.id));
+    pushToast("success", t.auToastDel);
+    setDelTarget(null);
   }
 
   return (
@@ -178,10 +185,17 @@ export function AudioTab() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <IconButton aria-label={t.udbEditT} onClick={() => openEdit(a)}>
+                    <IconButton
+                      aria-label={t.udbEditT}
+                      onClick={() => openEdit(a)}
+                    >
                       <Pencil />
                     </IconButton>
-                    <IconButton danger aria-label={t.empDel} onClick={() => setDelTarget(a)}>
+                    <IconButton
+                      danger
+                      aria-label={t.empDel}
+                      onClick={() => setDelTarget(a)}
+                    >
                       <Trash2 />
                     </IconButton>
                   </div>
@@ -225,8 +239,8 @@ export function AudioTab() {
                 id="au-title"
                 value={fTitle}
                 onChange={(e) => {
-                  setFTitle(e.target.value)
-                  if (e.target.value.trim()) setTitleErr(false)
+                  setFTitle(e.target.value);
+                  if (e.target.value.trim()) setTitleErr(false);
                 }}
               />
             </Field>
@@ -295,10 +309,16 @@ export function AudioTab() {
             {t.stAktif}
           </ToggleRow>
           <DialogActions>
-            <Button type="button" variant="ghost" onClick={() => setDlgOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDlgOpen(false)}
+            >
               {t.btnCancel}
             </Button>
-            <Button type="submit">{editing ? t.udbSaveEdit : t.auSaveAdd}</Button>
+            <Button type="submit">
+              {editing ? t.udbSaveEdit : t.auSaveAdd}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -324,5 +344,5 @@ export function AudioTab() {
         </DialogActions>
       </Dialog>
     </>
-  )
+  );
 }

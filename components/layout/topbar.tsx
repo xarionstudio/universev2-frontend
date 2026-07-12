@@ -1,70 +1,76 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname, useRouter, useParams } from "next/navigation"
+import * as React from "react";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import {
-  Menu,
-  Globe,
-  Moon,
-  Sun,
   Bell,
-  ChevronRight,
   ChevronDown,
-  User,
-  Settings,
+  ChevronRight,
+  Globe,
   LogOut,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useI18n, type Lang } from "@/lib/i18n"
-import { useTheme, type ThemePref } from "@/components/providers/theme-provider"
-import { useAppStore } from "@/components/providers/app-store"
-import { useShell } from "./shell-context"
-import { groupOfPath, activeChild } from "./nav"
-import { Avatar, initialsOf } from "@/components/ui/avatar"
+  Menu,
+  Moon,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react";
+
+import { mdCatLabels, type MdCat } from "@/lib/data/master-data";
+import { useI18n, type Lang } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
 import {
-  DropMenuWrap,
+  useTheme,
+  type ThemePref,
+} from "@/components/providers/theme-provider";
+import { Avatar, initialsOf } from "@/components/ui/avatar";
+import {
   DropMenu,
-  DropMenuRadio,
-  DropMenuItem,
   DropMenuHeading,
-} from "@/components/ui/drop-menu"
-import { mdCatLabels, type MdCat } from "@/lib/data/master-data"
+  DropMenuItem,
+  DropMenuRadio,
+  DropMenuWrap,
+} from "@/components/ui/drop-menu";
+
+import { activeChild, groupOfPath } from "./nav";
+import { useShell } from "./shell-context";
 
 const hbtnClass =
-  "relative inline-flex h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-(--glass-1-border) bg-(--fill-subtle) px-2 text-xs font-bold text-(--text-secondary) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) [&_svg]:size-4"
+  "relative inline-flex h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-(--glass-1-border) bg-(--fill-subtle) px-2 text-xs font-bold text-(--text-secondary) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) [&_svg]:size-4";
 
 export function Topbar() {
-  const pathname = usePathname()
-  const params = useParams()
-  const router = useRouter()
-  const { t, lang, setLang } = useI18n()
-  const { pref, resolved, setTheme } = useTheme()
-  const { userName } = useAppStore()
-  const { setSideOpen } = useShell()
-  const [openDrop, setOpenDrop] = React.useState<string | null>(null)
-  const [notifRead, setNotifRead] = React.useState(false)
+  const pathname = usePathname();
+  const params = useParams();
+  const router = useRouter();
+  const { t, lang, setLang } = useI18n();
+  const { pref, resolved, setTheme } = useTheme();
+  const { userName } = useAppStore();
+  const { setSideOpen } = useShell();
+  const [openDrop, setOpenDrop] = React.useState<string | null>(null);
+  const [notifRead, setNotifRead] = React.useState(false);
 
-  const toggle = (key: string) => setOpenDrop((v) => (v === key ? null : key))
-  const close = () => setOpenDrop(null)
+  const toggle = (key: string) => setOpenDrop((v) => (v === key ? null : key));
+  const close = () => setOpenDrop(null);
 
   /* breadcrumb: parent grup (bila ada) + halaman aktif */
-  const group = groupOfPath(pathname, lang)
-  const child = activeChild(pathname, lang)
+  const group = groupOfPath(pathname, lang);
+  const child = activeChild(pathname, lang);
   let cur: string =
-    (child && (child.labelKey ? t[child.labelKey] : child.label)) || t.navDashboard
-  if (pathname.startsWith("/roster/upload")) cur = t.navR1
-  else if (pathname.startsWith("/roster/revision/new")) cur = t.revNewTitle
-  else if (pathname.startsWith("/fit-to-work/history")) cur = t.ftwHistPage
-  else if (pathname.startsWith("/fit-to-work")) cur = t.navFtw
-  else if (pathname.startsWith("/employees")) cur = t.navEmployees
-  else if (pathname.startsWith("/settings")) cur = t.navSettings
+    (child && (child.labelKey ? t[child.labelKey] : child.label)) ||
+    t.navDashboard;
+  if (pathname.startsWith("/roster/upload")) cur = t.navR1;
+  else if (pathname.startsWith("/roster/revision/new")) cur = t.revNewTitle;
+  else if (pathname.startsWith("/fit-to-work/history")) cur = t.ftwHistPage;
+  else if (pathname.startsWith("/fit-to-work")) cur = t.navFtw;
+  else if (pathname.startsWith("/employees")) cur = t.navEmployees;
+  else if (pathname.startsWith("/settings")) cur = t.navSettings;
   else if (pathname.startsWith("/master/") && params?.cat)
-    cur = mdCatLabels[params.cat as MdCat]?.[lang] ?? cur
+    cur = mdCatLabels[params.cat as MdCat]?.[lang] ?? cur;
 
-  const userShort = userName.trim().split(/\s+/).slice(0, 2).join(" ")
+  const userShort = userName.trim().split(/\s+/).slice(0, 2).join(" ");
 
   return (
-    <header className="glass-panel relative z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6">
+    <header className="relative z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel">
       <button
         onClick={() => setSideOpen(true)}
         aria-label="Buka menu navigasi"
@@ -72,7 +78,10 @@ export function Topbar() {
       >
         <Menu />
       </button>
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 items-center gap-2 text-sm"
+      >
         {group ? (
           <>
             <span className="whitespace-nowrap text-(--text-tertiary)">
@@ -108,8 +117,8 @@ export function Topbar() {
                 key={code}
                 checked={lang === code}
                 onClick={() => {
-                  setLang(code)
-                  close()
+                  setLang(code);
+                  close();
                 }}
               >
                 {label}
@@ -141,8 +150,8 @@ export function Topbar() {
                 key={value}
                 checked={pref === value}
                 onClick={() => {
-                  setTheme(value)
-                  close()
+                  setTheme(value);
+                  close();
                 }}
               >
                 {label}
@@ -191,8 +200,8 @@ export function Topbar() {
             ))}
             <button
               onClick={() => {
-                setNotifRead(true)
-                close()
+                setNotifRead(true);
+                close();
               }}
               className="mt-1 flex h-9 w-full cursor-pointer items-center justify-center rounded-lg text-[13px] font-medium text-(--color-primary-bright) hover:bg-(--fill-hover)"
             >
@@ -214,7 +223,9 @@ export function Topbar() {
               <b className="block text-left text-[13px] leading-tight font-semibold">
                 {userShort}
               </b>
-              <span className="text-[11px] text-(--text-tertiary)">{t.userRole}</span>
+              <span className="text-[11px] text-(--text-tertiary)">
+                {t.userRole}
+              </span>
             </span>
             <ChevronDown className="size-3.5 text-(--text-tertiary) max-md:hidden" />
           </button>
@@ -231,8 +242,8 @@ export function Topbar() {
             </DropMenuItem>
             <DropMenuItem
               onClick={() => {
-                close()
-                router.push("/settings")
+                close();
+                router.push("/settings");
               }}
             >
               <Settings />
@@ -242,9 +253,9 @@ export function Topbar() {
               className="text-(--color-danger-text) hover:bg-(--badge-danger-fill) hover:text-(--color-danger-text)"
               onClick={() => {
                 try {
-                  localStorage.removeItem("universe-auth")
+                  localStorage.removeItem("universe-auth");
                 } catch {}
-                router.push("/login")
+                router.push("/login");
               }}
             >
               <LogOut />
@@ -254,5 +265,5 @@ export function Topbar() {
         </DropMenuWrap>
       </div>
     </header>
-  )
+  );
 }
