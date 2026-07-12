@@ -31,7 +31,6 @@ import { Select } from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
 import { StateBox } from "@/components/ui/state-box";
 import {
-  NameCell,
   Table,
   TableBody,
   TableCell,
@@ -269,6 +268,7 @@ export default function FitToWorkPage() {
               <TableHeader>
                 <tr>
                   <TableHead>{t.thOperator}</TableHead>
+                  <TableHead>NIK</TableHead>
                   <TableHead>{t.thCompany}</TableHead>
                   <TableHead>{t.thDept}</TableHead>
                   <TableHead>{t.thPos}</TableHead>
@@ -286,8 +286,11 @@ export default function FitToWorkPage() {
                   const bad = strip.filter((s) => s === "bad").length;
                   return (
                     <TableRow key={`${r.op.nik}-${r.d}`}>
-                      <TableCell>
-                        <NameCell name={r.op.name} sub={r.op.nik} />
+                      <TableCell className="font-semibold">
+                        {r.op.name}
+                      </TableCell>
+                      <TableCell className="font-mono text-(--text-secondary) tabular-nums">
+                        {r.op.nik}
                       </TableCell>
                       <TableCell>{r.company}</TableCell>
                       <TableCell>{r.op.dept}</TableCell>

@@ -25,7 +25,6 @@ import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
   IOCell,
-  NameCell,
   Table,
   TableBody,
   TableCell,
@@ -188,6 +187,7 @@ function AttendanceInner() {
             <TableHeader>
               <tr>
                 <TableHead>{t.thEmp}</TableHead>
+                <TableHead>NIK</TableHead>
                 <TableHead>{t.lblDate}</TableHead>
                 <TableHead className="max-xl:hidden">{t.thDept}</TableHead>
                 <TableHead>{t.thRoster}</TableHead>
@@ -199,8 +199,9 @@ function AttendanceInner() {
             <TableBody>
               {rows.map((r, i) => (
                 <TableRow key={`${r.nik}-${r.date}-${i}`}>
-                  <TableCell>
-                    <NameCell name={r.name} sub={r.nik} />
+                  <TableCell className="font-semibold">{r.name}</TableCell>
+                  <TableCell className="font-mono text-(--text-secondary) tabular-nums">
+                    {r.nik}
                   </TableCell>
                   <TableCell className="font-mono whitespace-nowrap">
                     {r.dLabel}

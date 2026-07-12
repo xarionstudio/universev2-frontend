@@ -39,7 +39,6 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
-  NameCell,
   Table,
   TableBody,
   TableCell,
@@ -243,6 +242,7 @@ export default function UsersPage() {
               <tr>
                 <TableHead>Email</TableHead>
                 <TableHead className="max-xl:hidden">{t.umLinked}</TableHead>
+                <TableHead className="max-xl:hidden">NIK</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
                 <TableHead className="w-[110px]">{t.thAct}</TableHead>
@@ -259,10 +259,13 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell className="max-xl:hidden">
                     {u.kar ? (
-                      <NameCell name={u.kar} sub={u.nik ?? undefined} />
+                      <span className="font-semibold">{u.kar}</span>
                     ) : (
                       <span className="text-(--text-tertiary)">—</span>
                     )}
+                  </TableCell>
+                  <TableCell className="font-mono text-(--text-secondary) tabular-nums max-xl:hidden">
+                    {u.nik ?? <span className="text-(--text-tertiary)">—</span>}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">

@@ -29,7 +29,6 @@ import {
 import { Segmented, SegmentedButton } from "@/components/ui/segmented";
 import { StateBox } from "@/components/ui/state-box";
 import {
-  NameCell,
   Table,
   TableBody,
   TableCell,
@@ -143,6 +142,7 @@ export default function RosterApprovalPage() {
             <TableHeader>
               <tr>
                 <TableHead>{t.thEmp}</TableHead>
+                <TableHead>NIK</TableHead>
                 <TableHead>{t.thSubmission}</TableHead>
                 <TableHead>{t.thWhen}</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
@@ -152,8 +152,9 @@ export default function RosterApprovalPage() {
             <TableBody>
               {list.map(({ r, i }) => (
                 <TableRow key={i}>
-                  <TableCell>
-                    <NameCell name={r.name} sub={r.nik} />
+                  <TableCell className="font-semibold">{r.name}</TableCell>
+                  <TableCell className="font-mono text-(--text-secondary) tabular-nums">
+                    {r.nik}
                   </TableCell>
                   <TableCell className="max-w-[360px]">
                     {en ? r.whatEn : r.whatId}

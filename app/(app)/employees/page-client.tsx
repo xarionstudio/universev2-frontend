@@ -44,7 +44,6 @@ import {
 import { SearchInput } from "@/components/ui/search-input";
 import { StateBox } from "@/components/ui/state-box";
 import {
-  NameCell,
   Table,
   TableBody,
   TableCell,
@@ -241,7 +240,8 @@ export default function EmployeesPage() {
                     aria-label={t.selAll}
                   />
                 </TableHead>
-                <TableHead>{t.thNameNik}</TableHead>
+                <TableHead>{t.thNama}</TableHead>
+                <TableHead>NIK</TableHead>
                 <TableHead className="max-xl:hidden">{t.thDept}</TableHead>
                 <TableHead>{t.thPos}</TableHead>
                 <TableHead>SIMPER</TableHead>
@@ -264,17 +264,15 @@ export default function EmployeesPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <NameCell
-                        name={
-                          <Link
-                            href={`/employees/${r.nik}`}
-                            className="text-inherit"
-                          >
-                            {r.name}
-                          </Link>
-                        }
-                        sub={r.nik}
-                      />
+                      <Link
+                        href={`/employees/${r.nik}`}
+                        className="font-semibold text-inherit"
+                      >
+                        {r.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-mono text-(--text-secondary) tabular-nums">
+                      {r.nik}
                     </TableCell>
                     <TableCell className="max-xl:hidden">{r.dept}</TableCell>
                     <TableCell>{r.pos}</TableCell>
