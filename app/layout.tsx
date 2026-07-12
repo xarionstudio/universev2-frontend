@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Instrument_Sans, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers/providers"
@@ -15,8 +15,21 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "UNIVERSE",
+  title: {
+    default: "UNIVERSE — Fleet Automation",
+    template: "%s · UNIVERSE",
+  },
   description: "Unggul Network for Integrated Vehicle Resource Smart Ecosystem",
+  applicationName: "UNIVERSE",
+  // aplikasi internal — jangan diindeks mesin pencari
+  robots: { index: false, follow: false },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#EAF3FF" },
+    { media: "(prefers-color-scheme: dark)", color: "#010416" },
+  ],
 }
 
 // Resolver tema (System|Terang|Gelap) — dijalankan sebelum paint agar tidak flash

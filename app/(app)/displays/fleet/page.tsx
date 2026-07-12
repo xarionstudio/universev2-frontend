@@ -1,7 +1,11 @@
-"use client"
+import type { Metadata } from "next"
+import PageClient from "./page-client"
 
-import { DisplayAdmin } from "../_components/display-admin"
+export const metadata: Metadata = {
+  title: "Pengelolaan Display Fleet",
+  description: "Pengelolaan TV kiosk status unit — konten, running text, dan status per display.",
+}
 
-export default function DisplayFleetPage() {
-  return <DisplayAdmin kind="fleet" />
+export default function Page() {
+  return <PageClient />
 }

@@ -1,13 +1,18 @@
-"use client"
+import type { Metadata } from "next"
+import { employees } from "@/lib/data/employees"
+import PageClient from "./page-client"
 
-import * as React from "react"
-import { EmployeeForm } from "../../_components/employee-form"
+type Props = { params: Promise<{ nik: string }> }
 
-export default function EmployeeEditPage({
-  params,
-}: {
-  params: Promise<{ nik: string }>
-}) {
-  const { nik } = React.use(params)
-  return <EmployeeForm nik={nik} />
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { nik } = await params
+  const emp = employees.find((e) => e.nik === nik)
+  return {
+    title: emp ? `Edit Karyawan — ${emp.name}` : "Edit Karyawan",
+    description: "Perbarui data kepegawaian, kompetensi SIMPER, medis, dan mess karyawan.",
+  }
+}
+
+export default function Page(props: Props) {
+  return <PageClient {...props} />
 }

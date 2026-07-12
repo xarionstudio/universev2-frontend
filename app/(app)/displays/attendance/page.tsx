@@ -1,7 +1,11 @@
-"use client"
+import type { Metadata } from "next"
+import PageClient from "./page-client"
 
-import { DisplayAdmin } from "../_components/display-admin"
+export const metadata: Metadata = {
+  title: "Pengelolaan Display Attendance",
+  description: "Pengelolaan TV kiosk attendance, fit to work, dan fingerprint — konten, running text, dan status per display.",
+}
 
-export default function DisplayAttendancePage() {
-  return <DisplayAdmin kind="att" />
+export default function Page() {
+  return <PageClient />
 }
