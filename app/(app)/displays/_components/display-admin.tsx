@@ -5,7 +5,7 @@ import { Monitor, Plus, Eye, Pencil, Trash2 } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { useToast } from "@/components/ui/toast"
 import { useAppStore } from "@/components/providers/app-store"
-import { useKiosk } from "@/components/providers/kiosk-provider"
+import { openDisplay } from "@/lib/open-display"
 import type { Display, DisplayKind } from "@/lib/data/settings-data"
 import {
   PageTitle,
@@ -55,12 +55,12 @@ const CONTENT_OPTS: Record<"att" | "fleet", { key: DisplayKind; label: string }[
   fleet: [{ key: "fleet", label: "Status Unit" }],
 }
 
-/* layar kiosk sungguhan (route dark-only 1920×1080) — ditampilkan fullscreen via iframe */
-const KIOSK_URLS: Record<DisplayKind, string> = {
-  att: "/kiosk/attendance",
-  fleet: "/kiosk/fleet",
-  ftw: "/kiosk/fitwork",
-  finger: "/kiosk/fingerprint",
+/* layar display sungguhan (route dark-only 1920×1080) — dibuka di tab baru, fullscreen */
+const DISPLAY_URLS: Record<DisplayKind, string> = {
+  att: "/display/attendance",
+  fleet: "/display/fleet",
+  ftw: "/display/fitwork",
+  finger: "/display/fingerprint",
 }
 
 export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
@@ -86,9 +86,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   /* dialog hapus */
   const [delTarget, setDelTarget] = React.useState<Display | null>(null)
 
-  /* layar kiosk fullscreen — overlay global (Esc menutup) */
-  const { openKiosk } = useKiosk()
-  const pageKioskUrl = KIOSK_URLS[kind]
+  const pageDisplayUrl = DISPLAY_URLS[kind]
 
   function openAdd() {
     setEditing(null)
@@ -152,9 +150,9 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
         title={kind === "att" ? t.navDispAtt : t.navDispFleet}
         sub={kind === "att" ? t.dspSubAtt : t.dspSubFleet}
       >
-        <Button onClick={() => openKiosk(pageKioskUrl)}>
+        <Button onClick={() => openDisplay(pageDisplayUrl)}>
           <Monitor />
-          {t.dspOpenKiosk}
+          {t.dspOpen}
         </Button>
       </PageTitle>
 
@@ -208,7 +206,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                   <div className="flex gap-2">
                     <IconButton
                       aria-label={t.dspPreview}
-                      onClick={() => openKiosk(KIOSK_URLS[d.content])}
+                      onClick={() => openDisplay(DISPLAY_URLS[d.content])}
                     >
                       <Eye />
                     </IconButton>

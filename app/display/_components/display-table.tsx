@@ -2,19 +2,19 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import type { KioskTone } from "@/lib/data/kiosk"
+import type { DisplayTone } from "@/lib/data/display-screens"
 
 /* Panel tabel kiosk (G1) — header pinned, isi auto-scroll (baris diduplikasi
    untuk loop mulus; durasi 4 dtk per baris). Font 28px untuk jarak ±6 m. */
 
-export function KioskBadge({
+export function DisplayBadge({
   tone,
   children,
 }: {
-  tone: KioskTone
+  tone: DisplayTone
   children: React.ReactNode
 }) {
-  const styles: Record<KioskTone, string> = {
+  const styles: Record<DisplayTone, string> = {
     success: "text-(--badge-success-text) bg-(--badge-success-fill) border-(--badge-success-border)",
     warning: "text-(--badge-warning-text) bg-(--badge-warning-fill) border-(--badge-warning-border)",
     danger: "text-(--badge-danger-text) bg-(--badge-danger-fill) border-(--badge-danger-border)",
@@ -34,16 +34,16 @@ export function KioskBadge({
   )
 }
 
-export type KioskCol = { label: string; width?: string }
+export type DisplayCol = { label: string; width?: string }
 
 const thClass =
   "bg-[linear-gradient(90deg,rgba(37,99,235,.4),rgba(0,84,199,.3))] px-6 py-4.5 text-left text-[22px] font-semibold tracking-[.05em] whitespace-nowrap uppercase first:rounded-l-[14px] last:rounded-r-[14px]"
 
-export function KioskTable({
+export function DisplayTable({
   cols,
   rows,
 }: {
-  cols: KioskCol[]
+  cols: DisplayCol[]
   rows: { key: string; danger?: boolean; cells: React.ReactNode[] }[]
 }) {
   const renderBody = () =>
@@ -82,7 +82,7 @@ export function KioskTable({
       </table>
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div
-          className="kiosk-scroller [animation:kscroll_var(--kscroll-dur,30s)_linear_infinite]"
+          className="display-scroller [animation:kscroll_var(--kscroll-dur,30s)_linear_infinite]"
           style={{ "--kscroll-dur": `${rows.length * 4}s` } as React.CSSProperties}
         >
           <table className="w-full border-collapse text-[28px]">
@@ -97,7 +97,7 @@ export function KioskTable({
 }
 
 /* Sel dua baris: teks utama + sub kecil (nik / mesin) */
-export function KioskNameCell({
+export function DisplayNameCell({
   main,
   sub,
   mono,

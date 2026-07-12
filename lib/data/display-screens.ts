@@ -1,19 +1,19 @@
-/* Data layar kiosk — dipindah dari HTML statis desain; kiosk tampil id-only. */
+/* Data layar display (TV) — dipindah dari HTML statis desain; display tampil id-only. */
 
-export type KioskTone = "success" | "warning" | "danger" | "neutral" | "info"
+export type DisplayTone = "success" | "warning" | "danger" | "neutral" | "info"
 
 /* Attendance — [nama, nik, dept, checkIn, mesin, tone, label] */
-export type KioskAttRow = {
+export type DisplayAttRow = {
   name: string
   nik: string
   dept: string
   checkIn: string
   machine: string
-  tone: KioskTone
+  tone: DisplayTone
   label: string
 }
 
-export const kioskAttRows: KioskAttRow[] = [
+export const displayAttRows: DisplayAttRow[] = [
   { name: "First Angel Paustine", nik: "503264133", dept: "Operation", checkIn: "05:45", machine: "Gate utara", tone: "success", label: "Fit" },
   { name: "Siti Nurhaliza", nik: "503264136", dept: "Operation", checkIn: "05:51", machine: "Gate selatan", tone: "success", label: "Fit" },
   { name: "Dewi Lestari", nik: "503264138", dept: "SDI", checkIn: "06:58", machine: "Kantor", tone: "success", label: "Fit" },
@@ -27,16 +27,16 @@ export const kioskAttRows: KioskAttRow[] = [
 ]
 
 /* Fleet — breakdown selalu di urutan teratas */
-export type KioskFleetRow = {
+export type DisplayFleetRow = {
   code: string
   type: string
   operator: string
   loc: string
-  tone: KioskTone
+  tone: DisplayTone
   label: string
 }
 
-export const kioskFleetRows: KioskFleetRow[] = [
+export const displayFleetRows: DisplayFleetRow[] = [
   { code: "RD5004", type: "777E · CATERPILLAR", operator: "—", loc: "Panel East - Atas Selatan", tone: "danger", label: "Breakdown" },
   { code: "RD5047", type: "777E · CATERPILLAR", operator: "—", loc: "Panel East - Atas Selatan", tone: "danger", label: "Breakdown" },
   { code: "RD5080", type: "HD785-7 · KOMATSU", operator: "—", loc: "Kasturi Tengah", tone: "danger", label: "Breakdown" },
@@ -50,17 +50,17 @@ export const kioskFleetRows: KioskFleetRow[] = [
 ]
 
 /* Fit to work — kurang tidur & belum lapor selalu teratas */
-export type KioskFtwRow = {
+export type DisplayFtwRow = {
   name: string
   nik: string
   dept: string
   shift: string
   sleep: string
-  tone: KioskTone
+  tone: DisplayTone
   label: string
 }
 
-export const kioskFtwRows: KioskFtwRow[] = [
+export const displayFtwRows: DisplayFtwRow[] = [
   { name: "Budi Santoso", nik: "503264135", dept: "HRGA", shift: "D1", sleep: "3 j 40 m", tone: "danger", label: "Kurang tidur" },
   { name: "Agus Salim", nik: "503264141", dept: "Plant", shift: "D1", sleep: "3 j 55 m", tone: "danger", label: "Kurang tidur" },
   { name: "Joko Widodo S.", nik: "503264139", dept: "Operation", shift: "D1", sleep: "—", tone: "warning", label: "Belum lapor" },
@@ -74,14 +74,14 @@ export const kioskFtwRows: KioskFtwRow[] = [
 ]
 
 /* Fingerprint — mesin offline selalu diurutkan teratas */
-export type KioskMachine = {
+export type DisplayMachine = {
   id: string
   loc: string
   online: boolean
   meta: string
 }
 
-export const kioskMachines: KioskMachine[] = [
+export const displayMachines: DisplayMachine[] = [
   { id: "FP-07", loc: "Gate selatan", online: false, meta: "terakhir aktif 04:52" },
   { id: "FP-11", loc: "Mess Karang Joang", online: false, meta: "terakhir aktif kemarin 21:14" },
   { id: "FP-01", loc: "Kantor SDI", online: true, meta: "312 scan" },

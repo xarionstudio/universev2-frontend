@@ -1,13 +1,13 @@
 "use client"
 
 import { CheckCircle2, AlertTriangle, Clock } from "lucide-react"
-import { kioskFleetRows } from "@/lib/data/kiosk"
-import { KioskShell } from "../_components/kiosk-shell"
-import { KioskTable, KioskBadge } from "../_components/kiosk-table"
+import { displayFleetRows } from "@/lib/data/display-screens"
+import { DisplayShell } from "../_components/display-shell"
+import { DisplayTable, DisplayBadge } from "../_components/display-table"
 
-export default function KioskFleetPage() {
+export default function DisplayFleetPage() {
   return (
-    <KioskShell
+    <DisplayShell
       title="Fleet — Status Unit"
       stats={[
         { icon: <CheckCircle2 className="text-(--badge-success-text)" />, iconClass: "bg-(--badge-success-fill) border-(--badge-success-border)", value: "46", label: "Ready" },
@@ -15,7 +15,7 @@ export default function KioskFleetPage() {
         { icon: <Clock className="text-(--badge-neutral-text)" />, iconClass: "bg-(--badge-neutral-fill) border-(--badge-neutral-border)", value: "3", label: "Standby" },
       ]}
     >
-      <KioskTable
+      <DisplayTable
         cols={[
           { label: "Unit", width: "16%" },
           { label: "Tipe", width: "24%" },
@@ -23,7 +23,7 @@ export default function KioskFleetPage() {
           { label: "Lokasi", width: "16%" },
           { label: "Status" },
         ]}
-        rows={kioskFleetRows.map((r) => ({
+        rows={displayFleetRows.map((r) => ({
           key: r.code,
           danger: r.tone === "danger",
           cells: [
@@ -33,12 +33,12 @@ export default function KioskFleetPage() {
             r.type,
             r.operator,
             r.loc,
-            <KioskBadge key="s" tone={r.tone}>
+            <DisplayBadge key="s" tone={r.tone}>
               {r.label}
-            </KioskBadge>,
+            </DisplayBadge>,
           ],
         }))}
       />
-    </KioskShell>
+    </DisplayShell>
   )
 }

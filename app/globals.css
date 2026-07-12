@@ -258,7 +258,7 @@
   }
 }
 
-/* ===== Layar kiosk (dark-only, TV 16:9) ===== */
+/* ===== Layar display (dark-only, TV 16:9) ===== */
 /* pixel-shift anti burn-in: seluruh stage bergeser 0→8px mengikuti siklus 8 menit */
 @keyframes pxshift {
   0% {
@@ -277,7 +277,7 @@
     transform: translate(0, 0);
   }
 }
-/* auto-scroll tabel kiosk: isi diduplikasi, header tetap pinned */
+/* auto-scroll tabel display: isi diduplikasi, header tetap pinned */
 @keyframes kscroll {
   from {
     transform: translateY(0);
@@ -292,13 +292,13 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kiosk-stage {
+  .display-stage {
     animation: none !important;
   }
-  .kiosk-scroller {
+  .display-scroller {
     animation-duration: 120s !important;
   }
-  .kiosk-offline-dot {
+  .display-offline-dot {
     animation: none !important;
   }
 }

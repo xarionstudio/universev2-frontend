@@ -215,7 +215,7 @@ export const id = {
   "mdDelToastT": "Entri dihapus",
   "dspSubAtt": "Pengelolaan TV kiosk attendance, fit to work, dan fingerprint — konten, running text, dan status per display.",
   "dspSubFleet": "Pengelolaan TV kiosk status unit — konten, running text, dan status per display.",
-  "dspOpenKiosk": "Buka layar kiosk",
+  "dspOpen": "Buka Display",
   "dspCloseKiosk": "Tutup kiosk",
   "dspPreview": "Pratinjau kiosk",
   "dspListTitle": "Display terdaftar",

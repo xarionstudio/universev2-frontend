@@ -15,20 +15,20 @@ function fmt(d: Date) {
   return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`
 }
 
-export type KioskStat = {
+export type DisplayStat = {
   icon: React.ReactNode
   iconClass: string
   value: string
   label: string
 }
 
-export function KioskShell({
+export function DisplayShell({
   title,
   stats,
   children,
 }: {
   title: string
-  stats: KioskStat[]
+  stats: DisplayStat[]
   children: React.ReactNode
 }) {
   const canvasRef = React.useRef<HTMLDivElement>(null)
@@ -50,6 +50,30 @@ export function KioskShell({
     rescale()
     window.addEventListener("resize", rescale)
     return () => window.removeEventListener("resize", rescale)
+  }, [])
+
+  /* selalu fullscreen: coba saat dibuka; bila browser menolak (butuh gestur),
+     interaksi pertama di layar memicunya */
+  React.useEffect(() => {
+    const goFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {})
+      }
+    }
+    goFullscreen()
+    const onFirstInput = () => {
+      goFullscreen()
+      if (document.fullscreenElement) {
+        document.removeEventListener("pointerdown", onFirstInput)
+        document.removeEventListener("keydown", onFirstInput)
+      }
+    }
+    document.addEventListener("pointerdown", onFirstInput)
+    document.addEventListener("keydown", onFirstInput)
+    return () => {
+      document.removeEventListener("pointerdown", onFirstInput)
+      document.removeEventListener("keydown", onFirstInput)
+    }
   }, [])
 
   /* jam nyata + kesegaran data (refresh tiap 30 dtk saat online) */
@@ -89,7 +113,7 @@ export function KioskShell({
         <div className="pointer-events-none absolute -top-50 -right-35 z-0 size-160 rounded-full bg-(--blob-cyan) blur-[140px]" />
         <div className="pointer-events-none absolute -bottom-55 -left-30 z-0 size-140 rounded-full bg-(--blob-blue) blur-[140px]" />
 
-        <div className="kiosk-stage relative z-1 flex h-[1080px] flex-col gap-8 px-14 py-12 [animation:pxshift_480s_steps(1)_infinite]">
+        <div className="display-stage relative z-1 flex h-[1080px] flex-col gap-8 px-14 py-12 [animation:pxshift_480s_steps(1)_infinite]">
           {/* header */}
           <header className="flex flex-none items-center gap-7">
             <div className="grid size-16 flex-none place-items-center rounded-full bg-linear-[1.86deg] from-[#0054C7] to-[#00CFFE] text-[26px] font-bold text-white shadow-[0_0_0_3px_rgba(255,255,255,.28),0_0_28px_rgba(0,212,255,.4)]">
@@ -106,7 +130,7 @@ export function KioskShell({
                     "size-3.5 rounded-full",
                     online
                       ? "bg-(--color-success) shadow-[0_0_12px_rgba(23,206,100,.9)]"
-                      : "kiosk-offline-dot bg-(--color-danger) shadow-[0_0_12px_rgba(252,60,59,.9)] [animation:kblink_1.2s_infinite]"
+                      : "display-offline-dot bg-(--color-danger) shadow-[0_0_12px_rgba(252,60,59,.9)] [animation:kblink_1.2s_infinite]"
                   )}
                 />
                 Diperbarui{" "}

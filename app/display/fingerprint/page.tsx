@@ -2,13 +2,13 @@
 
 import { Wifi, WifiOff, Fingerprint } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { kioskMachines } from "@/lib/data/kiosk"
-import { KioskShell } from "../_components/kiosk-shell"
-import { KioskBadge } from "../_components/kiosk-table"
+import { displayMachines } from "@/lib/data/display-screens"
+import { DisplayShell } from "../_components/display-shell"
+import { DisplayBadge } from "../_components/display-table"
 
-export default function KioskFingerprintPage() {
+export default function DisplayFingerprintPage() {
   return (
-    <KioskShell
+    <DisplayShell
       title="Mesin Fingerprint"
       stats={[
         { icon: <Wifi className="text-(--badge-success-text)" />, iconClass: "bg-(--badge-success-fill) border-(--badge-success-border)", value: "10", label: "Online" },
@@ -18,7 +18,7 @@ export default function KioskFingerprintPage() {
     >
       {/* grid mesin — offline selalu di urutan teratas & menonjol */}
       <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-4 gap-6">
-        {kioskMachines.map((m) => (
+        {displayMachines.map((m) => (
           <div
             key={m.id}
             className={cn(
@@ -45,9 +45,9 @@ export default function KioskFingerprintPage() {
               </span>
             </div>
             <div className="text-[22px] text-(--text-secondary)">{m.loc}</div>
-            <KioskBadge tone={m.online ? "success" : "danger"}>
+            <DisplayBadge tone={m.online ? "success" : "danger"}>
               {m.online ? "Online" : "Offline"}
-            </KioskBadge>
+            </DisplayBadge>
             <div
               className={cn(
                 "mt-auto text-xl text-(--text-tertiary)",
@@ -70,6 +70,6 @@ export default function KioskFingerprintPage() {
           </div>
         ))}
       </div>
-    </KioskShell>
+    </DisplayShell>
   )
 }

@@ -19,8 +19,8 @@ export type NavChild = {
   href?: string
   labelKey?: keyof Dict
   label?: string
-  /* anak yang membuka layar kiosk fullscreen alih-alih navigasi */
-  kioskUrl?: string
+  /* anak yang membuka layar display (tab baru, fullscreen) alih-alih navigasi */
+  displayUrl?: string
 }
 
 export type NavItem = {
@@ -41,10 +41,10 @@ export function navItems(lang: Lang): NavItem[] {
       icon: Monitor,
       visKey: "display",
       children: [
-        { href: "/display/attendance", labelKey: "navDispAtt" },
-        { href: "/display/fleet", labelKey: "navDispFleet" },
-        { label: "Display Fit To Work", kioskUrl: "/kiosk/fitwork" },
-        { label: "Monitoring Fingerprint", kioskUrl: "/kiosk/fingerprint" },
+        { href: "/displays/attendance", labelKey: "navDispAtt" },
+        { href: "/displays/fleet", labelKey: "navDispFleet" },
+        { label: "Display Fit To Work", displayUrl: "/display/fitwork" },
+        { label: "Monitoring Fingerprint", displayUrl: "/display/fingerprint" },
       ],
     },
     { key: "employees", labelKey: "navEmployees", icon: Users, href: "/employees", visKey: "employees" },

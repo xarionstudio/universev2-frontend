@@ -217,7 +217,7 @@ export const en: Dict = {
   "mdDelToastT": "Entry deleted",
   "dspSubAtt": "Manage attendance, fit-to-work, and fingerprint kiosk TVs — content, running text, and status per display.",
   "dspSubFleet": "Manage unit-status kiosk TVs — content, running text, and status per display.",
-  "dspOpenKiosk": "Open kiosk screen",
+  "dspOpen": "Open Display",
   "dspCloseKiosk": "Close kiosk",
   "dspPreview": "Kiosk preview",
   "dspListTitle": "Registered displays",

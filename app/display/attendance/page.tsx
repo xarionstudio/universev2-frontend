@@ -1,13 +1,13 @@
 "use client"
 
 import { Users, CheckCircle2, AlertTriangle } from "lucide-react"
-import { kioskAttRows } from "@/lib/data/kiosk"
-import { KioskShell } from "../_components/kiosk-shell"
-import { KioskTable, KioskBadge, KioskNameCell } from "../_components/kiosk-table"
+import { displayAttRows } from "@/lib/data/display-screens"
+import { DisplayShell } from "../_components/display-shell"
+import { DisplayTable, DisplayBadge, DisplayNameCell } from "../_components/display-table"
 
-export default function KioskAttendancePage() {
+export default function DisplayAttendancePage() {
   return (
-    <KioskShell
+    <DisplayShell
       title="Attendance — Shift Pagi"
       stats={[
         { icon: <Users className="text-[#7AE6FF]" />, iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]", value: "238", label: "Sudah Absen" },
@@ -15,31 +15,31 @@ export default function KioskAttendancePage() {
         { icon: <AlertTriangle className="text-(--color-danger-text)" />, iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)", value: "16", label: "Perlu Perhatian" },
       ]}
     >
-      <KioskTable
+      <DisplayTable
         cols={[
           { label: "Karyawan", width: "34%" },
           { label: "Departemen", width: "20%" },
           { label: "Check-in", width: "22%" },
           { label: "Status" },
         ]}
-        rows={kioskAttRows.map((r) => ({
+        rows={displayAttRows.map((r) => ({
           key: r.nik,
           cells: [
-            <KioskNameCell key="n" main={r.name} sub={r.nik} />,
+            <DisplayNameCell key="n" main={r.name} sub={r.nik} />,
             r.dept,
-            <KioskNameCell
+            <DisplayNameCell
               key="c"
               main={r.checkIn}
               mono
               sub={r.machine !== "—" ? r.machine : undefined}
               subMono={false}
             />,
-            <KioskBadge key="s" tone={r.tone}>
+            <DisplayBadge key="s" tone={r.tone}>
               {r.label}
-            </KioskBadge>,
+            </DisplayBadge>,
           ],
         }))}
       />
-    </KioskShell>
+    </DisplayShell>
   )
 }

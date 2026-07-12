@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 import { useAppStore } from "@/components/providers/app-store"
-import { useKiosk } from "@/components/providers/kiosk-provider"
+import { openDisplay } from "@/lib/open-display"
 import { useShell } from "./shell-context"
 import { navItems, settingsItem, groupOfPath, type NavItem } from "./nav"
 
@@ -22,7 +22,6 @@ export function Sidebar() {
   const router = useRouter()
   const { t, lang } = useI18n()
   const { appName, menuVis } = useAppStore()
-  const { openKiosk } = useKiosk()
   const { collapsed, setCollapsed, sideOpen, setSideOpen } = useShell()
   const items = navItems(lang)
   const currentGroup = groupOfPath(pathname, lang)
@@ -108,11 +107,11 @@ export function Sidebar() {
               "relative ml-7.5 flex h-10 w-[calc(100%-30px)] items-center gap-2 rounded-control border border-transparent px-3 text-left text-[13px] text-(--text-secondary) no-underline transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) hover:no-underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-primary) [&+a]:mt-2 [&+button]:mt-2"
             )
             const label = c.labelKey ? t[c.labelKey] : c.label
-            if (c.kioskUrl) {
+            if (c.displayUrl) {
               return (
                 <button
-                  key={c.kioskUrl}
-                  onClick={() => openKiosk(c.kioskUrl!)}
+                  key={c.displayUrl}
+                  onClick={() => openDisplay(c.displayUrl!)}
                   className={cn(kidClass, "cursor-pointer")}
                 >
                   {label}

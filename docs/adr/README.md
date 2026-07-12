@@ -4,4 +4,5 @@
 | --- | --- | --- |
 | [0001](0001-frontend-shadcn-architecture.md) | Frontend mengikuti arsitektur ala shadcn/ui | Accepted |
 | [0002](0002-kiosk-static-assets.md) | Layar kiosk sebagai aset statis + overlay iframe fullscreen | Superseded by 0003 |
-| [0003](0003-kiosk-nextjs-routes.md) | Layar kiosk sebagai route Next.js | Accepted |
+| [0003](0003-kiosk-nextjs-routes.md) | Layar kiosk sebagai route Next.js | Accepted (diamandemen 0004) |
+| [0004](0004-display-newtab-naming.md) | Layar display dibuka di tab baru + fullscreen; penamaan "display" | Accepted |
