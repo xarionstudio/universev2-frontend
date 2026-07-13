@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -79,6 +80,9 @@ export default function RosterRevisionNewPage() {
 
   const [entries, setEntries] = React.useState<Entry[]>([]);
   const [reviewOpen, setReviewOpen] = React.useState(false);
+  const pg = usePagination(entries, "5");
+  /* offset indeks asli — baris pada halaman aktif adalah slice dari entries */
+  const baseIdx = (pg.page - 1) * Number(pg.per);
 
   function addEntry() {
     const next = {
@@ -292,8 +296,8 @@ export default function RosterRevisionNewPage() {
                   </tr>
                 </TableHeader>
                 <TableBody>
-                  {entries.map((e, i) => (
-                    <TableRow key={i}>
+                  {pg.rows.map((e, i) => (
+                    <TableRow key={baseIdx + i}>
                       <TableCell>
                         <NameCell name={e.name} sub={e.nik} />
                       </TableCell>
@@ -314,7 +318,10 @@ export default function RosterRevisionNewPage() {
                           danger
                           aria-label={t.delEntry}
                           onClick={() =>
-                            setEntries((prev) => prev.filter((_, j) => j !== i))
+                            /* hapus pakai indeks asli, bukan indeks slice */
+                            setEntries((prev) =>
+                              prev.filter((_, j) => j !== baseIdx + i)
+                            )
                           }
                         >
                           <Trash2 />
@@ -326,7 +333,17 @@ export default function RosterRevisionNewPage() {
               </Table>
               <PanelFoot>
                 <FootSum>{t.revFootNote}</FootSum>
-                <Button onClick={() => setReviewOpen(true)}>{t.send}</Button>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Pagination
+                    page={pg.page}
+                    pageCount={pg.pageCount}
+                    onPage={pg.setPage}
+                    per={pg.per}
+                    perOptions={["5", "10", "25"]}
+                    onPer={pg.setPer}
+                  />
+                  <Button onClick={() => setReviewOpen(true)}>{t.send}</Button>
+                </div>
               </PanelFoot>
             </div>
           )}

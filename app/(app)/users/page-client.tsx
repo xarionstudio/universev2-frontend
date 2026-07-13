@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -90,6 +91,7 @@ export default function UsersPage() {
     return true;
   });
   const activeN = umUsers.filter((u) => u.on).length;
+  const pg = usePagination(rows);
 
   function openAdd() {
     setEditing(null);
@@ -249,7 +251,7 @@ export default function UsersPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {rows.map((u) => (
+              {pg.rows.map((u) => (
                 <TableRow
                   key={u.id}
                   className={u.on ? undefined : "opacity-60"}
@@ -317,9 +319,17 @@ export default function UsersPage() {
         )}
         <PanelFoot>
           <FootSum>
-            {t.showing} <b>{rows.length}</b> {t.umOf} <b>{umUsers.length}</b>{" "}
-            user · <b>{activeN}</b> {t.umActiveSum}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b> user ·{" "}
+            <b>{activeN}</b> {t.umActiveSum}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 

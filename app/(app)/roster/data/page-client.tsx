@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -50,6 +51,7 @@ export default function RosterDataPage() {
       r.by.toLowerCase().includes(needle)
     );
   });
+  const pg = usePagination(rows);
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,7 +104,7 @@ export default function RosterDataPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {pg.rows.map((r) => (
                 <TableRow key={r.key}>
                   <TableCell>
                     <NameCell name={r.label} sub={r.file} />
@@ -159,8 +161,17 @@ export default function RosterDataPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.rdSumA} <b>{rows.length}</b> {t.rdSumB}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+            {t.rdSumB}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
     </div>

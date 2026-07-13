@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   Fresh,
@@ -92,6 +93,7 @@ function AttendanceInner() {
   const presentN = rows.filter(
     (r) => r.st === "hadir" || r.st === "terlambat"
   ).length;
+  const pg = usePagination(rows);
 
   return (
     <div className="flex flex-col gap-6">
@@ -197,7 +199,7 @@ function AttendanceInner() {
               </tr>
             </TableHeader>
             <TableBody>
-              {rows.map((r, i) => (
+              {pg.rows.map((r, i) => (
                 <TableRow key={`${r.nik}-${r.date}-${i}`}>
                   <TableCell className="font-semibold">{r.name}</TableCell>
                   <TableCell className="font-mono text-(--text-secondary) tabular-nums">
@@ -235,9 +237,17 @@ function AttendanceInner() {
 
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{rows.length}</b> {t.attSumLog} · <b>{presentN}</b>{" "}
-            {t.attSumD}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+            {t.attSumLog} · <b>{presentN}</b> {t.attSumD}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
     </div>

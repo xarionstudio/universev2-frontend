@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FormGrid } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   DNote,
   FootSum,
@@ -64,6 +65,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
 
   const rows = kind === "att" ? store.dspAtt : store.dspFleet;
   const setRows = kind === "att" ? store.setDspAtt : store.setDspFleet;
+  const pg = usePagination(rows, "5");
   const runtextOpts = store.mdData.runtext
     .filter((e) => e.active)
     .map((e) => e.name);
@@ -185,7 +187,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
             </tr>
           </TableHeader>
           <TableBody>
-            {rows.map((d) => (
+            {pg.rows.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>
                   <NameCell name={displayNameOf(d)} sub={displaySubOf(d)} />
@@ -237,8 +239,17 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
         </Table>
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{rows.length}</b> {t.dspSumB}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+            {t.dspSumB}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["5", "10", "25"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 

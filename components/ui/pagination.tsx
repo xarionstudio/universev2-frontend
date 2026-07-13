@@ -28,6 +28,34 @@ function PageButton({
   );
 }
 
+/* State pagination standar untuk tabel daftar — slice + rentang + reset saat
+   ganti baris-per-halaman; halaman otomatis ter-clamp bila daftar menyusut */
+function usePagination<T>(items: T[], defaultPer = "10") {
+  const [page, setPage] = React.useState(1);
+  const [per, setPerState] = React.useState(defaultPer);
+  const perN = Math.max(1, Number(per));
+  const pageCount = Math.max(1, Math.ceil(items.length / perN));
+  const p = Math.min(page, pageCount);
+  const rows = items.slice((p - 1) * perN, p * perN);
+  const range = items.length
+    ? `${(p - 1) * perN + 1}–${Math.min(items.length, p * perN)}`
+    : "0";
+  const setPer = (v: string) => {
+    setPerState(v);
+    setPage(1);
+  };
+  return {
+    page: p,
+    setPage,
+    per,
+    setPer,
+    pageCount,
+    rows,
+    range,
+    total: items.length,
+  };
+}
+
 /* Kontrol lengkap footer tabel: baris-per-halaman + navigasi halaman */
 function Pagination({
   page,
@@ -122,4 +150,4 @@ function Pagination({
   );
 }
 
-export { Pagination, PageButton };
+export { Pagination, PageButton, usePagination };

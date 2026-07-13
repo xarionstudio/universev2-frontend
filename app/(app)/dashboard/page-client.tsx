@@ -11,11 +11,14 @@ import {
   XCircle,
 } from "lucide-react";
 
+import { attDayRows, type AttRow } from "@/lib/data/attendance";
+import { ftwData, type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   Fresh,
@@ -51,9 +54,14 @@ type AttentionRow = {
   action: string;
 };
 
-function attentionRows(en: boolean, breakUnits: Unit[]): AttentionRow[] {
-  /* unit breakdown diambil dari sumber status unit terpusat — sinkron dengan
-     halaman Status Unit & display TV */
+function attentionRows(
+  en: boolean,
+  breakUnits: Unit[],
+  kurang: FtwRecord[],
+  belumAbsen: AttRow[]
+): AttentionRow[] {
+  /* semua baris diturunkan dari sumber terpusat — status unit, log tidur,
+     dan log absensi yang sama dengan halaman modul & display TV */
   const unitRows: AttentionRow[] = breakUnits.slice(0, 2).map((u) => ({
     name: u.code,
     sub: u.type,
@@ -66,44 +74,34 @@ function attentionRows(en: boolean, breakUnits: Unit[]): AttentionRow[] {
     route: "/assets/status",
     action: en ? "Open Unit Status" : "Buka Status Unit",
   }));
+  const unfitRows: AttentionRow[] = kurang.slice(0, 3).map((r) => ({
+    name: r.name,
+    sub: r.nik,
+    dept: r.dept,
+    issue: en
+      ? `Slept ${r.sleep} — below the safe threshold`
+      : `Tidur ${r.sleep} — di bawah ambang aman`,
+    badge: "Unfit",
+    badgeVariant: "danger",
+    route: "/fit-to-work",
+    action: en ? "Open Fit To Work" : "Buka Fit To Work",
+  }));
+  const belumRows: AttentionRow[] = belumAbsen.slice(0, 2).map((r) => ({
+    name: r.name,
+    sub: r.nik,
+    dept: r.dept,
+    issue: en
+      ? `Roster ${r.code} — no check-in yet`
+      : `Roster ${r.code} — belum check-in`,
+    badge: en ? "Not clocked in" : "Belum absen",
+    badgeVariant: "warning",
+    route: "/roster/attendance",
+    action: en ? "View attendance" : "Lihat attendance",
+  }));
   return [
     ...unitRows,
-    {
-      name: "Budi Santoso",
-      sub: "503264135",
-      dept: "HRGA",
-      issue: en
-        ? "Slept 3 h 40 m — below the 4-hour threshold"
-        : "Tidur 3 j 40 m — di bawah ambang 4 jam",
-      badge: "Unfit",
-      badgeVariant: "danger",
-      route: "/fit-to-work",
-      action: en ? "Open Fit To Work" : "Buka Fit To Work",
-    },
-    {
-      name: "Agus Salim",
-      sub: "503264141",
-      dept: "Plant",
-      issue: en
-        ? "Slept 3 h 55 m — below the 4-hour threshold"
-        : "Tidur 3 j 55 m — di bawah ambang 4 jam",
-      badge: "Unfit",
-      badgeVariant: "danger",
-      route: "/fit-to-work",
-      action: en ? "Open Fit To Work" : "Buka Fit To Work",
-    },
-    {
-      name: "Joko Widodo S.",
-      sub: "503264139",
-      dept: "Operation",
-      issue: en
-        ? "Roster D — no check-in as of 06:15"
-        : "Roster D — belum check-in per 06:15",
-      badge: en ? "Not clocked in" : "Belum absen",
-      badgeVariant: "warning",
-      route: "/roster/attendance",
-      action: en ? "View attendance" : "Lihat attendance",
-    },
+    ...unfitRows,
+    ...belumRows,
     {
       name: "REV-0711-02",
       sub: "3 entri",
@@ -123,6 +121,10 @@ export default function DashboardPage() {
   const { t, lang } = useI18n();
   const { userName, units } = useAppStore();
   const breakUnits = units.filter((u) => u.status === "breakdown");
+  /* statistik dari sumber yang sama dengan modul & display TV */
+  const kurang = ftwData(lang).filter((r) => r.st === "kurang");
+  const attToday = attDayRows(lang, false).filter((r) => r.st !== "off");
+  const belumAbsen = attToday.filter((r) => r.st === "belum");
   const [q, setQ] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState("");
@@ -159,7 +161,12 @@ export default function DashboardPage() {
   const firstName = userName.trim().split(/\s+/).slice(0, 2).join(" ");
   const dateLine = `${new Date().toLocaleDateString(lang === "en" ? "en-GB" : "id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${t.shiftNote}`;
 
-  const rows = attentionRows(lang === "en", breakUnits).filter((r) => {
+  const rows = attentionRows(
+    lang === "en",
+    breakUnits,
+    kurang,
+    belumAbsen
+  ).filter((r) => {
     const needle = q.toLowerCase();
     return (
       r.name.toLowerCase().includes(needle) ||
@@ -167,6 +174,8 @@ export default function DashboardPage() {
       r.issue.toLowerCase().includes(needle)
     );
   });
+
+  const pg = usePagination(rows);
 
   const heads = [t.thName, t.thDept, t.thIssue, t.thStatus, t.thAction];
 
@@ -188,7 +197,7 @@ export default function DashboardPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value="2"
+          value={String(kurang.length)}
           label={t.statUnfit}
           detail={
             <>
@@ -204,11 +213,11 @@ export default function DashboardPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value="9"
+          value={String(belumAbsen.length)}
           label={t.statAbsent}
           detail={
             <>
-              {t.dAbsent1} <b>247</b> {t.dAbsent2}
+              {t.dAbsent1} <b>{attToday.length}</b> {t.dAbsent2}
             </>
           }
         />
@@ -321,7 +330,7 @@ export default function DashboardPage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {pg.rows.map((r) => (
                   <TableRow key={r.name}>
                     <TableCell>
                       <NameCell name={r.name} sub={r.sub} />
@@ -342,8 +351,17 @@ export default function DashboardPage() {
             </Table>
             <PanelFoot>
               <FootSum>
-                {t.showing} <b>{rows.length}</b> {t.sumRest}
+                {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+                {t.sumRest}
               </FootSum>
+              <Pagination
+                page={pg.page}
+                pageCount={pg.pageCount}
+                onPage={pg.setPage}
+                per={pg.per}
+                perOptions={["10", "25", "50"]}
+                onPer={pg.setPer}
+              />
               <Link href="/roster/attendance" className="text-sm">
                 {t.viewAll}
               </Link>

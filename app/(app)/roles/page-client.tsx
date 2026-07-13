@@ -24,9 +24,12 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FormGrid } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
+  FootSum,
   PageTitle,
   Panel,
+  PanelFoot,
   Toolbar,
   ToolbarGroup,
   ToolbarTitle,
@@ -95,6 +98,7 @@ export default function RolesPage() {
       r.name.toLowerCase().includes(q.toLowerCase()) ||
       r.desc.toLowerCase().includes(q.toLowerCase())
   );
+  const pg = usePagination(rows);
   const rbacRole = umRoles.find((r) => r.id === rbacSel) ?? umRoles[0];
   const locked = !!editing?.locked;
 
@@ -226,7 +230,7 @@ export default function RolesPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {pg.rows.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>
                     <Badge variant="info">{r.name}</Badge>
@@ -259,6 +263,19 @@ export default function RolesPage() {
               ))}
             </TableBody>
           </Table>
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b> role
+            </FootSum>
+            <Pagination
+              page={pg.page}
+              pageCount={pg.pageCount}
+              onPage={pg.setPage}
+              per={pg.per}
+              perOptions={["10", "25", "50"]}
+              onPer={pg.setPer}
+            />
+          </PanelFoot>
         </Panel>
 
         {/* anotasi RBAC: efek role pada UI */}

@@ -1,3 +1,6 @@
+import { attDayRows } from "@/lib/data/attendance";
+import { employees } from "@/lib/data/employees";
+import { ftwData, ftwHistoryFor } from "@/lib/data/ftw";
 import { unitsDb } from "@/lib/data/units-db";
 
 /* Data layar display (TV) — display tampil id-only.
@@ -19,7 +22,10 @@ export const displayRuntext: Record<
 };
 
 /* ===== Attendance — murni kehadiran (siapa sudah/belum datang) =====
-   belum absen & terlambat selalu teratas */
+   DITURUNKAN dari log absensi hari berjalan (attendance.ts) + jabatan dari
+   master karyawan — sumber yang sama dengan halaman admin. "Off" tidak tampil
+   (bukan roster hari ini); "unfit" tetap Hadir di layar ini (kelayakan kerja
+   adalah domain layar Fit To Work). Belum absen & terlambat selalu teratas. */
 export type DisplayAttRow = {
   nik: string;
   name: string;
@@ -29,91 +35,39 @@ export type DisplayAttRow = {
   label: string;
 };
 
-export const displayAttRows: DisplayAttRow[] = [
-  {
-    nik: "503264139",
-    name: "Joko Widodo S.",
-    pos: "Operator Grader",
-    dept: "Operation",
-    tone: "danger",
-    label: "Belum absen",
-  },
-  {
-    nik: "503264135",
-    name: "Budi Santoso",
-    pos: "Operator Excavator",
-    dept: "HRGA",
-    tone: "danger",
-    label: "Belum absen",
-  },
-  {
-    nik: "503264141",
-    name: "Agus Salim",
-    pos: "Welder",
-    dept: "Plant",
-    tone: "danger",
-    label: "Belum absen",
-  },
-  {
-    nik: "503264137",
-    name: "Andi Prasetyo",
-    pos: "Mekanik",
-    dept: "Plant",
-    tone: "warning",
-    label: "Terlambat",
-  },
-  {
-    nik: "503264133",
-    name: "First Angel Paustine",
-    pos: "Operator Dump Truck",
-    dept: "Operation",
-    tone: "success",
-    label: "Hadir",
-  },
-  {
-    nik: "503264136",
-    name: "Siti Nurhaliza",
-    pos: "Operator Dump Truck",
-    dept: "Operation",
-    tone: "success",
-    label: "Hadir",
-  },
-  {
-    nik: "503264150",
-    name: "Rizky Ananda",
-    pos: "Operator HD / Excavator",
-    dept: "Operation",
-    tone: "success",
-    label: "Hadir",
-  },
-  {
-    nik: "503264143",
-    name: "Hendra Gunawan",
-    pos: "Mekanik Senior",
-    dept: "Plant",
-    tone: "success",
-    label: "Hadir",
-  },
-  {
-    nik: "503264138",
-    name: "Dewi Lestari",
-    pos: "Staff Administrasi",
-    dept: "SDI",
-    tone: "success",
-    label: "Hadir",
-  },
-  {
-    nik: "503264134",
-    name: "Rahmat Hidayat",
-    pos: "Admin Roster",
-    dept: "SDI",
-    tone: "success",
-    label: "Hadir",
-  },
-];
+const posByNik = new Map(employees.map((e) => [e.nik, e.pos]));
+
+const ATT_TONE: Record<
+  string,
+  { tone: DisplayTone; label: string; rank: number }
+> = {
+  belum: { tone: "danger", label: "Belum absen", rank: 0 },
+  terlambat: { tone: "warning", label: "Terlambat", rank: 1 },
+  hadir: { tone: "success", label: "Hadir", rank: 2 },
+  unfit: { tone: "success", label: "Hadir", rank: 2 },
+};
+
+export function displayAttRowsNow(): DisplayAttRow[] {
+  return attDayRows("id", false)
+    .filter((r) => r.st !== "off")
+    .map((r) => ({
+      row: {
+        nik: r.nik,
+        name: r.name,
+        pos: posByNik.get(r.nik) ?? "—",
+        dept: r.dept,
+        tone: ATT_TONE[r.st].tone,
+        label: ATT_TONE[r.st].label,
+      },
+      rank: ATT_TONE[r.st].rank,
+    }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((x) => x.row);
+}
 
 /* ===== Fit to work — murni kelayakan kerja (jam tidur + waktu lapor) =====
-   kurang tidur & belum lapor selalu teratas */
+   DITURUNKAN dari log tidur (ftw.ts) + jabatan dari master karyawan — sumber
+   yang sama dengan halaman admin. Kurang tidur & belum lapor selalu teratas. */
 export type DisplayFtwRow = {
   nik: string;
   name: string;
@@ -125,108 +79,38 @@ export type DisplayFtwRow = {
   label: string;
 };
 
-export const displayFtwRows: DisplayFtwRow[] = [
-  {
-    nik: "503264135",
-    name: "Budi Santoso",
-    pos: "Operator Excavator",
-    dept: "HRGA",
-    sleep: "3 j 40 m",
-    note: "Di bawah ambang 4 jam — butuh penggantian",
-    tone: "danger",
-    label: "Kurang tidur",
-  },
-  {
-    nik: "503264141",
-    name: "Agus Salim",
-    pos: "Welder",
-    dept: "Plant",
-    sleep: "3 j 55 m",
-    note: "Di bawah ambang 4 jam — butuh penggantian",
-    tone: "danger",
-    label: "Kurang tidur",
-  },
-  {
-    nik: "503264139",
-    name: "Joko Widodo S.",
-    pos: "Operator Grader",
-    dept: "Operation",
-    sleep: "—",
-    note: "Belum mengirim log — hubungi sebelum shift",
-    tone: "warning",
-    label: "Belum lapor",
-  },
-  {
-    nik: "503264143",
-    name: "Hendra Gunawan",
-    pos: "Mekanik Senior",
-    dept: "Plant",
-    sleep: "—",
-    note: "Belum mengirim log — hubungi sebelum shift",
-    tone: "warning",
-    label: "Belum lapor",
-  },
-  {
-    nik: "503264133",
-    name: "First Angel Paustine",
-    pos: "Operator Dump Truck",
-    dept: "Operation",
-    sleep: "7 j 10 m",
-    note: "Lapor 03:51 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    nik: "503264136",
-    name: "Siti Nurhaliza",
-    pos: "Operator Dump Truck",
-    dept: "Operation",
-    sleep: "6 j 45 m",
-    note: "Lapor 03:54 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    nik: "503264142",
-    name: "Maya Sari",
-    pos: "Operator Water Truck",
-    dept: "Operation",
-    sleep: "8 j 05 m",
-    note: "Lapor 16:05 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    nik: "503264150",
-    name: "Rizky Ananda",
-    pos: "Operator HD / Excavator",
-    dept: "Operation",
-    sleep: "7 j 30 m",
-    note: "Lapor 04:02 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    nik: "503264138",
-    name: "Dewi Lestari",
-    pos: "Staff Administrasi",
-    dept: "SDI",
-    sleep: "7 j 20 m",
-    note: "Lapor 04:10 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    nik: "503264134",
-    name: "Rahmat Hidayat",
-    pos: "Admin Roster",
-    dept: "SDI",
-    sleep: "6 j 45 m",
-    note: "Lapor 03:52 WITA",
-    tone: "success",
-    label: "Fit",
-  },
-];
+const FTW_TONE: Record<
+  string,
+  { tone: DisplayTone; label: string; rank: number }
+> = {
+  kurang: { tone: "danger", label: "Kurang tidur", rank: 0 },
+  belum: { tone: "warning", label: "Belum lapor", rank: 1 },
+  fit: { tone: "success", label: "Fit", rank: 2 },
+};
+
+export function displayFtwRowsNow(): DisplayFtwRow[] {
+  return ftwData("id")
+    .map((r) => ({
+      row: {
+        nik: r.nik,
+        name: r.name,
+        pos: posByNik.get(r.nik) ?? "—",
+        dept: r.dept,
+        sleep: r.sleep,
+        note:
+          r.st === "kurang"
+            ? "Jam tidur di bawah ambang — butuh penggantian"
+            : r.st === "belum"
+              ? "Belum mengirim log — hubungi sebelum shift"
+              : `Lapor ${ftwHistoryFor(r, "id", 1)[0].sendTime}`,
+        tone: FTW_TONE[r.st].tone,
+        label: FTW_TONE[r.st].label,
+      },
+      rank: FTW_TONE[r.st].rank,
+    }))
+    .sort((a, b) => a.rank - b.rank)
+    .map((x) => x.row);
+}
 
 /* ===== Fleet — kartu operator per unit (foto, NIK, nama, unit) =====
    satu layar = satu formasi dari Setting Fleet (digger + maks. 13 OHT);

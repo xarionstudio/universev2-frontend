@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
 import { Dropzone } from "@/components/ui/dropzone";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -79,7 +80,9 @@ export default function RosterUploadPage() {
   }
 
   const preview = React.useMemo(() => upPreviewData(), []);
+  const pgPrev = usePagination(preview.rows);
   const errors = upErrorRows(lang);
+  const pgErr = usePagination(errors);
   const legendGroups = legendGroupsFor(lang);
 
   const vchips = [
@@ -192,7 +195,7 @@ export default function RosterUploadPage() {
                   </tr>
                 </TableHeader>
                 <TableBody>
-                  {preview.rows.map((r) => (
+                  {pgPrev.rows.map((r) => (
                     <TableRow key={r.nik}>
                       <TableCell className="font-mono whitespace-nowrap">
                         {r.nik}
@@ -216,8 +219,16 @@ export default function RosterUploadPage() {
             </div>
             <PanelFoot>
               <FootSum>
-                {t.upPrevA} <b>10</b> {t.upPrevB}
+                {t.upPrevA} <b>{pgPrev.range}</b> {t.upPrevB}
               </FootSum>
+              <Pagination
+                page={pgPrev.page}
+                pageCount={pgPrev.pageCount}
+                onPage={pgPrev.setPage}
+                per={pgPrev.per}
+                perOptions={["10", "25", "50"]}
+                onPer={pgPrev.setPer}
+              />
             </PanelFoot>
           </Panel>
 
@@ -259,7 +270,7 @@ export default function RosterUploadPage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {errors.map((e) => (
+                {pgErr.rows.map((e) => (
                   <TableRow key={e.row}>
                     <TableCell className="font-mono">{e.row}</TableCell>
                     <TableCell className="font-mono">{e.nik}</TableCell>
@@ -276,18 +287,30 @@ export default function RosterUploadPage() {
             </Table>
             <PanelFoot>
               <FootSum>{t.upFootNote}</FootSum>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => pushToast("success", t.toastErrT, t.toastErrD)}
-                >
-                  <Download />
-                  {t.upDlErrors}
-                </Button>
-                <Button onClick={doImport} disabled={importBusy}>
-                  {importBusy ? <Spinner /> : null}
-                  {importBusy ? t.upImporting : t.upImport}
-                </Button>
+              <div className="flex flex-wrap items-center gap-4">
+                <Pagination
+                  page={pgErr.page}
+                  pageCount={pgErr.pageCount}
+                  onPage={pgErr.setPage}
+                  per={pgErr.per}
+                  perOptions={["10", "25", "50"]}
+                  onPer={pgErr.setPer}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      pushToast("success", t.toastErrT, t.toastErrD)
+                    }
+                  >
+                    <Download />
+                    {t.upDlErrors}
+                  </Button>
+                  <Button onClick={doImport} disabled={importBusy}>
+                    {importBusy ? <Spinner /> : null}
+                    {importBusy ? t.upImporting : t.upImport}
+                  </Button>
+                </div>
               </div>
             </PanelFoot>
           </Panel>

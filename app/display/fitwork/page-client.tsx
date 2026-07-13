@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -8,13 +9,16 @@ import {
   Clock,
 } from "lucide-react";
 
-import { displayFtwRows, displayRuntext } from "@/lib/data/display-screens";
+import { displayFtwRowsNow, displayRuntext } from "@/lib/data/display-screens";
 
 import { DisplayShell } from "../_components/display-shell";
 import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayFitworkPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  /* baris + statistik diturunkan dari log tidur — sinkron dengan admin */
+  const rows = React.useMemo(() => displayFtwRowsNow(), []);
+  const n = (label: string) => rows.filter((r) => r.label === label).length;
   return (
     <DisplayShell
       title="Fit To Work — Shift Pagi"
@@ -24,27 +28,27 @@ export default function DisplayFitworkPage() {
         {
           icon: <ClipboardCheck className="text-(--color-primary-bright)" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
-          value: "233",
+          value: String(n("Fit") + n("Kurang tidur")),
           label: "Sudah Lapor",
         },
         {
           icon: <CheckCircle2 className="text-(--badge-success-text)" />,
           iconClass:
             "bg-(--badge-success-fill) border-(--badge-success-border)",
-          value: "231",
+          value: String(n("Fit")),
           label: "Fit",
         },
         {
           icon: <Clock className="text-(--badge-warning-text)" />,
           iconClass:
             "bg-(--badge-warning-fill) border-(--badge-warning-border)",
-          value: "9",
+          value: String(n("Belum lapor")),
           label: "Belum Lapor",
         },
         {
           icon: <AlertTriangle className="text-(--color-danger-text)" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
-          value: "2",
+          value: String(n("Kurang tidur")),
           label: "Kurang Tidur",
         },
       ]}
@@ -59,7 +63,7 @@ export default function DisplayFitworkPage() {
           { label: "Log Tidur", width: "12%" },
           { label: "Note" },
         ]}
-        rows={displayFtwRows.map((r) => ({
+        rows={rows.map((r) => ({
           key: r.nik,
           danger: r.tone === "danger",
           cells: [

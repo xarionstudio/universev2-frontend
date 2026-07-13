@@ -8,6 +8,7 @@ import { legendGroupsFor, rosterMeta, upPreviewData } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -37,6 +38,7 @@ export default function RosterDetailPage() {
   const meta = metas.find((m) => m.key === key) ?? metas[0];
 
   const preview = React.useMemo(() => upPreviewData(), []);
+  const pg = usePagination(preview.rows);
   const legendGroups = legendGroupsFor(lang);
 
   return (
@@ -93,7 +95,7 @@ export default function RosterDetailPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {preview.rows.map((r) => (
+              {pg.rows.map((r) => (
                 <TableRow key={r.nik}>
                   <TableCell className="font-mono whitespace-nowrap">
                     {r.nik}
@@ -117,8 +119,16 @@ export default function RosterDetailPage() {
         </div>
         <PanelFoot>
           <FootSum>
-            {t.rdSumA} <b>10</b> {t.rdDetailFootB}
+            {t.rdSumA} <b>{pg.range}</b> {t.rdDetailFootB}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 

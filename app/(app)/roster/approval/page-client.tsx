@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -70,6 +71,7 @@ export default function RosterApprovalPage() {
   const list = apRows
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => filter === "all" || r.status === filter);
+  const pg = usePagination(list);
 
   function refresh() {
     setBusy(true);
@@ -150,7 +152,7 @@ export default function RosterApprovalPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {list.map(({ r, i }) => (
+              {pg.rows.map(({ r, i }) => (
                 <TableRow key={i}>
                   <TableCell className="font-semibold">{r.name}</TableCell>
                   <TableCell className="font-mono text-(--text-secondary) tabular-nums">
@@ -214,9 +216,17 @@ export default function RosterApprovalPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.apSumA} <b>{list.length}</b> {t.apSumB} · <b>{pendingN}</b>{" "}
-            {t.apSumC}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+            {t.apSumB} · <b>{pendingN}</b> {t.apSumC}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 

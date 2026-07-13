@@ -16,6 +16,7 @@ import {
   DialogIcon,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   PageTitle,
@@ -80,6 +81,7 @@ export default function RosterRevisionPage() {
     if (!needle) return true;
     return g.rows.some((r) => r.name.toLowerCase().includes(needle));
   });
+  const pg = usePagination(shown);
 
   const pendingN = apRows.filter((r) => r.status === "pending").length;
   const detail = detailSid
@@ -134,7 +136,7 @@ export default function RosterRevisionPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {shown.map((g) => {
+              {pg.rows.map((g) => {
                 const statuses = Array.from(
                   new Set(g.rows.map((r) => r.status))
                 );
@@ -185,9 +187,17 @@ export default function RosterRevisionPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.apSumA} <b>{shown.length}</b> {t.rvSumB} · <b>{pendingN}</b>{" "}
-            {t.apSumC}
+            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+            {t.rvSumB} · <b>{pendingN}</b> {t.apSumC}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["10", "25", "50"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 

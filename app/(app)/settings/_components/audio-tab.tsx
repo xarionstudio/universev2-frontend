@@ -19,6 +19,7 @@ import {
 import { Dropzone } from "@/components/ui/dropzone";
 import { Field, FormGrid } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
   Panel,
@@ -44,6 +45,7 @@ export function AudioTab() {
   const { t } = useI18n();
   const { pushToast } = useToast();
   const { audios, setAudios } = useAppStore();
+  const pg = usePagination(audios, "5");
 
   const freqLabel: Record<Audio["freq"], string> = {
     sekali: t.auFreqOnce,
@@ -158,7 +160,7 @@ export function AudioTab() {
             </tr>
           </TableHeader>
           <TableBody>
-            {audios.map((a) => (
+            {pg.rows.map((a) => (
               <TableRow key={a.id}>
                 <TableCell className="font-semibold">{a.title}</TableCell>
                 <TableCell className="font-mono">{a.when}</TableCell>
@@ -208,6 +210,14 @@ export function AudioTab() {
           <FootSum>
             {t.attSumA} <b>{audios.length}</b> {t.auSumB}
           </FootSum>
+          <Pagination
+            page={pg.page}
+            pageCount={pg.pageCount}
+            onPage={pg.setPage}
+            per={pg.per}
+            perOptions={["5", "10", "25"]}
+            onPer={pg.setPer}
+          />
         </PanelFoot>
       </Panel>
 
