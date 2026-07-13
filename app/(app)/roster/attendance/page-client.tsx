@@ -7,6 +7,7 @@ import { Download, Search } from "lucide-react";
 
 import { attData, type AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
+import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,9 @@ function AttendanceInner() {
     const id = setTimeout(updateFresh, 0);
     return () => clearTimeout(id);
   }, [updateFresh]);
+
+  /* refresh dari topbar: perbarui stempel "data per" */
+  useRegisterRefresh(updateFresh);
 
   const stLabel = (s: AttStatus) =>
     s === "hadir"

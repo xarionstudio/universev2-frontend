@@ -2,22 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  Clock,
-  MessageSquareMore,
-  RefreshCw,
-  Search,
-  Truck,
-  XCircle,
-} from "lucide-react";
+import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
 
 import { attDayRows, type AttRow } from "@/lib/data/attendance";
 import { ftwData, type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
@@ -141,13 +134,18 @@ export default function DashboardPage() {
     return () => clearTimeout(id);
   }, [updateFresh]);
 
-  function refresh() {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      updateFresh();
-    }, 900);
-  }
+  /* refresh dari topbar: skeleton singkat + stempel waktu baru */
+  useRegisterRefresh(
+    () =>
+      new Promise<void>((done) => {
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          updateFresh();
+          done();
+        }, 900);
+      })
+  );
 
   const hour = new Date().getHours();
   const greet =
@@ -269,10 +267,6 @@ export default function DashboardPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <Button variant="secondary" onClick={refresh} disabled={loading}>
-              <RefreshCw />
-              {t.refresh}
-            </Button>
           </ToolbarGroup>
         </Toolbar>
 

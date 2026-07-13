@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, PenLine, RefreshCw, TriangleAlert } from "lucide-react";
+import { CheckCircle2, PenLine, TriangleAlert } from "lucide-react";
 
 import type { ApRow } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
@@ -54,7 +54,6 @@ export default function RosterApprovalPage() {
   const en = lang === "en";
 
   const [filter, setFilter] = React.useState<Filter>("pending");
-  const [busy, setBusy] = React.useState(false);
   const [noteFor, setNoteFor] = React.useState<number | null>(null);
   const [note, setNote] = React.useState("");
   const [noFor, setNoFor] = React.useState<number | null>(null);
@@ -72,11 +71,6 @@ export default function RosterApprovalPage() {
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => filter === "all" || r.status === filter);
   const pg = usePagination(list);
-
-  function refresh() {
-    setBusy(true);
-    setTimeout(() => setBusy(false), 900);
-  }
 
   function decide(i: number | null, ok: boolean, extra?: string) {
     if (i === null || i === undefined) return;
@@ -132,10 +126,6 @@ export default function RosterApprovalPage() {
                 </SegmentedButton>
               ))}
             </Segmented>
-            <Button variant="secondary" onClick={refresh} disabled={busy}>
-              <RefreshCw />
-              {t.refresh}
-            </Button>
           </ToolbarGroup>
         </Toolbar>
 

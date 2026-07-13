@@ -9,7 +9,6 @@ import {
   Filter,
   Pencil,
   Plus,
-  RefreshCw,
   Search,
   Trash2,
 } from "lucide-react";
@@ -73,7 +72,6 @@ export default function EmployeesPage() {
   const [q, setQ] = React.useState("");
   const [fOpen, setFOpen] = React.useState(false);
   const [fDepts, setFDepts] = React.useState<Record<string, boolean>>({});
-  const [busy, setBusy] = React.useState(false);
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
   const [sel, setSel] = React.useState<Record<string, boolean>>({});
@@ -130,11 +128,6 @@ export default function EmployeesPage() {
       t.toastExportT,
       `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
     );
-  }
-
-  function refresh() {
-    setBusy(true);
-    setTimeout(() => setBusy(false), 900);
   }
 
   function resetFilters() {
@@ -216,10 +209,6 @@ export default function EmployeesPage() {
             <Button variant="secondary" onClick={exportNow}>
               <Download />
               {t.export}
-            </Button>
-            <Button variant="secondary" onClick={refresh} disabled={busy}>
-              <RefreshCw />
-              {t.refresh}
             </Button>
             <Button onClick={() => router.push("/employees/new")}>
               <Plus />

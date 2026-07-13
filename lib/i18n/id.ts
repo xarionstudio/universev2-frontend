@@ -60,6 +60,7 @@ export const id = {
   panelTitle: "Perlu perhatian pagi ini",
   searchPh: "Cari nama / unit…",
   refresh: "Refresh",
+  refreshDoneT: "Data diperbarui",
   thName: "Karyawan / Unit",
   thDept: "Departemen",
   thIssue: "Masalah",

@@ -13,6 +13,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -94,6 +95,9 @@ export default function FitToWorkPage() {
     const id = setTimeout(updateFresh, 0);
     return () => clearTimeout(id);
   }, [updateFresh]);
+
+  /* refresh dari topbar: perbarui stempel "data per" */
+  useRegisterRefresh(updateFresh);
 
   const stBadge = (key: StKey) => {
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {

@@ -62,6 +62,7 @@ export const en: Dict = {
   panelTitle: "Needs attention this morning",
   searchPh: "Search name / unit…",
   refresh: "Refresh",
+  refreshDoneT: "Data refreshed",
   thName: "Employee / Unit",
   thDept: "Department",
   thIssue: "Issue",

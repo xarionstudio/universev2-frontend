@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, Search, Wrench } from "lucide-react";
+import { Search, Wrench } from "lucide-react";
 
 import { statusDotColor, type UnitStatus } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,7 +77,6 @@ export default function UnitStatusPage() {
   const [q, setQ] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [per, setPer] = React.useState("10");
-  const [busy, setBusy] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState(stampNow);
 
   const [drawerCode, setDrawerCode] = React.useState<string | null>(null);
@@ -84,13 +84,8 @@ export default function UnitStatusPage() {
   const [newSt, setNewSt] = React.useState("Ready");
   const [reason, setReason] = React.useState("");
 
-  function refresh() {
-    setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      setFreshTime(stampNow());
-    }, 900);
-  }
+  /* refresh dari topbar: perbarui stempel "data per" */
+  useRegisterRefresh(() => setFreshTime(stampNow()));
 
   const needle = q.trim().toLowerCase();
   const rows = units.filter((u) => {
@@ -201,10 +196,6 @@ export default function UnitStatusPage() {
                 setPage(1);
               }}
             />
-            <Button variant="secondary" onClick={refresh} disabled={busy}>
-              <RefreshCw />
-              {t.refresh}
-            </Button>
           </ToolbarGroup>
         </Toolbar>
 

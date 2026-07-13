@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  RefreshCw,
   Settings,
   Sun,
   User,
@@ -19,6 +20,7 @@ import { mdCatLabels, type MdCat } from "@/lib/data/master-data";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { useRefresh } from "@/components/providers/refresh";
 import {
   useTheme,
   type ThemePref,
@@ -31,6 +33,7 @@ import {
   DropMenuRadio,
   DropMenuWrap,
 } from "@/components/ui/drop-menu";
+import { useToast } from "@/components/ui/toast";
 
 import { activeChild, groupOfPath } from "./nav";
 import { useShell } from "./shell-context";
@@ -46,6 +49,8 @@ export function Topbar() {
   const { pref, resolved, setTheme } = useTheme();
   const { userName } = useAppStore();
   const { setSideOpen } = useShell();
+  const { refreshing, refresh } = useRefresh();
+  const { pushToast } = useToast();
   const [openDrop, setOpenDrop] = React.useState<string | null>(null);
   const [notifRead, setNotifRead] = React.useState(false);
 
@@ -68,6 +73,20 @@ export function Topbar() {
     cur = mdCatLabels[params.cat as MdCat]?.[lang] ?? cur;
 
   const userShort = userName.trim().split(/\s+/).slice(0, 2).join(" ");
+
+  /* refresh data halaman aktif — handler didaftarkan tiap halaman via
+     useRegisterRefresh; toast konfirmasi menyebut halaman + jam */
+  function doRefresh() {
+    void refresh().then(() => {
+      const d = new Date();
+      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+      pushToast(
+        "success",
+        t.refreshDoneT,
+        `${cur} · ${pad(d.getHours())}:${pad(d.getMinutes())} WITA`
+      );
+    });
+  }
 
   return (
     <header className="sticky top-6 z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel max-xl:top-4">
@@ -94,6 +113,17 @@ export function Topbar() {
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
+        {/* refresh data halaman aktif */}
+        <button
+          onClick={doRefresh}
+          disabled={refreshing}
+          aria-label={t.refresh}
+          title={t.refresh}
+          className={cn(hbtnClass, "disabled:cursor-progress")}
+        >
+          <RefreshCw className={refreshing ? "animate-spin" : undefined} />
+        </button>
+
         {/* bahasa */}
         <DropMenuWrap open={openDrop === "lang"} onClose={close}>
           <button
