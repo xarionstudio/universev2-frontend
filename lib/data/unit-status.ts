@@ -1,4 +1,8 @@
-/* Status operasional unit (layar Status Unit) — riwayat: [kapan, apa, alasan, jenis] */
+import { unitsDb } from "./units-db";
+
+/* Status operasional unit (layar Status Unit) — DITURUNKAN dari master unit
+   terpusat (units-db.ts, hasil generate equipment.json) supaya sinkron dengan
+   Database Unit, Fleet, dan display TV. Riwayat: [kapan, apa, alasan, jenis] */
 export type UnitStatus = "ready" | "breakdown" | "standby";
 
 export type UnitHist = [string, string, string, UnitStatus];
@@ -12,90 +16,60 @@ export type Unit = {
   hist: UnitHist[];
 };
 
-export const initialUnits: Unit[] = [
-  {
-    code: "DT-114",
-    type: "Dump Truck 777D",
-    status: "breakdown",
-    loc: "Pit utara",
-    upd: "04:12 — hidrolik bocor",
-    hist: [
-      [
-        "11 Jul 04:12",
-        "Breakdown",
-        "Hidrolik bocor — dilaporkan operator shift malam",
-        "breakdown",
-      ],
-      ["08 Jul 06:00", "Ready", "Servis 250 jam selesai", "ready"],
-      ["06 Jul 13:40", "Standby", "Menunggu servis terjadwal", "standby"],
-    ],
-  },
-  {
-    code: "DT-108",
-    type: "Dump Truck 777D",
-    status: "ready",
-    loc: "Pit utara",
-    upd: "05:58 — checklist ok",
-    hist: [
-      ["11 Jul 05:58", "Ready", "Checklist harian ok", "ready"],
-      ["10 Jul 05:55", "Ready", "Checklist harian ok", "ready"],
-    ],
-  },
-  {
-    code: "EX-07",
-    type: "Excavator PC2000",
-    status: "breakdown",
-    loc: "Pit selatan",
-    upd: "kemarin 22:15 — track putus",
-    hist: [
-      ["10 Jul 22:15", "Breakdown", "Track putus — butuh crane", "breakdown"],
-      ["05 Jul 06:00", "Ready", "Perbaikan minor selesai", "ready"],
-    ],
-  },
-  {
-    code: "EX-03",
-    type: "Excavator PC1250",
-    status: "ready",
-    loc: "Pit selatan",
-    upd: "05:52 — checklist ok",
-    hist: [["11 Jul 05:52", "Ready", "Checklist harian ok", "ready"]],
-  },
-  {
-    code: "GR-02",
-    type: "Grader 24M",
-    status: "breakdown",
-    loc: "Workshop",
-    upd: "2 hari — tunggu spare part",
-    hist: [
-      [
-        "09 Jul 08:30",
-        "Breakdown",
-        "Transmisi — menunggu spare part dari Balikpapan",
-        "breakdown",
-      ],
-      ["01 Jul 06:00", "Ready", "—", "ready"],
-    ],
-  },
-  {
-    code: "WT-05",
-    type: "Water Truck 773E",
-    status: "standby",
-    loc: "Workshop",
-    upd: "06:10 — cadangan shift pagi",
-    hist: [
-      ["11 Jul 06:10", "Standby", "Cadangan shift pagi", "standby"],
-      ["10 Jul 06:00", "Ready", "—", "ready"],
-    ],
-  },
-  {
-    code: "DT-121",
-    type: "Dump Truck 785C",
-    status: "ready",
-    loc: "Pit utara",
-    upd: "05:47 — checklist ok",
-    hist: [["11 Jul 05:47", "Ready", "Checklist harian ok", "ready"]],
-  },
-];
+const rank: Record<UnitStatus, number> = { breakdown: 0, standby: 1, ready: 2 };
+
+export const initialUnits: Unit[] = unitsDb
+  .filter((u) => u.active)
+  .map((u, i): Unit => {
+    const status: UnitStatus = u.breakdown
+      ? "breakdown"
+      : u.standby
+        ? "standby"
+        : "ready";
+    /* menit deterministik per unit agar jam laporan terlihat wajar */
+    const mm = String((i * 7) % 60).padStart(2, "0");
+    const type = `${u.egi || "—"} · ${u.product}`;
+    if (status === "breakdown")
+      return {
+        code: u.code,
+        type,
+        status,
+        loc: u.loc,
+        upd: `04:${mm} — dilaporkan rusak, menunggu perbaikan`,
+        hist: [
+          [
+            `12 Jul 04:${mm}`,
+            "Breakdown",
+            "Dilaporkan rusak — masuk antrean workshop",
+            "breakdown",
+          ],
+          [`05 Jul 06:${mm}`, "Ready", "Checklist harian ok", "ready"],
+        ],
+      };
+    if (status === "standby")
+      return {
+        code: u.code,
+        type,
+        status,
+        loc: u.loc,
+        upd: `06:${mm} — cadangan shift pagi`,
+        hist: [
+          [`12 Jul 06:${mm}`, "Standby", "Cadangan shift pagi", "standby"],
+          [`10 Jul 05:${mm}`, "Ready", "Checklist harian ok", "ready"],
+        ],
+      };
+    return {
+      code: u.code,
+      type,
+      status,
+      loc: u.loc,
+      upd: `05:${mm} — checklist ok`,
+      hist: [[`13 Jul 05:${mm}`, "Ready", "Checklist harian ok", "ready"]],
+    };
+  })
+  .sort(
+    (a, b) => rank[a.status] - rank[b.status] || a.code.localeCompare(b.code)
+  );
 
 export const statusDotColor: Record<UnitStatus, string> = {
   ready: "var(--badge-success-text)",

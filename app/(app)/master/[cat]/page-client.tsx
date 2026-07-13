@@ -10,6 +10,7 @@ import {
   type MdCat,
   type MdEntry,
 } from "@/lib/data/master-data";
+import { unitsDb } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +53,9 @@ type SortKey = ColKey | "active";
 type ColDef = {
   key: ColKey;
   label: string;
-  kind?: "text" | "time" | "select" | "color";
+  kind?: "text" | "time" | "select" | "color" | "readonly";
   opts?: string[];
+  help?: string;
 };
 
 const runtextTargets = ["Semua kiosk", "Display Attendance", "Display Fleet"];
@@ -96,6 +98,40 @@ export default function MasterDataPage() {
   const en = lang === "en";
   const catLabel = mdCatLabels[cat][lang];
 
+  /* opsi dropdown dari sumber yang benar (bukan teks bebas):
+     bus ← Database Unit class BUS; lokasi excavator ← digger + master bus/tempudo */
+  const busCodeOpts = React.useMemo(() => {
+    const used = new Set(
+      mdData.bus.filter((r) => r.id !== editId).map((r) => r.name)
+    );
+    return unitsDb
+      .filter((u) => u.cls === "BUS" && u.active && !used.has(u.code))
+      .map((u) => u.code);
+  }, [mdData.bus, editId]);
+  const diggerOpts = React.useMemo(() => {
+    const used = new Set(
+      mdData.lokasiex.filter((r) => r.id !== editId).map((r) => r.name)
+    );
+    return unitsDb
+      .filter(
+        (u) =>
+          (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") &&
+          u.active &&
+          !used.has(u.code)
+      )
+      .map((u) => u.code);
+  }, [mdData.lokasiex, editId]);
+  const busOpts = React.useMemo(
+    () => mdData.bus.filter((r) => r.active).map((r) => r.name),
+    [mdData.bus]
+  );
+  const tempudoOpts = React.useMemo(
+    () => mdData.tempudo.filter((r) => r.active).map((r) => r.name),
+    [mdData.tempudo]
+  );
+  const busTypeOf = (code: string) =>
+    unitsDb.find((u) => u.code === code)?.egi ?? "";
+
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {
       case "egi":
@@ -119,15 +155,38 @@ export default function MasterDataPage() {
         ];
       case "bus":
         return [
-          { key: "name", label: "Kode" },
-          { key: "a", label: en ? "Type" : "Tipe" },
+          {
+            key: "name",
+            label: "Kode",
+            kind: "select",
+            opts: busCodeOpts,
+            help: en
+              ? "From Unit Database (BUS class) — registered buses are hidden."
+              : "Dari Database Unit (class BUS) — bus yang sudah terdaftar tidak muncul.",
+          },
+          {
+            key: "a",
+            label: en ? "Type" : "Tipe",
+            kind: "readonly",
+            help: en
+              ? "Auto-filled from the selected unit."
+              : "Terisi otomatis dari unit yang dipilih.",
+          },
           { key: "b", label: t.mdJam, kind: "time" },
         ];
       case "lokasiex":
         return [
-          { key: "name", label: "Excavator" },
-          { key: "a", label: "Bus" },
-          { key: "b", label: "Tempudo" },
+          {
+            key: "name",
+            label: "Excavator",
+            kind: "select",
+            opts: diggerOpts,
+            help: en
+              ? "Big/medium diggers from the Unit Database — mapped ones are hidden."
+              : "Big/medium digger dari Database Unit — yang sudah dipetakan tidak muncul.",
+          },
+          { key: "a", label: "Bus", kind: "select", opts: busOpts },
+          { key: "b", label: "Tempudo", kind: "select", opts: tempudoOpts },
         ];
       case "runtext":
         return [
@@ -141,7 +200,7 @@ export default function MasterDataPage() {
           },
         ];
     }
-  }, [cat, t, en]);
+  }, [cat, t, en, busCodeOpts, diggerOpts, busOpts, tempudoOpts]);
 
   const entries = mdData[cat];
   const needle = q.trim().toLowerCase();
@@ -180,8 +239,14 @@ export default function MasterDataPage() {
 
   function openAdd() {
     setEditId(null);
-    setFName("");
-    setFA(cols.find((c) => c.key === "a")?.opts?.[0] ?? "");
+    const nameCol = cols.find((c) => c.key === "name");
+    const name = nameCol?.kind === "select" ? (nameCol.opts?.[0] ?? "") : "";
+    setFName(name);
+    setFA(
+      cat === "bus"
+        ? busTypeOf(name)
+        : (cols.find((c) => c.key === "a")?.opts?.[0] ?? "")
+    );
     setFB(cols.find((c) => c.key === "b")?.opts?.[0] ?? "");
     setFActive(true);
     setErrName(false);
@@ -230,8 +295,11 @@ export default function MasterDataPage() {
     return key === "name" ? fName : key === "a" ? fA : fB;
   }
   function setFieldValue(key: ColKey, v: string) {
-    if (key === "name") setFName(v);
-    else if (key === "a") setFA(v);
+    if (key === "name") {
+      setFName(v);
+      /* tipe bus mengikuti unit yang dipilih — bukan input manual */
+      if (cat === "bus") setFA(busTypeOf(v));
+    } else if (key === "a") setFA(v);
     else setFB(v);
   }
 
@@ -390,6 +458,7 @@ export default function MasterDataPage() {
               label={c.label}
               htmlFor={`md-f-${c.key}`}
               required={c.key === "name"}
+              helper={c.help}
               error={c.key === "name" && errName}
               errorMessage={c.key === "name" ? t.mdErrName : undefined}
             >
@@ -399,12 +468,26 @@ export default function MasterDataPage() {
                   value={fieldValue(c.key)}
                   onChange={(e) => setFieldValue(c.key, e.target.value)}
                 >
+                  {/* nilai lama yang tak lagi ada di sumber tetap bisa dipertahankan */}
+                  {fieldValue(c.key) &&
+                  !(c.opts ?? []).includes(fieldValue(c.key)) ? (
+                    <option value={fieldValue(c.key)}>
+                      {fieldValue(c.key)}
+                    </option>
+                  ) : null}
                   {(c.opts ?? []).map((o) => (
                     <option key={o} value={o}>
                       {o}
                     </option>
                   ))}
                 </Select>
+              ) : c.kind === "readonly" ? (
+                <Input
+                  id={`md-f-${c.key}`}
+                  value={fieldValue(c.key)}
+                  disabled
+                  readOnly
+                />
               ) : c.kind === "time" ? (
                 <Input
                   id={`md-f-${c.key}`}

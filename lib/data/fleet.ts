@@ -15,8 +15,8 @@ export const initialFleets: Fleet[] = [
   {
     id: "fl1",
     digger: "EX7001",
-    loc: "PANEL EAST - ATAS SELATAN",
-    bus: "B01",
+    loc: "Panel East Puncak Selatan",
+    bus: "UD-BU06",
     units: [
       "RD5001",
       "RD5002",
@@ -37,16 +37,16 @@ export const initialFleets: Fleet[] = [
   {
     id: "fl2",
     digger: "EX7007",
-    loc: "KASTURI TENGAH BAWAH",
-    bus: "B02",
+    loc: "Kasturi Tengah",
+    bus: "UD-BU07",
     units: ["RD5061", "RD5063", "RD5065", "RD5066"],
     active: true,
   },
   {
     id: "fl3",
     digger: "EX8001",
-    loc: "KASTURI PUNCAK",
-    bus: "B03",
+    loc: "Kasturi Puncak",
+    bus: "UD-BU08",
     units: ["RD5091", "RD5092", "RD5093"],
     active: false,
   },

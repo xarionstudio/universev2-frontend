@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 
+import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
@@ -50,8 +51,23 @@ type AttentionRow = {
   action: string;
 };
 
-function attentionRows(en: boolean): AttentionRow[] {
+function attentionRows(en: boolean, breakUnits: Unit[]): AttentionRow[] {
+  /* unit breakdown diambil dari sumber status unit terpusat — sinkron dengan
+     halaman Status Unit & display TV */
+  const unitRows: AttentionRow[] = breakUnits.slice(0, 2).map((u) => ({
+    name: u.code,
+    sub: u.type,
+    dept: "—",
+    issue: en
+      ? `Reported down at ${u.upd.slice(0, 5)} — awaiting repair (${u.loc})`
+      : `Dilaporkan rusak ${u.upd.slice(0, 5)} — menunggu perbaikan (${u.loc})`,
+    badge: "Breakdown",
+    badgeVariant: "danger",
+    route: "/assets/status",
+    action: en ? "Open Unit Status" : "Buka Status Unit",
+  }));
   return [
+    ...unitRows,
     {
       name: "Budi Santoso",
       sub: "503264135",
@@ -77,36 +93,12 @@ function attentionRows(en: boolean): AttentionRow[] {
       action: en ? "Open Fit To Work" : "Buka Fit To Work",
     },
     {
-      name: "DT-114",
-      sub: "Dump Truck 777D",
-      dept: "—",
-      issue: en
-        ? "Hydraulic leak — reported 04:12 by night shift"
-        : "Hidrolik bocor — dilaporkan 04:12 shift malam",
-      badge: "Breakdown",
-      badgeVariant: "danger",
-      route: "/assets/status",
-      action: en ? "Open Unit Status" : "Buka Status Unit",
-    },
-    {
-      name: "GR-02",
-      sub: "Grader 24M",
-      dept: "—",
-      issue: en
-        ? "Waiting for spare parts — 2 days in workshop"
-        : "Menunggu spare part — 2 hari di workshop",
-      badge: "Breakdown",
-      badgeVariant: "danger",
-      route: "/assets/status",
-      action: en ? "Open Unit Status" : "Buka Status Unit",
-    },
-    {
       name: "Joko Widodo S.",
       sub: "503264139",
       dept: "Operation",
       issue: en
-        ? "Roster D12 — no check-in as of 06:15"
-        : "Roster D12 — belum check-in per 06:15",
+        ? "Roster D — no check-in as of 06:15"
+        : "Roster D — belum check-in per 06:15",
       badge: en ? "Not clocked in" : "Belum absen",
       badgeVariant: "warning",
       route: "/roster/attendance",
@@ -129,7 +121,8 @@ function attentionRows(en: boolean): AttentionRow[] {
 
 export default function DashboardPage() {
   const { t, lang } = useI18n();
-  const { userName } = useAppStore();
+  const { userName, units } = useAppStore();
+  const breakUnits = units.filter((u) => u.status === "breakdown");
   const [q, setQ] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState("");
@@ -166,7 +159,7 @@ export default function DashboardPage() {
   const firstName = userName.trim().split(/\s+/).slice(0, 2).join(" ");
   const dateLine = `${new Date().toLocaleDateString(lang === "en" ? "en-GB" : "id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${t.shiftNote}`;
 
-  const rows = attentionRows(lang === "en").filter((r) => {
+  const rows = attentionRows(lang === "en", breakUnits).filter((r) => {
     const needle = q.toLowerCase();
     return (
       r.name.toLowerCase().includes(needle) ||
@@ -227,11 +220,15 @@ export default function DashboardPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value="3"
+          value={String(breakUnits.length)}
           label={t.statBreakdown}
           detail={
             <>
-              <b>DT-114</b> · EX-07 · GR-02
+              <b>{breakUnits[0]?.code ?? "—"}</b>
+              {breakUnits
+                .slice(1, 3)
+                .map((u) => ` · ${u.code}`)
+                .join("")}
             </>
           }
         />

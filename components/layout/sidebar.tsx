@@ -15,7 +15,7 @@ import { groupOfPath, navItems, settingsItem, type NavItem } from "./nav";
 import { useShell } from "./shell-context";
 
 const navBtnClass =
-  "relative flex h-11 w-full cursor-pointer items-center gap-3 rounded-control border border-transparent px-3 text-left text-sm font-medium text-(--text-secondary) transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-primary)";
+  "relative flex h-11 w-full flex-none cursor-pointer items-center gap-3 rounded-control border border-transparent px-3 text-left text-sm font-medium text-(--text-secondary) transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-primary)";
 
 const activeClass =
   "border-[rgba(0,212,255,.5)] bg-(image:--gradient-nav-active) font-semibold text-(--text-primary) shadow-[0_0_10px_rgba(0,212,255,.4)]";
@@ -108,7 +108,7 @@ export function Sidebar() {
         </button>
         <div
           className={cn(
-            "overflow-hidden transition-[max-height] duration-250 ease-in-out",
+            "flex-none overflow-hidden transition-[max-height] duration-250 ease-in-out",
             expanded ? "max-h-[520px] py-2 pb-3" : "max-h-0",
             collapsed && "hidden max-xl:block"
           )}
@@ -208,7 +208,7 @@ export function Sidebar() {
         >
           <ChevronRight className="size-3.5 text-(--text-secondary)" />
         </button>
-        <nav className="scrollbar-none flex flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto">
+        <nav className="scrollbar-none flex min-h-0 flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto">
           {items.map(renderTop)}
         </nav>
         <div className="mx-2 my-4 border-t border-(--divider)" />

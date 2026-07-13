@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/drawer";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   FootSum,
   Fresh,
@@ -73,6 +74,8 @@ export default function UnitStatusPage() {
 
   const [filter, setFilter] = React.useState<"all" | UnitStatus>("all");
   const [q, setQ] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [per, setPer] = React.useState("10");
   const [busy, setBusy] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState(stampNow);
 
@@ -100,6 +103,14 @@ export default function UnitStatusPage() {
     );
   });
   const breakN = units.filter((u) => u.status === "breakdown").length;
+
+  const perN = Number(per);
+  const pageCount = Math.max(1, Math.ceil(rows.length / perN));
+  const p = Math.min(page, pageCount);
+  const pageRows = rows.slice((p - 1) * perN, p * perN);
+  const range = rows.length
+    ? `${(p - 1) * perN + 1}–${Math.min(rows.length, p * perN)}`
+    : "0";
 
   const drawerUnit = drawerCode
     ? units.find((u) => u.code === drawerCode)
@@ -160,37 +171,35 @@ export default function UnitStatusPage() {
           <ToolbarTitle>{t.usListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <Segmented role="group" aria-label="Filter status">
-              <SegmentedButton
-                active={filter === "all"}
-                onClick={() => setFilter("all")}
-              >
-                {t.segAll}
-              </SegmentedButton>
-              <SegmentedButton
-                active={filter === "ready"}
-                onClick={() => setFilter("ready")}
-              >
-                Ready
-              </SegmentedButton>
-              <SegmentedButton
-                active={filter === "breakdown"}
-                onClick={() => setFilter("breakdown")}
-              >
-                Breakdown
-              </SegmentedButton>
-              <SegmentedButton
-                active={filter === "standby"}
-                onClick={() => setFilter("standby")}
-              >
-                Standby
-              </SegmentedButton>
+              {(
+                [
+                  ["all", t.segAll],
+                  ["ready", "Ready"],
+                  ["breakdown", "Breakdown"],
+                  ["standby", "Standby"],
+                ] as ["all" | UnitStatus, string][]
+              ).map(([key, label]) => (
+                <SegmentedButton
+                  key={key}
+                  active={filter === key}
+                  onClick={() => {
+                    setFilter(key);
+                    setPage(1);
+                  }}
+                >
+                  {label}
+                </SegmentedButton>
+              ))}
             </Segmented>
             <SearchInput
               className="w-50"
               placeholder={t.searchUnit}
               aria-label={t.searchUnit}
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
             />
             <Button variant="secondary" onClick={refresh} disabled={busy}>
               <RefreshCw />
@@ -215,7 +224,7 @@ export default function UnitStatusPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {rows.map((u) => (
+              {pageRows.map((u) => (
                 <TableRow key={u.code}>
                   <TableCell>
                     <NameCell name={u.code} />
@@ -262,9 +271,20 @@ export default function UnitStatusPage() {
 
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{rows.length}</b> {t.attSumB} <b>52</b> {t.udbSumB} ·{" "}
-            <b>{breakN}</b> Breakdown
+            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{rows.length}</b>{" "}
+            {t.udbSumB} · <b>{breakN}</b> Breakdown
           </FootSum>
+          <Pagination
+            page={p}
+            pageCount={pageCount}
+            onPage={setPage}
+            per={per}
+            perOptions={["10", "25", "50"]}
+            onPer={(v) => {
+              setPer(v);
+              setPage(1);
+            }}
+          />
         </PanelFoot>
       </Panel>
 

@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FormGrid } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   DNote,
   FootSum,
@@ -58,18 +58,38 @@ export default function FleetSettingPage() {
   /* dialog hapus */
   const [delTarget, setDelTarget] = React.useState<Fleet | null>(null);
 
+  /* pagination daftar fleet */
+  const [page, setPage] = React.useState(1);
+  const [per, setPer] = React.useState("5");
+  const perN = Number(per);
+  const pageCount = Math.max(1, Math.ceil(fleets.length / perN));
+  const p = Math.min(page, pageCount);
+  const pageRows = fleets.slice((p - 1) * perN, p * perN);
+  const range = fleets.length
+    ? `${(p - 1) * perN + 1}–${Math.min(fleets.length, p * perN)}`
+    : "0";
+
   const all = udbAll();
   const diggerTypeOf = (code: string) => {
     const u = all.find((x) => x.code === code);
     return u ? `${u.egi} · ${u.product}` : "—";
   };
 
+  /* digger = big/medium digger dari Database Unit (bukan semua excavator) */
   const diggerOpts = Array.from(
-    new Set(all.filter((u) => u.cls === "EX").map((u) => u.code))
+    new Set(
+      all
+        .filter(
+          (u) =>
+            (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") && u.active
+        )
+        .map((u) => u.code)
+    )
   )
     .filter((code) => !fleets.some((f) => f.digger === code && f.id !== editId))
     .sort();
   const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name);
+  const areaOpts = mdData.area.filter((a) => a.active).map((a) => a.name);
 
   /* pilihan unit OHT — langsung dari Database Unit, unit milik fleet lain disembunyikan */
   const usedElsewhere = new Set(
@@ -104,7 +124,7 @@ export default function FleetSettingPage() {
     setEditId(null);
     setFDigger(diggerOpts[0] || "");
     setFBus(busOpts[0] || "");
-    setFLoc("");
+    setFLoc(areaOpts[0] || "");
     setFUnits([]);
     setUnitQ("");
     setFActive(true);
@@ -182,7 +202,7 @@ export default function FleetSettingPage() {
             </tr>
           </TableHeader>
           <TableBody>
-            {fleets.map((f) => (
+            {pageRows.map((f) => (
               <TableRow key={f.id}>
                 <TableCell>
                   <NameCell name={f.digger} sub={diggerTypeOf(f.digger)} />
@@ -234,8 +254,20 @@ export default function FleetSettingPage() {
         </Table>
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{fleets.length}</b> {t.flSumB}
+            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{fleets.length}</b>{" "}
+            {t.flSumB}
           </FootSum>
+          <Pagination
+            page={p}
+            pageCount={pageCount}
+            onPage={setPage}
+            per={per}
+            perOptions={["5", "10", "25"]}
+            onPer={(v) => {
+              setPer(v);
+              setPage(1);
+            }}
+          />
         </PanelFoot>
       </Panel>
 
@@ -292,18 +324,27 @@ export default function FleetSettingPage() {
                 ))}
               </Select>
             </Field>
+            {/* lokasi kerja dari master Area — bukan teks bebas */}
             <Field
               className="col-span-full"
               label={t.flLoc}
               htmlFor="fl-loc"
               required
             >
-              <Input
+              <Select
                 id="fl-loc"
-                placeholder="PANEL EAST - ATAS SELATAN"
                 value={fLoc}
                 onChange={(e) => setFLoc(e.target.value)}
-              />
+              >
+                {fLoc && !areaOpts.includes(fLoc) ? (
+                  <option value={fLoc}>{fLoc}</option>
+                ) : null}
+                {areaOpts.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field
               className="col-span-full"

@@ -63,51 +63,61 @@ export function legendGroupsFor(lang: Lang): LegendGroup[] {
   const en = lang === "en";
   return [
     {
-      label: en ? "Work shifts" : "Shift kerja",
+      label: en ? "Shifts & attendance" : "Shift & kehadiran",
       codes: [
-        { k: "D", v: en ? "Day shift" : "Shift siang" },
-        { k: "D7", v: en ? "Day 7 hours" : "Siang 7 jam" },
-        { k: "D8", v: en ? "Day 8 hours" : "Siang 8 jam" },
-        { k: "D10", v: en ? "Day 10 hours" : "Siang 10 jam" },
-        { k: "D12", v: en ? "Day 12 hours" : "Siang 12 jam" },
-        { k: "N", v: en ? "Night shift" : "Shift malam" },
-        { k: "N7", v: en ? "Night 7 hours" : "Malam 7 jam" },
-        { k: "N8", v: en ? "Night 8 hours" : "Malam 8 jam" },
-        { k: "N10", v: en ? "Night 10 hours" : "Malam 10 jam" },
-        { k: "N12", v: en ? "Night 12 hours" : "Malam 12 jam" },
+        { k: "D", v: en ? "Day shift" : "Day shift" },
+        { k: "N", v: en ? "Night shift" : "Night shift" },
+        { k: "R", v: en ? "Regular" : "Reguler" },
+        { k: "STB", v: "Standby" },
+        { k: "OFF", v: "OFF" },
       ],
     },
     {
-      label: en ? "Leave & rest" : "Cuti & istirahat",
+      label: en ? "Leave & permits" : "Cuti & izin",
       codes: [
-        { k: "OFF", v: en ? "Roster day off" : "Hari libur roster" },
         { k: "CR", v: en ? "Roster leave" : "Cuti roster" },
         { k: "AL", v: "Annual leave" },
-        { k: "CB", v: en ? "Long-service leave" : "Cuti besar" },
-        { k: "CH", v: en ? "Maternity leave" : "Cuti hamil" },
+        { k: "LWP", v: en ? "Paid leave" : "Izin dengan upah" },
+        { k: "LWOP", v: en ? "Unpaid leave" : "Izin tanpa upah" },
+        { k: "PH", v: "Public holiday" },
+        { k: "PHD", v: en ? "Public holiday (day)" : "Public holiday siang" },
       ],
     },
     {
-      label: en ? "Absence" : "Ketidakhadiran",
+      label: en ? "Sickness & absence" : "Sakit & ketidakhadiran",
       codes: [
         { k: "S", v: en ? "Sick" : "Sakit" },
-        { k: "SD", v: en ? "Sick + doctor's note" : "Sakit + surat dokter" },
-        { k: "I", v: en ? "Permitted absence" : "Izin" },
-        { k: "A", v: en ? "Absent without notice" : "Alpha / tanpa kabar" },
+        { k: "A", v: en ? "Alpha / no notice" : "Alpha" },
       ],
     },
     {
-      label: en ? "Other" : "Lainnya",
+      label: en ? "Medical & quarantine" : "Medis & karantina",
       codes: [
-        { k: "TR", v: "Training" },
-        { k: "DL", v: en ? "Field assignment" : "Dinas luar" },
-        { k: "ST", v: "Standby" },
-        { k: "M", v: "Meeting" },
-        { k: "MCU", v: "Medical check-up" },
-        { k: "MT", v: "Medical treatment" },
-        { k: "EM", v: "Emergency leave" },
-        { k: "PH", v: "Public holiday" },
-        { k: "RD", v: "Rest day" },
+        { k: "MCU", v: "Medical check up" },
+        { k: "MCR", v: en ? "Regular MCU" : "Reguler MCU" },
+        { k: "MCUF", v: en ? "MCU follow-up" : "Follow up MCU" },
+        { k: "ISM", v: en ? "Self-isolation" : "Isolasi mandiri" },
+        { k: "OBC", v: en ? "COVID observation" : "Observasi COVID" },
+        { k: "KRT", v: en ? "Quarantine" : "Karantina" },
+      ],
+    },
+    {
+      label: en ? "Assignment & training" : "Tugas & training",
+      codes: [
+        { k: "TGS", v: en ? "Assignment" : "Tugas" },
+        { k: "DNS", v: en ? "Official duty" : "Dinas" },
+        { k: "TRV", v: "Travel" },
+        { k: "TR", v: en ? "Off-site training" : "Training di luar site" },
+        { k: "TRS", v: en ? "On-site training" : "Training onsite" },
+        { k: "IN", v: en ? "Induction" : "Induksi" },
+      ],
+    },
+    {
+      label: en ? "Employment status" : "Status kepegawaian",
+      codes: [
+        { k: "TERM", v: "Termination" },
+        { k: "EOC", v: en ? "Contract ended" : "Kontrak berakhir" },
+        { k: "RSG", v: "Resign" },
       ],
     },
   ];
@@ -141,8 +151,8 @@ export function upErrorRows(lang: Lang): UpError[] {
       nik: "503264135",
       emp: "Budi Santoso",
       issue: en
-        ? 'Code "XX" on 14 Jul — not a known roster code'
-        : 'Kode "XX" pada 14 Jul — bukan kode roster yang dikenal',
+        ? 'Code "D12" on 14 Jul — not a known roster code'
+        : 'Kode "D12" pada 14 Jul — bukan kode roster yang dikenal',
       badgeVariant: "danger",
       badge: "Error",
     },
@@ -171,8 +181,8 @@ export function upErrorRows(lang: Lang): UpError[] {
       nik: "503264142",
       emp: "Maya Sari",
       issue: en
-        ? "N12 consecutive > 14 days — violates roster rules"
-        : "N12 berurutan > 14 hari — melanggar aturan roster",
+        ? "N consecutive > 14 days — violates roster rules"
+        : "N berurutan > 14 hari — melanggar aturan roster",
       badgeVariant: "danger",
       badge: "Error",
     },
@@ -200,52 +210,30 @@ export function upPreviewData(): UpPreview {
     [
       "503264133",
       "First Angel Paustine",
-      ["D12", "D12", "D12", "D12", "D12", "OFF", "OFF"],
+      ["D", "D", "D", "D", "D", "OFF", "OFF"],
     ],
-    [
-      "503264134",
-      "Rahmat Hidayat",
-      ["D8", "D8", "D8", "D8", "D8", "OFF", "OFF"],
-    ],
-    ["503264135", "Budi Santoso", ["D8", "D8", "OFF", "D8", "D8", "D8", "OFF"]],
-    [
-      "503264136",
-      "Siti Nurhaliza",
-      ["D12", "D12", "OFF", "D12", "D12", "D12", "OFF"],
-    ],
-    [
-      "503264137",
-      "Andi Prasetyo",
-      ["D10", "D10", "D10", "OFF", "D10", "D10", "OFF"],
-    ],
-    ["503264138", "Dewi Lestari", ["D8", "D8", "D8", "D8", "OFF", "D8", "OFF"]],
-    [
-      "503264139",
-      "Joko Widodo S.",
-      ["D12", "D12", "D12", "OFF", "OFF", "D12", "D12"],
-    ],
+    ["503264134", "Rahmat Hidayat", ["R", "R", "R", "R", "R", "OFF", "OFF"]],
+    ["503264135", "Budi Santoso", ["D", "D", "OFF", "D", "D", "D", "OFF"]],
+    ["503264136", "Siti Nurhaliza", ["D", "D", "OFF", "D", "D", "D", "OFF"]],
+    ["503264137", "Andi Prasetyo", ["D", "D", "D", "OFF", "D", "D", "OFF"]],
+    ["503264138", "Dewi Lestari", ["R", "R", "R", "R", "OFF", "R", "OFF"]],
+    ["503264139", "Joko Widodo S.", ["D", "D", "D", "OFF", "OFF", "D", "STB"]],
     ["503264140", "Rina Marlina", ["CR", "CR", "CR", "CR", "CR", "OFF", "OFF"]],
-    [
-      "503264141",
-      "Agus Salim",
-      ["D10", "OFF", "D10", "D10", "D10", "D10", "OFF"],
-    ],
-    [
-      "503264142",
-      "Maya Sari",
-      ["N12", "N12", "N12", "N12", "OFF", "OFF", "N12"],
-    ],
+    ["503264141", "Agus Salim", ["D", "OFF", "D", "D", "TRS", "D", "OFF"]],
+    ["503264142", "Maya Sari", ["N", "N", "N", "N", "OFF", "OFF", "N"]],
   ];
-  // sisipan realistis: sakit & alpha di tengah bulan
+  // sisipan realistis: sakit, alpha & MCU di tengah bulan
   const OVERRIDE: Record<string, Record<number, string>> = {
     "503264135": { 14: "S" },
     "503264141": { 9: "A" },
+    "503264138": { 21: "MCU" },
   };
   function colorOf(c: string) {
-    if (c === "OFF" || c === "CR" || c === "AL") return "var(--text-tertiary)";
-    if (c === "S" || c === "SD" || c === "A" || c === "I")
+    if (["OFF", "CR", "AL", "LWP", "LWOP", "PH", "PHD"].includes(c))
+      return "var(--text-tertiary)";
+    if (["S", "A", "ISM", "OBC", "KRT", "TERM", "RSG", "EOC"].includes(c))
       return "var(--color-danger-text)";
-    if (c.charAt(0) === "N") return "var(--color-primary-bright)";
+    if (c === "N") return "var(--color-primary-bright)";
     return "var(--text-secondary)";
   }
   const days: string[] = [];
@@ -266,16 +254,17 @@ export function upPreviewData(): UpPreview {
 export function revCodeList(lang: Lang): string[] {
   const en = lang === "en";
   return [
-    `D — ${en ? "Day shift" : "Shift siang"}`,
-    `D12 — ${en ? "Day 12 hours" : "Siang 12 jam"}`,
-    `N — ${en ? "Night shift" : "Shift malam"}`,
-    `N12 — ${en ? "Night 12 hours" : "Malam 12 jam"}`,
-    `OFF — ${en ? "Roster day off" : "Hari libur roster"}`,
+    "D — Day shift",
+    "N — Night shift",
+    `R — ${en ? "Regular" : "Reguler"}`,
+    "STB — Standby",
+    "OFF — OFF",
     `CR — ${en ? "Roster leave" : "Cuti roster"}`,
     "AL — Annual leave",
     `S — ${en ? "Sick" : "Sakit"}`,
-    `SD — ${en ? "Sick + doctor's note" : "Sakit + surat dokter"}`,
-    `I — ${en ? "Permitted absence" : "Izin"}`,
+    `A — ${en ? "Alpha / no notice" : "Alpha"}`,
+    `LWP — ${en ? "Paid leave" : "Izin dengan upah"}`,
+    `LWOP — ${en ? "Unpaid leave" : "Izin tanpa upah"}`,
   ];
 }
 
@@ -319,8 +308,8 @@ export function apInitialRows(): ApRow[] {
       sid: "REV-0711-02",
       name: "Siti Nurhaliza",
       nik: "503264136",
-      whatId: "08 Jul — kode A → SD · surat dokter menyusul",
-      whatEn: "08 Jul — code A → SD · doctor's note to follow",
+      whatId: "08 Jul — kode A → S · surat dokter menyusul",
+      whatEn: "08 Jul — code A → S · doctor's note to follow",
       whenId: "hari ini 07:12",
       whenEn: "today 07:12",
       status: "pending",
@@ -329,8 +318,8 @@ export function apInitialRows(): ApRow[] {
       sid: "REV-0709-05",
       name: "Maya Sari",
       nik: "503264142",
-      whatId: "07 Jul — kode D12 → OFF · tukar shift disetujui spv",
-      whatEn: "07 Jul — code D12 → OFF · shift swap approved by spv",
+      whatId: "07 Jul — kode D → OFF · tukar shift disetujui spv",
+      whatEn: "07 Jul — code D → OFF · shift swap approved by spv",
       whenId: "2 hari lalu",
       whenEn: "2 days ago",
       status: "pending",
@@ -351,8 +340,8 @@ export function apInitialRows(): ApRow[] {
       sid: "REV-0707-01",
       name: "Budi Santoso",
       nik: "503264135",
-      whatId: "05 Jul — kode A → I · tanpa bukti pendukung",
-      whatEn: "05 Jul — code A → I · no supporting evidence",
+      whatId: "05 Jul — kode A → LWP · tanpa bukti pendukung",
+      whatEn: "05 Jul — code A → LWP · no supporting evidence",
       whenId: "4 hari lalu",
       whenEn: "4 days ago",
       status: "rejected",

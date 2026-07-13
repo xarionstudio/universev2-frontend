@@ -47,7 +47,28 @@ function Pagination({
   className?: string;
 }) {
   const { t } = useI18n();
-  const pages = Array.from({ length: Math.max(1, pageCount) }, (_, i) => i + 1);
+  /* jendela nomor halaman: 1 … (p-1) p (p+1) … N — daftar panjang tidak
+     merender ratusan tombol */
+  const count = Math.max(1, pageCount);
+  let pages: (number | "…")[];
+  if (count <= 7) {
+    pages = Array.from({ length: count }, (_, i) => i + 1);
+  } else {
+    const anchors = Array.from(
+      new Set(
+        [1, 2, page - 1, page, page + 1, count - 1, count].filter(
+          (n) => n >= 1 && n <= count
+        )
+      )
+    ).sort((a, b) => a - b);
+    pages = [];
+    let prev = 0;
+    for (const n of anchors) {
+      if (n - prev > 1) pages.push("…");
+      pages.push(n);
+      prev = n;
+    }
+  }
   return (
     <div className={cn("flex items-center gap-5", className)}>
       <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
@@ -74,11 +95,21 @@ function Pagination({
         >
           ‹
         </PageButton>
-        {pages.map((n) => (
-          <PageButton key={n} active={n === page} onClick={() => onPage(n)}>
-            {n}
-          </PageButton>
-        ))}
+        {pages.map((n, i) =>
+          n === "…" ? (
+            <span
+              key={`gap-${i}`}
+              className="grid h-9 min-w-9 place-items-center text-[13px] text-(--text-tertiary)"
+              aria-hidden
+            >
+              …
+            </span>
+          ) : (
+            <PageButton key={n} active={n === page} onClick={() => onPage(n)}>
+              {n}
+            </PageButton>
+          )
+        )}
         <PageButton
           onClick={() => onPage(page + 1)}
           disabled={page >= pageCount}

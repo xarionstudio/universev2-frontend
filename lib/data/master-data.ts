@@ -1,4 +1,10 @@
-import { egiTypes } from "./units-db";
+import {
+  egiTypes,
+  eqClassDefs,
+  pitLocations,
+  unitMakes,
+  unitsDb,
+} from "./units-db";
 
 /* Master data dinamis (EGI, product, class, area, tempudo, bus, lokasi ex, running text) */
 export type MdEntry = {
@@ -58,62 +64,42 @@ export function mdInit(): Record<MdCat, MdEntry[]> {
       "egi",
       egiTypes.map((n) => [n])
     ),
-    product: mk("product", [
-      ["CATERPILLAR"],
-      ["KOMATSU"],
-      ["HITACHI"],
-      ["SANY"],
-      ["RENAULT"],
-      ["SCANIA"],
-      ["VOLVO"],
-      ["TEREX"],
-      ["BOMAG"],
-      ["EPIROC"],
-      ["CASE"],
-      ["MITSUBISHI"],
-      ["HINO"],
-    ]),
-    eqclass: mk("eqclass", [
-      ["LD", "Light Dump Truck"],
-      ["HD", "Heavy Dump Truck"],
-      ["EX", "Excavator"],
-      ["MH", "Manhaul"],
-      ["WT", "Water Truck"],
-      ["GD", "Grader"],
-      ["DZ", "Dozer"],
-      ["CM", "Compactor"],
-      ["DR", "Drill"],
-      ["LV", "Light Vehicle"],
-      ["580B", "Backhoe Loader"],
-    ]),
-    area: mk("area", [
-      ["Main Office", "Non-Mining"],
-      ["KM 31", "Non-Mining"],
-      ["Port / Stockpile", "Non-Mining"],
-      ["Pit Tempudo", "Mining"],
-      ["Pit Utara", "Mining"],
-      ["Pit Selatan", "Mining"],
-      ["Workshop", "Non-Mining"],
-      ["Mess Karang Joang", "Non-Mining"],
-    ]),
+    /* product/merek, eq class, area & bus disinkronkan dari master unit
+       terpusat (equipment.json) — bukan daftar lepas lagi */
+    product: mk(
+      "product",
+      unitMakes.map((n) => [n])
+    ),
+    eqclass: mk("eqclass", eqClassDefs),
+    area: mk(
+      "area",
+      pitLocations.map((p) => [p.name, p.mining ? "Mining" : "Non-Mining"])
+    ),
     tempudo: mk("tempudo", [
-      ["TP-01", "KM 31", "Pickup"],
-      ["TP-02", "Pit Tempudo", "Pickup & Drop"],
-      ["TP-03", "Port / Stockpile", "Drop-off"],
-      ["TP-04", "Mess Karang Joang", "Pickup", false],
+      ["TP-01", "Workshop", "Pickup"],
+      ["TP-02", "Panel East Tengah", "Pickup & Drop"],
+      ["TP-03", "Kasturi Tengah", "Pickup & Drop"],
+      ["TP-04", "Parkiran T6", "Pickup", false],
     ]),
-    bus: mk("bus", [
-      ["B01", "K460 6x6", "05:30"],
-      ["B02", "K460 6x6", "05:45"],
-      ["B03", "P460XT", "06:00"],
-      ["B04", "P460XT", "06:15", false],
-    ]),
+    /* sebagian bus sengaja belum terdaftar — tersedia di dropdown "Tambah Entri" */
+    bus: mk(
+      "bus",
+      unitsDb
+        .filter((u) => u.cls === "BUS" && u.active)
+        .slice(0, 22)
+        .map((u, i) => [
+          u.code,
+          u.egi,
+          `05:${String((i % 4) * 15).padStart(2, "0")}`,
+        ])
+    ),
+    /* hanya big/medium digger — selaras aturan dropdown form-nya */
     lokasiex: mk("lokasiex", [
-      ["EX7007", "B01", "TP-02"],
-      ["EX6001", "B02", "TP-02"],
-      ["EX5001", "B02", "TP-03"],
-      ["EX2015", "B03", "TP-01"],
-      ["EX3007", "B01", "TP-04"],
+      ["EX7007", "UD-BU06", "TP-02"],
+      ["EX6001", "UD-BU07", "TP-02"],
+      ["EX5001", "UD-BU07", "TP-03"],
+      ["EX7003", "UD-BU08", "TP-01"],
+      ["EX7004", "UD-BU06", "TP-04"],
     ]),
     runtext: mk("runtext", [
       [
