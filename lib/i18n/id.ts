@@ -407,6 +407,17 @@ export const id = {
   faWhyKomp: "kompetensi/SIMPER tidak sesuai",
   faWhyNoUnit: "tidak ada unit ready yang cocok",
   faAutoBtn: "Alokasi otomatis",
+  faCopyYday: "Salin dari kemarin",
+  faCopyToastT: "unit diisi dari alokasi kemarin",
+  faCopyEmptyT: "Tidak ada yang bisa disalin",
+  faCopyEmptyD:
+    "Alokasi kemarin kosong untuk shift ini, atau semua unitnya sudah terisi.",
+  faSpareTitle: "Operator spare",
+  faSpareSub:
+    "Operator berkompetensi yang belum mendapat unit di shift ini — pengganti baris SPARE di file setting lama.",
+  faSpareEmpty: "Semua operator berkompetensi sudah teralokasi.",
+  faFleetAll: "Semua fleet",
+  faSupportGrp: "Unit support",
   faAutoT: "Usulan alokasi otomatis",
   faAutoB:
     "Match berdasar kompetensi (eq. class + SIMPER berlaku) dan status fit. Operator kompetensi tunggal ditempatkan lebih dulu. Tinjau lalu terapkan — belum ada yang berubah.",

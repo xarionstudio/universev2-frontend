@@ -8,6 +8,7 @@ import {
   type Employee,
 } from "@/lib/data/employees";
 import { initialFleets, type Fleet } from "@/lib/data/fleet";
+import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
 import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
 import { apInitialRows, type ApRow } from "@/lib/data/roster";
 import {
@@ -26,11 +27,7 @@ import {
   type UmUser,
 } from "@/lib/data/users";
 
-/* Alokasi fleet: shift → kode unit → NIK operator */
-export type FaAlloc = {
-  pagi: Record<string, string>;
-  malam: Record<string, string>;
-};
+export { type FaAlloc } from "@/lib/data/fleet-alloc";
 
 export type MenuVis = {
   display: boolean;
@@ -114,9 +111,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     Record<string, Partial<UnitDb>>
   >({});
   const [mdData, setMdData] = React.useState<Record<MdCat, MdEntry[]>>(mdInit);
-  const [faAlloc, setFaAlloc] = React.useState<FaAlloc>({
-    pagi: {},
-    malam: {},
+  /* alokasi diseed untuk kemarin & hari ini — demo "salin dari kemarin" + TV;
+     fleet yang punya display TV diisi duluan */
+  const [faAlloc, setFaAlloc] = React.useState<FaAlloc>(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return seedFaAlloc(
+      [isoAddDays(today, -1), today],
+      initialDspFleet.flatMap((d) => (d.fleetId ? [d.fleetId] : []))
+    );
   });
   const [fleets, setFleets] = React.useState<Fleet[]>(initialFleets);
   const [appName, setAppName] = React.useState("UNIVERSE");

@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Wand2 } from "lucide-react";
+import { CopyPlus, Wand2 } from "lucide-react";
 
 import { ftwTodayMap } from "@/lib/data/employees";
+import { isoAddDays } from "@/lib/data/fleet-alloc";
 import { typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -14,9 +15,17 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
-import { DNote, FootSum, PageTitle, Panel } from "@/components/ui/panel";
+import {
+  DNote,
+  FootSum,
+  PageTitle,
+  Panel,
+  Toolbar,
+  ToolbarTitle,
+} from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 
 import { AllocDialog } from "./_components/alloc-dialog";
@@ -30,6 +39,10 @@ import {
 
 type Shift = "pagi" | "malam";
 type Filter = "all" | "unalloc" | "alloc" | "issue";
+
+/* class unit yang di-setting operatornya — mengikuti file setting lama
+   (OHT/DT/digger/dozer/water truck/manhaul); LV, bus, pompa dsb. di luar papan */
+const OPERATED_CLS = new Set(["HD", "LD", "EX", "DZ", "WT", "MH"]);
 
 const stBadge: Record<
   FaUnit["status"],
@@ -51,24 +64,45 @@ export default function FleetAllocationPage() {
   );
   const [shift, setShift] = React.useState<Shift>("pagi");
   const [filter, setFilter] = React.useState<Filter>("all");
+  const [fleetF, setFleetF] = React.useState("all");
   const [q, setQ] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [per, setPer] = React.useState("6");
   const [allocFor, setAllocFor] = React.useState<FaUnit | null>(null);
   const [autoOpen, setAutoOpen] = React.useState(false);
 
+  /* urutan papan: unit formasi fleet dulu (sesuai Setting Fleet), lalu support */
+  const fleetRank = React.useMemo(() => {
+    const rank = new Map<string, number>();
+    fleets
+      .filter((f) => f.active)
+      .forEach((f, fi) =>
+        [f.digger, ...f.units].forEach((c, ci) => rank.set(c, fi * 100 + ci))
+      );
+    return rank;
+  }, [fleets]);
+
   const faUnits: FaUnit[] = React.useMemo(
     () =>
       udbAll()
-        .filter((u) => u.active)
+        .filter((u) => u.active && OPERATED_CLS.has(u.cls))
         .map((u) => ({
           code: u.code,
           type: `${u.egi} · ${u.product}`,
-          loc: u.cls,
+          loc: u.loc || u.cls,
           tegi: typeOfEgi(u.egi),
-          status: u.breakdown ? "breakdown" : u.standby ? "standby" : "ready",
-        })),
-    [udbAll]
+          status: u.breakdown
+            ? ("breakdown" as const)
+            : u.standby
+              ? ("standby" as const)
+              : ("ready" as const),
+        }))
+        .sort(
+          (a, b) =>
+            (fleetRank.get(a.code) ?? 1e9) - (fleetRank.get(b.code) ?? 1e9) ||
+            a.code.localeCompare(b.code)
+        ),
+    [udbAll, fleetRank]
   );
 
   const ops: FaOp[] = React.useMemo(
@@ -79,7 +113,11 @@ export default function FleetAllocationPage() {
     [empAll]
   );
 
-  const alloc = faAlloc[shift];
+  /* alokasi tanggal + shift terpilih */
+  const alloc = React.useMemo(
+    () => faAlloc[faDate]?.[shift] ?? {},
+    [faAlloc, faDate, shift]
+  );
   const opByNik = React.useMemo(
     () => new Map(ops.map((o) => [o.nik, o])),
     [ops]
@@ -99,6 +137,12 @@ export default function FleetAllocationPage() {
     if (filter === "unalloc" && kind !== "none") return false;
     if (filter === "alloc" && kind !== "ok") return false;
     if (filter === "issue" && kind !== "warn" && kind !== "bd") return false;
+    if (fleetF === "support" && fleetRank.has(u.code)) return false;
+    if (fleetF !== "all" && fleetF !== "support") {
+      const f = fleets.find((x) => x.id === fleetF);
+      if (!f || (f.digger !== u.code && !f.units.includes(u.code)))
+        return false;
+    }
     if (!needle) return true;
     return (
       u.code.toLowerCase().includes(needle) ||
@@ -118,21 +162,27 @@ export default function FleetAllocationPage() {
   const allocN = faUnits.filter((u) => opByNik.has(alloc[u.code] ?? "")).length;
   const shiftLabel = shift === "pagi" ? t.faShiftPagi : t.faShiftMalam;
 
+  /* tulis ke alloc[tanggal][shift] */
+  function writeAlloc(mut: (next: Record<string, string>) => void) {
+    setFaAlloc((prev) => {
+      const next = { ...(prev[faDate]?.[shift] ?? {}) };
+      mut(next);
+      return { ...prev, [faDate]: { ...prev[faDate], [shift]: next } };
+    });
+  }
+
   function assign(unit: FaUnit, op: FaOp) {
-    setFaAlloc((prev) => ({
-      ...prev,
-      [shift]: { ...prev[shift], [unit.code]: op.nik },
-    }));
+    writeAlloc((next) => {
+      next[unit.code] = op.nik;
+    });
     setAllocFor(null);
     pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD);
   }
 
   function release(unit: FaUnit) {
     const op = opByNik.get(alloc[unit.code] ?? "");
-    setFaAlloc((prev) => {
-      const next = { ...prev[shift] };
+    writeAlloc((next) => {
       delete next[unit.code];
-      return { ...prev, [shift]: next };
     });
     if (op)
       pushToast(
@@ -143,13 +193,32 @@ export default function FleetAllocationPage() {
   }
 
   function applyAuto(proposals: FaProposal[]) {
-    setFaAlloc((prev) => {
-      const next = { ...prev[shift] };
+    writeAlloc((next) => {
       for (const pr of proposals) next[pr.code] = pr.nik;
-      return { ...prev, [shift]: next };
     });
     setAutoOpen(false);
     pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
+  }
+
+  /* salin alokasi shift yang sama dari hari sebelumnya — hanya slot kosong,
+     operator yang sudah terpakai hari ini dilewati */
+  function copyFromYesterday() {
+    const src = faAlloc[isoAddDays(faDate, -1)]?.[shift] ?? {};
+    const usedNik = new Set(Object.values(alloc));
+    const operable = new Map(faUnits.map((u) => [u.code, u]));
+    let n = 0;
+    writeAlloc((next) => {
+      for (const [code, nik] of Object.entries(src)) {
+        const u = operable.get(code);
+        if (!u || u.status === "breakdown") continue;
+        if (next[code] || usedNik.has(nik) || !opByNik.has(nik)) continue;
+        next[code] = nik;
+        usedNik.add(nik);
+        n++;
+      }
+    });
+    if (n) pushToast("success", `${n} ${t.faCopyToastT}`);
+    else pushToast("info", t.faCopyEmptyT, t.faCopyEmptyD);
   }
 
   return (
@@ -160,23 +229,36 @@ export default function FleetAllocationPage() {
             type="date"
             className="w-[160px] font-mono"
             value={faDate}
-            onChange={(e) => setFaDate(e.target.value)}
+            onChange={(e) => {
+              setFaDate(e.target.value);
+              setPage(1);
+            }}
             aria-label={t.lblDate}
           />
           <Segmented role="group" aria-label="Shift">
             <SegmentedButton
               active={shift === "pagi"}
-              onClick={() => setShift("pagi")}
+              onClick={() => {
+                setShift("pagi");
+                setPage(1);
+              }}
             >
               {t.faShiftPagi}
             </SegmentedButton>
             <SegmentedButton
               active={shift === "malam"}
-              onClick={() => setShift("malam")}
+              onClick={() => {
+                setShift("malam");
+                setPage(1);
+              }}
             >
               {t.faShiftMalam}
             </SegmentedButton>
           </Segmented>
+          <Button variant="secondary" onClick={copyFromYesterday}>
+            <CopyPlus />
+            {t.faCopyYday}
+          </Button>
           <Button onClick={() => setAutoOpen(true)}>
             <Wand2 />
             {t.faAutoBtn}
@@ -194,6 +276,26 @@ export default function FleetAllocationPage() {
           {t.faAllocUnits}
         </span>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <Select
+            aria-label="Filter fleet"
+            wrapperClassName="w-auto"
+            className="h-10 w-auto pr-9"
+            value={fleetF}
+            onChange={(e) => {
+              setFleetF(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="all">{t.faFleetAll}</option>
+            {fleets
+              .filter((f) => f.active)
+              .map((f) => (
+                <option key={f.id} value={f.id}>
+                  Fleet {f.digger}
+                </option>
+              ))}
+            <option value="support">{t.faSupportGrp}</option>
+          </Select>
           <Segmented role="group" aria-label="Filter alokasi">
             {(
               [
@@ -390,6 +492,55 @@ export default function FleetAllocationPage() {
             }}
           />
         </div>
+      </Panel>
+
+      {/* pool spare — pengganti baris "SPARE" (unit fiktif) di file lama */}
+      <Panel>
+        <Toolbar className="mb-4">
+          <ToolbarTitle>
+            {t.faSpareTitle} (
+            {
+              ops.filter((o) => !new Set(Object.values(alloc)).has(o.nik))
+                .length
+            }
+            )
+          </ToolbarTitle>
+          <span className="text-xs text-(--text-tertiary)">{t.faSpareSub}</span>
+        </Toolbar>
+        {(() => {
+          const usedNik = new Set(Object.values(alloc));
+          const spare = ops.filter((o) => !usedNik.has(o.nik));
+          if (!spare.length)
+            return (
+              <p className="text-sm text-(--text-tertiary)">{t.faSpareEmpty}</p>
+            );
+          return (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+              {spare.map((o) => {
+                const ftw = ftwBadgeOf(o, t);
+                return (
+                  <div
+                    key={o.nik}
+                    className="flex items-center gap-3 rounded-icon border border-(--divider) bg-(--fill-subtle) p-3"
+                  >
+                    <Avatar className="text-xs">{initialsOf(o.name)}</Avatar>
+                    <div className="min-w-0 flex-1">
+                      <b className="block truncate text-[13px] font-semibold">
+                        {o.name}
+                      </b>
+                      <span className="font-mono text-xs text-(--text-tertiary)">
+                        {o.nik} · {o.komp?.map((k) => k.cls).join(", ")}
+                      </span>
+                    </div>
+                    <Badge variant={ftw.variant} dot>
+                      {ftw.label}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </Panel>
 
       <DNote title={t.faNoteT}>{t.faNoteB}</DNote>

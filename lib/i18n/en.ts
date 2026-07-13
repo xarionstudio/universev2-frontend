@@ -410,6 +410,17 @@ export const en: Dict = {
   faWhyKomp: "competency/SIMPER mismatch",
   faWhyNoUnit: "no matching ready unit",
   faAutoBtn: "Auto-allocate",
+  faCopyYday: "Copy from yesterday",
+  faCopyToastT: "units filled from yesterday's allocation",
+  faCopyEmptyT: "Nothing to copy",
+  faCopyEmptyD:
+    "Yesterday's allocation is empty for this shift, or its units are already filled.",
+  faSpareTitle: "Spare operators",
+  faSpareSub:
+    "Competent operators without a unit this shift — replaces the SPARE rows of the old setting file.",
+  faSpareEmpty: "All competent operators are allocated.",
+  faFleetAll: "All fleets",
+  faSupportGrp: "Support units",
   faAutoT: "Auto-allocation proposal",
   faAutoB:
     "Matched by competency (eq. class + valid SIMPER) and fit status. Single-competency operators are placed first. Review then apply — nothing has changed yet.",

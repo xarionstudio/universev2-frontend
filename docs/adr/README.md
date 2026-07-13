@@ -8,3 +8,5 @@
 | [0004](0004-display-newtab-naming.md)          | Layar display dibuka di tab baru + fullscreen; penamaan "display" | Accepted                    |
 | [0005](0005-tooling-kolaborasi.md)             | Format, linter, dan pre-commit mengikuti universe-2               | Accepted                    |
 | [0006](0006-equipment-json-sumber-terpusat.md) | equipment.json sebagai sumber data unit terpusat                  | Accepted                    |
+| [0007](0007-alokasi-per-tanggal-shift.md)      | Alokasi operator per tanggal+shift, display fleet memantulkannya  | Accepted                    |
+| [0008](0008-formasi-fleet-dari-xlsx.md)        | Formasi fleet digenerate dari setting-operator.xlsx               | Accepted                    |

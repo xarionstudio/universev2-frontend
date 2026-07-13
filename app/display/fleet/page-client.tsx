@@ -16,17 +16,33 @@ export default function DisplayFleetPage() {
   const params = useSearchParams();
   const deviceName = params.get("name") ?? undefined;
   const fleetId = params.get("fleet");
-  const { fleets } = useAppStore();
+  const { fleets, faAlloc, empAll } = useAppStore();
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */
   const fleet =
     fleets.find((f) => f.id === fleetId) ??
     fleets.find((f) => f.active) ??
     fleets[0];
-  const cards = React.useMemo(
-    () => (fleet ? fleetDisplayCards(fleet) : []),
-    [fleet]
+
+  /* operator dari alokasi harian: tanggal hari ini + shift menurut jam
+     (06:00–17:59 = pagi); bisa dipaksa lewat ?shift= untuk pengujian */
+  const [now] = React.useState(() => new Date());
+  const shiftParam = params.get("shift");
+  const shift =
+    shiftParam === "pagi" || shiftParam === "malam"
+      ? shiftParam
+      : now.getHours() >= 6 && now.getHours() < 18
+        ? "pagi"
+        : "malam";
+  const nameByNik = React.useMemo(
+    () => new Map(empAll().map((e) => [e.nik, e.name])),
+    [empAll]
   );
+  const cards = React.useMemo(() => {
+    if (!fleet) return [];
+    const alloc = faAlloc[now.toISOString().slice(0, 10)]?.[shift] ?? {};
+    return fleetDisplayCards(fleet, alloc, (nik) => nameByNik.get(nik));
+  }, [fleet, faAlloc, now, shift, nameByNik]);
   const count = (tone: string) => cards.filter((c) => c.tone === tone).length;
 
   return (
