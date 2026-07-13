@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils";
 
 export function DisplayBadge({
   tone,
+  className,
   children,
 }: {
   tone: DisplayTone;
+  className?: string;
   children: React.ReactNode;
 }) {
   const styles: Record<DisplayTone, string> = {
@@ -30,7 +32,8 @@ export function DisplayBadge({
     <span
       className={cn(
         "inline-flex items-center gap-3 rounded-full border-[1.5px] px-5.5 py-2 text-2xl font-semibold whitespace-nowrap",
-        styles[tone]
+        styles[tone],
+        className
       )}
     >
       <span className="size-3 flex-none rounded-full bg-current" />
@@ -42,7 +45,7 @@ export function DisplayBadge({
 export type DisplayCol = { label: string; width?: string };
 
 const thClass =
-  "bg-[linear-gradient(90deg,rgba(37,99,235,.4),rgba(0,84,199,.3))] px-6 py-4.5 text-left text-[22px] font-semibold tracking-[.05em] whitespace-nowrap uppercase first:rounded-l-[14px] last:rounded-r-[14px]";
+  "bg-[linear-gradient(90deg,rgba(37,99,235,.4),rgba(0,84,199,.3))] px-6 py-3.5 text-left text-[22px] font-semibold tracking-[.05em] whitespace-nowrap uppercase first:rounded-l-[14px] last:rounded-r-[14px]";
 
 export function DisplayTable({
   cols,
@@ -64,7 +67,7 @@ export function DisplayTable({
           <td
             key={i}
             style={{ width: cols[i]?.width }}
-            className="border-b border-[rgba(255,255,255,.08)] px-6 py-5"
+            className="border-b border-[rgba(255,255,255,.08)] px-6 py-3.5"
           >
             {c}
           </td>

@@ -40,25 +40,6 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-const CONTENT_LABELS: Record<DisplayKind, string> = {
-  att: "Attendance",
-  fleet: "Fleet",
-  ftw: "Fit To Work",
-  finger: "Fingerprint",
-};
-
-const CONTENT_OPTS: Record<
-  "att" | "fleet",
-  { key: DisplayKind; label: string }[]
-> = {
-  att: [
-    { key: "att", label: "Attendance" },
-    { key: "ftw", label: "Fit To Work" },
-    { key: "finger", label: "Monitoring Fingerprint" },
-  ],
-  fleet: [{ key: "fleet", label: "Status Unit" }],
-};
-
 /* layar display sungguhan (route dark-only 1920×1080) — dibuka di tab baru, fullscreen */
 const DISPLAY_URLS: Record<DisplayKind, string> = {
   att: "/display/attendance",
@@ -66,6 +47,12 @@ const DISPLAY_URLS: Record<DisplayKind, string> = {
   ftw: "/display/fitwork",
   finger: "/display/fingerprint",
 };
+
+/* buka layar + bawa nama display terdaftar agar tampil di layarnya */
+function openNamedDisplay(kind: DisplayKind, name?: string) {
+  const url = DISPLAY_URLS[kind];
+  openDisplay(name ? `${url}?name=${encodeURIComponent(name)}` : url);
+}
 
 export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   const { t } = useI18n();
@@ -77,16 +64,11 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   const runtextOpts = store.mdData.runtext
     .filter((e) => e.active)
     .map((e) => e.name);
-  const contentOpts = CONTENT_OPTS[kind];
 
-  /* dialog tambah/edit */
+  /* dialog tambah/edit — satu site, tanpa lokasi & konten */
   const [dlgOpen, setDlgOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Display | null>(null);
   const [fName, setFName] = React.useState("");
-  const [fLoc, setFLoc] = React.useState("");
-  const [fContent, setFContent] = React.useState<DisplayKind>(
-    contentOpts[0].key
-  );
   const [fRuntext, setFRuntext] = React.useState("");
   const [fActive, setFActive] = React.useState(true);
   const [nameErr, setNameErr] = React.useState(false);
@@ -94,13 +76,9 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   /* dialog hapus */
   const [delTarget, setDelTarget] = React.useState<Display | null>(null);
 
-  const pageDisplayUrl = DISPLAY_URLS[kind];
-
   function openAdd() {
     setEditing(null);
     setFName("");
-    setFLoc("");
-    setFContent(contentOpts[0].key);
     setFRuntext(runtextOpts[0] ?? "");
     setFActive(true);
     setNameErr(false);
@@ -110,8 +88,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   function openEdit(d: Display) {
     setEditing(d);
     setFName(d.name);
-    setFLoc(d.loc);
-    setFContent(d.content);
     setFRuntext(d.runtext);
     setFActive(d.active);
     setNameErr(false);
@@ -126,8 +102,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
     }
     const data = {
       name: fName.trim(),
-      loc: fLoc.trim(),
-      content: fContent,
       runtext: fRuntext,
       active: fActive,
     };
@@ -141,7 +115,14 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       const id = `${prefix}${String(rows.length + 1).padStart(2, "0")}`;
       setRows((prev) => [
         ...prev,
-        { id, online: true, hb: "baru saja", ...data },
+        {
+          id,
+          online: true,
+          hb: "baru saja",
+          loc: "",
+          content: kind === "att" ? "att" : "fleet",
+          ...data,
+        },
       ]);
       pushToast("success", t.dspToastAdd);
     }
@@ -161,7 +142,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
         title={kind === "att" ? t.navDispAtt : t.navDispFleet}
         sub={kind === "att" ? t.dspSubAtt : t.dspSubFleet}
       >
-        <Button onClick={() => openDisplay(pageDisplayUrl)}>
+        <Button onClick={() => openNamedDisplay(kind)}>
           <Monitor />
           {t.dspOpen}
         </Button>
@@ -179,9 +160,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
           <TableHeader>
             <tr>
               <TableHead>{t.dspName}</TableHead>
-              <TableHead>{t.dspLoc}</TableHead>
-              <TableHead>{t.dspContent}</TableHead>
-              <TableHead className="max-xl:hidden">{t.dspRuntext}</TableHead>
+              <TableHead>{t.dspRuntext}</TableHead>
               <TableHead>{t.dspConn}</TableHead>
               <TableHead>{t.thStatus}</TableHead>
               <TableHead className="w-[110px]">{t.thAct}</TableHead>
@@ -193,11 +172,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                 <TableCell>
                   <NameCell name={d.name} sub={d.id} />
                 </TableCell>
-                <TableCell>{d.loc}</TableCell>
-                <TableCell>
-                  <Badge variant="info">{CONTENT_LABELS[d.content]}</Badge>
-                </TableCell>
-                <TableCell className="max-w-[280px] text-(--text-secondary) max-xl:hidden">
+                <TableCell className="max-w-[360px] text-(--text-secondary)">
                   {d.runtext}
                 </TableCell>
                 <TableCell>
@@ -217,7 +192,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                   <div className="flex gap-2">
                     <IconButton
                       aria-label={t.dspPreview}
-                      onClick={() => openDisplay(DISPLAY_URLS[d.content])}
+                      onClick={() => openNamedDisplay(d.content, d.name)}
                     >
                       <Eye />
                     </IconButton>
@@ -281,27 +256,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                   if (e.target.value.trim()) setNameErr(false);
                 }}
               />
-            </Field>
-            <Field label={t.dspLoc} htmlFor="dsp-loc">
-              <Input
-                id="dsp-loc"
-                placeholder="Gate utara / Mess / Workshop"
-                value={fLoc}
-                onChange={(e) => setFLoc(e.target.value)}
-              />
-            </Field>
-            <Field label={t.dspContent} htmlFor="dsp-content">
-              <Select
-                id="dsp-content"
-                value={fContent}
-                onChange={(e) => setFContent(e.target.value as DisplayKind)}
-              >
-                {contentOpts.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </Select>
             </Field>
             <Field
               label={t.dspRuntext}

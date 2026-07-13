@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { WifiOff } from "lucide-react";
+import { Megaphone, Monitor, WifiOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -25,11 +25,16 @@ export type DisplayStat = {
 
 export function DisplayShell({
   title,
+  deviceName,
   stats,
+  runtext,
   children,
 }: {
   title: string;
+  /* nama display terdaftar (mis. "TV Gate Utara") — dikirim lewat ?name= */
+  deviceName?: string;
   stats: DisplayStat[];
+  runtext?: string;
   children: React.ReactNode;
 }) {
   const canvasRef = React.useRef<HTMLDivElement>(null);
@@ -117,7 +122,7 @@ export function DisplayShell({
         <div className="pointer-events-none absolute -top-50 -right-35 z-0 size-160 rounded-full bg-(--blob-cyan) blur-[140px]" />
         <div className="pointer-events-none absolute -bottom-55 -left-30 z-0 size-140 rounded-full bg-(--blob-blue) blur-[140px]" />
 
-        <div className="display-stage relative z-1 flex h-[1080px] [animation:pxshift_480s_steps(1)_infinite] flex-col gap-8 px-14 py-12">
+        <div className="display-stage relative z-1 flex h-[1080px] [animation:pxshift_480s_steps(1)_infinite] flex-col gap-7 px-14 pt-10 pb-22">
           {/* header */}
           <header className="flex flex-none items-center gap-7">
             <div className="grid size-16 flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-[26px] font-bold text-white shadow-[0_0_0_3px_rgba(255,255,255,.28),0_0_28px_rgba(0,212,255,.4)]">
@@ -129,6 +134,12 @@ export function DisplayShell({
                 {dateLine}
               </p>
             </div>
+            {deviceName ? (
+              <div className="flex items-center gap-3 rounded-full px-6 py-3 glass-card">
+                <Monitor className="size-6 text-(--color-primary-bright)" />
+                <span className="text-[22px] font-semibold">{deviceName}</span>
+              </div>
+            ) : null}
             <div className="ml-auto flex items-center gap-5">
               <div className="flex items-center gap-3 text-[22px] text-(--text-secondary)">
                 <span
@@ -176,25 +187,25 @@ export function DisplayShell({
           ) : null}
 
           {/* stat kiosk (G2) */}
-          <div className="grid flex-none grid-cols-3 gap-7">
+          <div className="grid flex-none grid-cols-4 gap-5">
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="flex items-center gap-7 rounded-panel px-9 py-7 glass-card"
+                className="flex items-center gap-5 rounded-card px-6 py-4 glass-card"
               >
                 <div
                   className={cn(
-                    "grid size-18 flex-none place-items-center rounded-card border [&_svg]:size-8.5",
+                    "grid size-13 flex-none place-items-center rounded-icon border [&_svg]:size-6.5",
                     s.iconClass
                   )}
                 >
                   {s.icon}
                 </div>
                 <div>
-                  <div className="text-[80px] leading-none font-bold tabular-nums">
+                  <div className="text-[52px] leading-none font-bold tabular-nums">
                     {s.value}
                   </div>
-                  <div className="mt-1.5 text-2xl font-semibold text-(--text-secondary)">
+                  <div className="mt-1 text-lg font-semibold text-(--text-secondary)">
                     {s.label}
                   </div>
                 </div>
@@ -204,6 +215,20 @@ export function DisplayShell({
 
           {children}
         </div>
+
+        {/* running text — nempel dasar layar, full-bleed tanpa jarak bawah */}
+        {runtext ? (
+          <div className="absolute inset-x-0 bottom-0 z-1 flex h-16 items-center gap-5 border-t border-(--glass-1-border) bg-(--glass-1-fill) px-14 backdrop-blur-md">
+            <span className="grid size-10 flex-none place-items-center rounded-full border border-(--badge-info-border) bg-(--badge-info-fill)">
+              <Megaphone className="size-5 text-(--color-primary-bright)" />
+            </span>
+            <div className="relative min-w-0 flex-1 overflow-hidden">
+              <div className="display-marquee w-max [animation:kmarquee_28s_linear_infinite] text-2xl whitespace-nowrap text-(--text-secondary)">
+                {runtext}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* demo switch (bukan bagian desain kiosk) */}

@@ -1,309 +1,326 @@
-/* Data layar display (TV) — dipindah dari HTML statis desain; display tampil id-only. */
+/* Data layar display (TV) — display tampil id-only.
+   Satu layar = satu domain: attendance (kehadiran), fitwork (kelayakan kerja),
+   fleet (status unit + formasi), fingerprint (kesehatan mesin) — tanpa
+   tumpang tindih informasi antar layar. */
 
 export type DisplayTone = "success" | "warning" | "danger" | "neutral" | "info";
 
-/* Attendance — [nama, nik, dept, checkIn, mesin, tone, label] */
+/* Running text per layar — dari master Running Text yang dikelola admin */
+export const displayRuntext: Record<
+  "att" | "ftw" | "fleet" | "finger",
+  string
+> = {
+  att: "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.",
+  ftw: "Rapat P5M setiap pergantian shift di front masing-masing.",
+  fleet: "Wajib P2H sebelum mengoperasikan unit.",
+  finger: "Wajib P2H sebelum mengoperasikan unit.",
+};
+
+/* ===== Attendance — murni kehadiran (siapa sudah/belum datang) =====
+   belum absen & terlambat selalu teratas */
 export type DisplayAttRow = {
-  name: string;
   nik: string;
+  name: string;
+  pos: string;
   dept: string;
-  checkIn: string;
-  machine: string;
   tone: DisplayTone;
   label: string;
 };
 
 export const displayAttRows: DisplayAttRow[] = [
   {
-    name: "First Angel Paustine",
-    nik: "503264133",
+    nik: "503264139",
+    name: "Joko Widodo S.",
+    pos: "Operator Grader",
     dept: "Operation",
-    checkIn: "05:45",
-    machine: "Gate utara",
-    tone: "success",
-    label: "Fit",
+    tone: "danger",
+    label: "Belum absen",
   },
   {
-    name: "Siti Nurhaliza",
-    nik: "503264136",
-    dept: "Operation",
-    checkIn: "05:51",
-    machine: "Gate selatan",
-    tone: "success",
-    label: "Fit",
+    nik: "503264135",
+    name: "Budi Santoso",
+    pos: "Operator Excavator",
+    dept: "HRGA",
+    tone: "danger",
+    label: "Belum absen",
   },
   {
-    name: "Dewi Lestari",
-    nik: "503264138",
-    dept: "SDI",
-    checkIn: "06:58",
-    machine: "Kantor",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Rahmat Hidayat",
-    nik: "503264134",
-    dept: "SDI",
-    checkIn: "07:02",
-    machine: "Kantor",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Andi Prasetyo",
-    nik: "503264137",
+    nik: "503264141",
+    name: "Agus Salim",
+    pos: "Welder",
     dept: "Plant",
-    checkIn: "06:31",
-    machine: "Workshop",
+    tone: "danger",
+    label: "Belum absen",
+  },
+  {
+    nik: "503264137",
+    name: "Andi Prasetyo",
+    pos: "Mekanik",
+    dept: "Plant",
     tone: "warning",
     label: "Terlambat",
   },
   {
-    name: "Budi Santoso",
-    nik: "503264135",
-    dept: "HRGA",
-    checkIn: "—",
-    machine: "—",
-    tone: "danger",
-    label: "Kurang tidur",
-  },
-  {
-    name: "Agus Salim",
-    nik: "503264141",
-    dept: "Plant",
-    checkIn: "—",
-    machine: "—",
-    tone: "danger",
-    label: "Kurang tidur",
-  },
-  {
-    name: "Joko Widodo S.",
-    nik: "503264139",
+    nik: "503264133",
+    name: "First Angel Paustine",
+    pos: "Operator Dump Truck",
     dept: "Operation",
-    checkIn: "—",
-    machine: "—",
-    tone: "warning",
-    label: "Belum absen",
-  },
-  {
-    name: "Maya Sari",
-    nik: "503264142",
-    dept: "Operation",
-    checkIn: "05:49",
-    machine: "Gate utara",
     tone: "success",
-    label: "Fit",
+    label: "Hadir",
   },
   {
-    name: "Hendra Gunawan",
+    nik: "503264136",
+    name: "Siti Nurhaliza",
+    pos: "Operator Dump Truck",
+    dept: "Operation",
+    tone: "success",
+    label: "Hadir",
+  },
+  {
+    nik: "503264150",
+    name: "Rizky Ananda",
+    pos: "Operator HD / Excavator",
+    dept: "Operation",
+    tone: "success",
+    label: "Hadir",
+  },
+  {
     nik: "503264143",
+    name: "Hendra Gunawan",
+    pos: "Mekanik Senior",
     dept: "Plant",
-    checkIn: "06:12",
-    machine: "Workshop",
     tone: "success",
-    label: "Fit",
+    label: "Hadir",
+  },
+  {
+    nik: "503264138",
+    name: "Dewi Lestari",
+    pos: "Staff Administrasi",
+    dept: "SDI",
+    tone: "success",
+    label: "Hadir",
+  },
+  {
+    nik: "503264134",
+    name: "Rahmat Hidayat",
+    pos: "Admin Roster",
+    dept: "SDI",
+    tone: "success",
+    label: "Hadir",
   },
 ];
 
-/* Fleet — breakdown selalu di urutan teratas */
-export type DisplayFleetRow = {
-  code: string;
-  type: string;
-  operator: string;
-  loc: string;
-  tone: DisplayTone;
-  label: string;
-};
-
-export const displayFleetRows: DisplayFleetRow[] = [
-  {
-    code: "RD5004",
-    type: "777E · CATERPILLAR",
-    operator: "—",
-    loc: "Panel East - Atas Selatan",
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "RD5047",
-    type: "777E · CATERPILLAR",
-    operator: "—",
-    loc: "Panel East - Atas Selatan",
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "RD5080",
-    type: "HD785-7 · KOMATSU",
-    operator: "—",
-    loc: "Kasturi Tengah",
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "EX7001",
-    type: "EX2000-7BH · HITACHI",
-    operator: "David Pakiding",
-    loc: "Panel East - Puncak Utara",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5001",
-    type: "777E · CATERPILLAR",
-    operator: "First Angel P.",
-    loc: "Panel East - Atas Selatan",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5002",
-    type: "777E · CATERPILLAR",
-    operator: "Siti Nurhaliza",
-    loc: "Panel East - Atas Selatan",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "EX7007",
-    type: "PC2000-11 · KOMATSU",
-    operator: "Hendrik",
-    loc: "Kasturi Tengah Bawah",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5061",
-    type: "HD785-7 · KOMATSU",
-    operator: "Rizky Ananda",
-    loc: "Kasturi Tengah Bawah",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "WT1009",
-    type: "K460 6x6 · RENAULT",
-    operator: "Maya Sari",
-    loc: "Jalan hauling",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "GD5001",
-    type: "16GC · CATERPILLAR",
-    operator: "—",
-    loc: "Jalan hauling",
-    tone: "neutral",
-    label: "Standby",
-  },
-];
-
-/* Fit to work — kurang tidur & belum lapor selalu teratas */
+/* ===== Fit to work — murni kelayakan kerja (jam tidur + waktu lapor) =====
+   kurang tidur & belum lapor selalu teratas */
 export type DisplayFtwRow = {
-  name: string;
   nik: string;
+  name: string;
+  pos: string;
   dept: string;
-  shift: string;
   sleep: string;
+  note: string;
   tone: DisplayTone;
   label: string;
 };
 
 export const displayFtwRows: DisplayFtwRow[] = [
   {
-    name: "Budi Santoso",
     nik: "503264135",
+    name: "Budi Santoso",
+    pos: "Operator Excavator",
     dept: "HRGA",
-    shift: "D1",
     sleep: "3 j 40 m",
+    note: "Di bawah ambang 4 jam — butuh penggantian",
     tone: "danger",
     label: "Kurang tidur",
   },
   {
-    name: "Agus Salim",
     nik: "503264141",
+    name: "Agus Salim",
+    pos: "Welder",
     dept: "Plant",
-    shift: "D1",
     sleep: "3 j 55 m",
+    note: "Di bawah ambang 4 jam — butuh penggantian",
     tone: "danger",
     label: "Kurang tidur",
   },
   {
-    name: "Joko Widodo S.",
     nik: "503264139",
+    name: "Joko Widodo S.",
+    pos: "Operator Grader",
     dept: "Operation",
-    shift: "D1",
     sleep: "—",
+    note: "Belum mengirim log — hubungi sebelum shift",
     tone: "warning",
     label: "Belum lapor",
   },
   {
-    name: "Rina Marlina",
-    nik: "503264140",
-    dept: "HRGA",
-    shift: "OFF",
-    sleep: "—",
-    tone: "warning",
-    label: "Belum lapor",
-  },
-  {
-    name: "First Angel Paustine",
-    nik: "503264133",
-    dept: "Operation",
-    shift: "D1",
-    sleep: "7 j 10 m",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Siti Nurhaliza",
-    nik: "503264136",
-    dept: "Operation",
-    shift: "D1",
-    sleep: "6 j 45 m",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Maya Sari",
-    nik: "503264142",
-    dept: "Operation",
-    shift: "N1",
-    sleep: "8 j 05 m",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Rizky Ananda",
-    nik: "503264150",
-    dept: "Operation",
-    shift: "D1",
-    sleep: "7 j 30 m",
-    tone: "success",
-    label: "Fit",
-  },
-  {
-    name: "Hendra Gunawan",
     nik: "503264143",
+    name: "Hendra Gunawan",
+    pos: "Mekanik Senior",
     dept: "Plant",
-    shift: "D1",
-    sleep: "6 j 55 m",
+    sleep: "—",
+    note: "Belum mengirim log — hubungi sebelum shift",
+    tone: "warning",
+    label: "Belum lapor",
+  },
+  {
+    nik: "503264133",
+    name: "First Angel Paustine",
+    pos: "Operator Dump Truck",
+    dept: "Operation",
+    sleep: "7 j 10 m",
+    note: "Lapor 03:51 WITA",
     tone: "success",
     label: "Fit",
   },
   {
-    name: "Dewi Lestari",
+    nik: "503264136",
+    name: "Siti Nurhaliza",
+    pos: "Operator Dump Truck",
+    dept: "Operation",
+    sleep: "6 j 45 m",
+    note: "Lapor 03:54 WITA",
+    tone: "success",
+    label: "Fit",
+  },
+  {
+    nik: "503264142",
+    name: "Maya Sari",
+    pos: "Operator Water Truck",
+    dept: "Operation",
+    sleep: "8 j 05 m",
+    note: "Lapor 16:05 WITA",
+    tone: "success",
+    label: "Fit",
+  },
+  {
+    nik: "503264150",
+    name: "Rizky Ananda",
+    pos: "Operator HD / Excavator",
+    dept: "Operation",
+    sleep: "7 j 30 m",
+    note: "Lapor 04:02 WITA",
+    tone: "success",
+    label: "Fit",
+  },
+  {
     nik: "503264138",
+    name: "Dewi Lestari",
+    pos: "Staff Administrasi",
     dept: "SDI",
-    shift: "D1",
     sleep: "7 j 20 m",
+    note: "Lapor 04:10 WITA",
+    tone: "success",
+    label: "Fit",
+  },
+  {
+    nik: "503264134",
+    name: "Rahmat Hidayat",
+    pos: "Admin Roster",
+    dept: "SDI",
+    sleep: "6 j 45 m",
+    note: "Lapor 03:52 WITA",
     tone: "success",
     label: "Fit",
   },
 ];
 
-/* Fingerprint — mesin offline selalu diurutkan teratas */
+/* ===== Fleet — kartu operator per unit (foto, NIK, nama, unit) =====
+   breakdown selalu di urutan teratas */
+export type DisplayFleetCard = {
+  code: string;
+  type: string;
+  opName: string | null;
+  opNik: string | null;
+  tone: DisplayTone;
+  label: string;
+};
+
+export const displayFleetCards: DisplayFleetCard[] = [
+  {
+    code: "RD5004",
+    type: "777E · CATERPILLAR",
+    opName: null,
+    opNik: null,
+    tone: "danger",
+    label: "Breakdown",
+  },
+  {
+    code: "RD5047",
+    type: "777E · CATERPILLAR",
+    opName: null,
+    opNik: null,
+    tone: "danger",
+    label: "Breakdown",
+  },
+  {
+    code: "RD5080",
+    type: "HD785-7 · KOMATSU",
+    opName: null,
+    opNik: null,
+    tone: "danger",
+    label: "Breakdown",
+  },
+  {
+    code: "EX7001",
+    type: "EX2000-7BH · HITACHI",
+    opName: "David Pakiding",
+    opNik: "503264151",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "RD5001",
+    type: "777E · CATERPILLAR",
+    opName: "First Angel Paustine",
+    opNik: "503264133",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "RD5002",
+    type: "777E · CATERPILLAR",
+    opName: "Siti Nurhaliza",
+    opNik: "503264136",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "EX7007",
+    type: "PC2000-11 · KOMATSU",
+    opName: "Hendrik",
+    opNik: "503264149",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "RD5061",
+    type: "HD785-7 · KOMATSU",
+    opName: "Rizky Ananda",
+    opNik: "503264150",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "WT1009",
+    type: "K460 6x6 · RENAULT",
+    opName: "Maya Sari",
+    opNik: "503264142",
+    tone: "success",
+    label: "Ready",
+  },
+  {
+    code: "GD5001",
+    type: "16GC · CATERPILLAR",
+    opName: null,
+    opNik: null,
+    tone: "neutral",
+    label: "Standby",
+  },
+];
+
+/* ===== Fingerprint — kesehatan mesin (offline selalu teratas) ===== */
 export type DisplayMachine = {
   id: string;
   loc: string;

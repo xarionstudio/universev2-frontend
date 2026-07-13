@@ -1,21 +1,32 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+} from "lucide-react";
 
-import { displayFtwRows } from "@/lib/data/display-screens";
+import { displayFtwRows, displayRuntext } from "@/lib/data/display-screens";
 
 import { DisplayShell } from "../_components/display-shell";
-import {
-  DisplayBadge,
-  DisplayNameCell,
-  DisplayTable,
-} from "../_components/display-table";
+import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayFitworkPage() {
+  const deviceName = useSearchParams().get("name") ?? undefined;
   return (
     <DisplayShell
       title="Fit To Work — Shift Pagi"
+      deviceName={deviceName}
+      runtext={displayRuntext.ftw}
       stats={[
+        {
+          icon: <ClipboardCheck className="text-(--color-primary-bright)" />,
+          iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
+          value: "233",
+          label: "Sudah Lapor",
+        },
         {
           icon: <CheckCircle2 className="text-(--badge-success-text)" />,
           iconClass:
@@ -40,27 +51,38 @@ export default function DisplayFitworkPage() {
     >
       <DisplayTable
         cols={[
-          { label: "Operator", width: "30%" },
-          { label: "Departemen", width: "18%" },
-          { label: "Shift", width: "16%" },
-          { label: "Jam Tidur", width: "16%" },
-          { label: "Status" },
+          { label: "NIK", width: "11%" },
+          { label: "Nama", width: "18%" },
+          { label: "Posisi", width: "14%" },
+          { label: "Departemen", width: "11%" },
+          { label: "Status", width: "13%" },
+          { label: "Log Tidur", width: "12%" },
+          { label: "Note" },
         ]}
         rows={displayFtwRows.map((r) => ({
           key: r.nik,
           danger: r.tone === "danger",
           cells: [
-            <DisplayNameCell key="n" main={r.name} sub={r.nik} />,
+            <span
+              key="k"
+              className="font-mono text-(--text-secondary) tabular-nums"
+            >
+              {r.nik}
+            </span>,
+            <b key="n" className="font-bold">
+              {r.name}
+            </b>,
+            r.pos,
             r.dept,
-            <span key="sh" className="font-mono tabular-nums">
-              {r.shift}
-            </span>,
-            <span key="sl" className="font-mono tabular-nums">
-              {r.sleep}
-            </span>,
             <DisplayBadge key="s" tone={r.tone}>
               {r.label}
             </DisplayBadge>,
+            <span key="sl" className="font-mono whitespace-nowrap tabular-nums">
+              {r.sleep}
+            </span>,
+            <span key="no" className="text-xl text-(--text-secondary)">
+              {r.note}
+            </span>,
           ],
         }))}
       />

@@ -1,61 +1,72 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Users } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { AlertTriangle, CheckCircle2, Clock, Users } from "lucide-react";
 
-import { displayAttRows } from "@/lib/data/display-screens";
+import { displayAttRows, displayRuntext } from "@/lib/data/display-screens";
 
 import { DisplayShell } from "../_components/display-shell";
-import {
-  DisplayBadge,
-  DisplayNameCell,
-  DisplayTable,
-} from "../_components/display-table";
+import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayAttendancePage() {
+  const deviceName = useSearchParams().get("name") ?? undefined;
   return (
     <DisplayShell
       title="Attendance — Shift Pagi"
+      deviceName={deviceName}
+      runtext={displayRuntext.att}
       stats={[
         {
           icon: <Users className="text-(--color-primary-bright)" />,
-          iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
-          value: "238",
-          label: "Sudah Absen",
+          iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
+          value: "247",
+          label: "Total Roster",
         },
         {
           icon: <CheckCircle2 className="text-(--badge-success-text)" />,
           iconClass:
             "bg-(--badge-success-fill) border-(--badge-success-border)",
-          value: "231",
-          label: "Fit To Work",
+          value: "238",
+          label: "Sudah Absen",
+        },
+        {
+          icon: <Clock className="text-(--badge-warning-text)" />,
+          iconClass:
+            "bg-(--badge-warning-fill) border-(--badge-warning-border)",
+          value: "6",
+          label: "Terlambat",
         },
         {
           icon: <AlertTriangle className="text-(--color-danger-text)" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
-          value: "16",
-          label: "Perlu Perhatian",
+          value: "9",
+          label: "Belum Absen",
         },
       ]}
     >
       <DisplayTable
         cols={[
-          { label: "Karyawan", width: "34%" },
-          { label: "Departemen", width: "20%" },
-          { label: "Check-in", width: "22%" },
+          { label: "NIK", width: "13%" },
+          { label: "Nama", width: "27%" },
+          { label: "Posisi", width: "24%" },
+          { label: "Departemen", width: "16%" },
           { label: "Status" },
         ]}
         rows={displayAttRows.map((r) => ({
           key: r.nik,
+          danger: r.tone === "danger",
           cells: [
-            <DisplayNameCell key="n" main={r.name} sub={r.nik} />,
+            <span
+              key="k"
+              className="font-mono text-(--text-secondary) tabular-nums"
+            >
+              {r.nik}
+            </span>,
+            <b key="n" className="font-bold">
+              {r.name}
+            </b>,
+            r.pos,
             r.dept,
-            <DisplayNameCell
-              key="c"
-              main={r.checkIn}
-              mono
-              sub={r.machine !== "—" ? r.machine : undefined}
-              subMono={false}
-            />,
             <DisplayBadge key="s" tone={r.tone}>
               {r.label}
             </DisplayBadge>,
