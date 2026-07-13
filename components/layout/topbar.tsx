@@ -70,7 +70,7 @@ export function Topbar() {
   const userShort = userName.trim().split(/\s+/).slice(0, 2).join(" ");
 
   return (
-    <header className="relative z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel">
+    <header className="sticky top-6 z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel max-xl:top-4">
       <button
         onClick={() => setSideOpen(true)}
         aria-label="Buka menu navigasi"
