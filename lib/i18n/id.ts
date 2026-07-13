@@ -227,7 +227,6 @@ export const id = {
     "Pengelolaan TV kiosk attendance, fit to work, dan fingerprint — konten, running text, dan status per display.",
   dspSubFleet:
     "Pengelolaan TV kiosk status unit — konten, running text, dan status per display.",
-  dspOpen: "Buka Display",
   dspCloseKiosk: "Tutup kiosk",
   dspPreview: "Pratinjau kiosk",
   dspListTitle: "Display terdaftar",
@@ -240,6 +239,9 @@ export const id = {
   dspRuntext: "Running text",
   dspConn: "Koneksi",
   dspRuntextHelp: "Diambil dari Master → Running Text (hanya yang aktif).",
+  dspFleetHelp:
+    "Diambil dari Setting Fleet — nama display mengikuti fleet yang dipilih.",
+  dspErrFleet: "Fleet wajib dipilih — buat formasinya dulu di Setting Fleet.",
   dspDlgB:
     "Perubahan diterapkan ke TV dalam ±30 detik lewat heartbeat berikutnya.",
   dspSumB: "display",
@@ -385,10 +387,10 @@ export const id = {
   flBus: "Bus default",
   flUnits: "Unit dalam fleet",
   flUnitsHelp:
-    "Pisahkan dengan koma — kode harus terdaftar di Database Unit dan belum dipakai fleet lain.",
+    "Pilih dari Database Unit — unit yang sudah dipakai fleet lain tidak muncul.",
+  flUnitSearchPh: "Cari kode unit…",
   flErrDigger: "Digger wajib dipilih dan belum memimpin fleet lain.",
-  flErrUnknown: "Kode tidak ada di Database Unit:",
-  flErrUsed: "Sudah dipakai fleet lain:",
+  flErrMax: "Maksimal 13 unit dalam satu fleet.",
   flDlgB:
     "Formasi relatif tetap — alokasi operator harian dilakukan di Fleet Allocation.",
   flSumB: "formasi fleet",
@@ -556,6 +558,11 @@ export const id = {
   stAktif: "Aktif",
   stArsip: "Arsip",
   rdView: "Lihat attendance →",
+  rdDetail: "Lihat detail roster",
+  rdDetailTitle: "Detail Roster",
+  rdDetailSub:
+    "Isi lengkap file roster — hanya-baca; perubahan lewat upload roster baru atau revisi absensi.",
+  rdDetailFootB: "dari 247 karyawan — data hanya-baca.",
   rdDl: "Unduh file roster",
   rdDlT: "File roster diunduh",
   rdUpload: "Upload roster baru",

@@ -1,3 +1,5 @@
+import { unitsDb } from "@/lib/data/units-db";
+
 /* Data layar display (TV) — display tampil id-only.
    Satu layar = satu domain: attendance (kehadiran), fitwork (kelayakan kerja),
    fleet (status unit + formasi), fingerprint (kesehatan mesin) — tanpa
@@ -227,98 +229,65 @@ export const displayFtwRows: DisplayFtwRow[] = [
 ];
 
 /* ===== Fleet — kartu operator per unit (foto, NIK, nama, unit) =====
-   breakdown selalu di urutan teratas */
+   satu layar = satu formasi dari Setting Fleet (digger + maks. 13 OHT);
+   status unit ikut Database Unit, breakdown selalu di urutan teratas */
 export type DisplayFleetCard = {
   code: string;
-  type: string;
   opName: string | null;
   opNik: string | null;
   tone: DisplayTone;
   label: string;
 };
 
-export const displayFleetCards: DisplayFleetCard[] = [
-  {
-    code: "RD5004",
-    type: "777E · CATERPILLAR",
-    opName: null,
-    opNik: null,
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "RD5047",
-    type: "777E · CATERPILLAR",
-    opName: null,
-    opNik: null,
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "RD5080",
-    type: "HD785-7 · KOMATSU",
-    opName: null,
-    opNik: null,
-    tone: "danger",
-    label: "Breakdown",
-  },
-  {
-    code: "EX7001",
-    type: "EX2000-7BH · HITACHI",
-    opName: "David Pakiding",
-    opNik: "503264151",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5001",
-    type: "777E · CATERPILLAR",
-    opName: "First Angel Paustine",
-    opNik: "503264133",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5002",
-    type: "777E · CATERPILLAR",
-    opName: "Siti Nurhaliza",
-    opNik: "503264136",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "EX7007",
-    type: "PC2000-11 · KOMATSU",
-    opName: "Hendrik",
-    opNik: "503264149",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "RD5061",
-    type: "HD785-7 · KOMATSU",
-    opName: "Rizky Ananda",
-    opNik: "503264150",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "WT1009",
-    type: "K460 6x6 · RENAULT",
-    opName: "Maya Sari",
-    opNik: "503264142",
-    tone: "success",
-    label: "Ready",
-  },
-  {
-    code: "GD5001",
-    type: "16GC · CATERPILLAR",
-    opName: null,
-    opNik: null,
-    tone: "neutral",
-    label: "Standby",
-  },
+/* operator dummy shift berjalan — nanti dari alokasi harian */
+const fleetOperators: [string, string][] = [
+  ["David Pakiding", "503264151"],
+  ["First Angel Paustine", "503264133"],
+  ["Siti Nurhaliza", "503264136"],
+  ["Hendrik", "503264149"],
+  ["Rizky Ananda", "503264150"],
+  ["Maya Sari", "503264142"],
+  ["Andi Prasetyo", "503264137"],
+  ["Rahmat Hidayat", "503264134"],
+  ["Budi Santoso", "503264135"],
+  ["Agus Salim", "503264141"],
+  ["Dewi Lestari", "503264138"],
+  ["Hendra Gunawan", "503264143"],
+  ["Joko Widodo S.", "503264139"],
+  ["Rina Marlina", "503264140"],
 ];
+
+export function fleetDisplayCards(fleet: {
+  digger: string;
+  units: string[];
+}): DisplayFleetCard[] {
+  const codes = [fleet.digger, ...fleet.units];
+  let op = 0;
+  const cards = codes.map((code): DisplayFleetCard => {
+    const u = unitsDb.find((x) => x.code === code);
+    if (u?.breakdown || u?.active === false)
+      return {
+        code,
+        opName: null,
+        opNik: null,
+        tone: "danger",
+        label: "Breakdown",
+      };
+    if (u?.standby)
+      return {
+        code,
+        opName: null,
+        opNik: null,
+        tone: "neutral",
+        label: "Standby",
+      };
+    const [opName, opNik] = fleetOperators[op++ % fleetOperators.length];
+    return { code, opName, opNik, tone: "success", label: "Ready" };
+  });
+  const rank = (c: DisplayFleetCard) =>
+    c.tone === "danger" ? 0 : c.tone === "success" ? 1 : 2;
+  return cards.sort((a, b) => rank(a) - rank(b));
+}
 
 /* ===== Fingerprint — kesehatan mesin (offline selalu teratas) ===== */
 export type DisplayMachine = {

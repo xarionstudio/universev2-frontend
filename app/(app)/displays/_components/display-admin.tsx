@@ -48,10 +48,13 @@ const DISPLAY_URLS: Record<DisplayKind, string> = {
   finger: "/display/fingerprint",
 };
 
-/* buka layar + bawa nama display terdaftar agar tampil di layarnya */
-function openNamedDisplay(kind: DisplayKind, name?: string) {
-  const url = DISPLAY_URLS[kind];
-  openDisplay(name ? `${url}?name=${encodeURIComponent(name)}` : url);
+/* buka layar + bawa nama display terdaftar (dan fleet-nya) agar tampil di layarnya */
+function openNamedDisplay(kind: DisplayKind, name?: string, fleetId?: string) {
+  const q = new URLSearchParams();
+  if (name) q.set("name", name);
+  if (fleetId) q.set("fleet", fleetId);
+  const qs = q.toString();
+  openDisplay(qs ? `${DISPLAY_URLS[kind]}?${qs}` : DISPLAY_URLS[kind]);
 }
 
 export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
@@ -65,10 +68,23 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
     .filter((e) => e.active)
     .map((e) => e.name);
 
+  /* display fleet terikat formasi dari Setting Fleet — nama & jumlah unit
+     mengikuti fleet yang dipilih (digger dihitung sebagai unit) */
+  const fleetOf = (d: Display) => store.fleets.find((f) => f.id === d.fleetId);
+  const displayNameOf = (d: Display) => {
+    const fl = fleetOf(d);
+    return fl ? `Fleet ${fl.digger}` : d.name;
+  };
+  const displaySubOf = (d: Display) => {
+    const fl = fleetOf(d);
+    return fl ? `${fl.units.length + 1} unit · ${d.id}` : d.id;
+  };
+
   /* dialog tambah/edit — satu site, tanpa lokasi & konten */
   const [dlgOpen, setDlgOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Display | null>(null);
   const [fName, setFName] = React.useState("");
+  const [fFleetId, setFFleetId] = React.useState("");
   const [fRuntext, setFRuntext] = React.useState("");
   const [fActive, setFActive] = React.useState(true);
   const [nameErr, setNameErr] = React.useState(false);
@@ -79,6 +95,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   function openAdd() {
     setEditing(null);
     setFName("");
+    setFFleetId(store.fleets[0]?.id ?? "");
     setFRuntext(runtextOpts[0] ?? "");
     setFActive(true);
     setNameErr(false);
@@ -88,6 +105,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   function openEdit(d: Display) {
     setEditing(d);
     setFName(d.name);
+    setFFleetId(d.fleetId ?? store.fleets[0]?.id ?? "");
     setFRuntext(d.runtext);
     setFActive(d.active);
     setNameErr(false);
@@ -96,15 +114,20 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!fName.trim()) {
+    const fleet = store.fleets.find((f) => f.id === fFleetId);
+    if (kind === "fleet" ? !fleet : !fName.trim()) {
       setNameErr(true);
       return;
     }
-    const data = {
-      name: fName.trim(),
-      runtext: fRuntext,
-      active: fActive,
-    };
+    const data =
+      kind === "fleet"
+        ? {
+            name: `Fleet ${fleet!.digger}`,
+            fleetId: fleet!.id,
+            runtext: fRuntext,
+            active: fActive,
+          }
+        : { name: fName.trim(), runtext: fRuntext, active: fActive };
     if (editing) {
       setRows((prev) =>
         prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d))
@@ -141,12 +164,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       <PageTitle
         title={kind === "att" ? t.navDispAtt : t.navDispFleet}
         sub={kind === "att" ? t.dspSubAtt : t.dspSubFleet}
-      >
-        <Button onClick={() => openNamedDisplay(kind)}>
-          <Monitor />
-          {t.dspOpen}
-        </Button>
-      </PageTitle>
+      />
 
       <Panel>
         <Toolbar>
@@ -170,7 +188,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
             {rows.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>
-                  <NameCell name={d.name} sub={d.id} />
+                  <NameCell name={displayNameOf(d)} sub={displaySubOf(d)} />
                 </TableCell>
                 <TableCell className="max-w-[360px] text-(--text-secondary)">
                   {d.runtext}
@@ -192,7 +210,9 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                   <div className="flex gap-2">
                     <IconButton
                       aria-label={t.dspPreview}
-                      onClick={() => openNamedDisplay(d.content, d.name)}
+                      onClick={() =>
+                        openNamedDisplay(d.content, displayNameOf(d), d.fleetId)
+                      }
                     >
                       <Eye />
                     </IconButton>
@@ -235,28 +255,55 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
           <Monitor />
         </DialogIcon>
         <DialogTitle id="dsp-t">
-          {editing ? `${t.dspEditT} — ${editing.name}` : t.dspAdd}
+          {editing ? `${t.dspEditT} — ${displayNameOf(editing)}` : t.dspAdd}
         </DialogTitle>
         <DialogBody>{t.dspDlgB}</DialogBody>
         <form onSubmit={save} noValidate>
           <FormGrid className="mt-4">
-            <Field
-              label={t.dspName}
-              htmlFor="dsp-name"
-              required
-              error={nameErr}
-              errorMessage={t.mdErrName}
-            >
-              <Input
-                id="dsp-name"
-                placeholder="TV Gate Utara"
-                value={fName}
-                onChange={(e) => {
-                  setFName(e.target.value);
-                  if (e.target.value.trim()) setNameErr(false);
-                }}
-              />
-            </Field>
+            {kind === "fleet" ? (
+              /* nama display mengikuti fleet — pilih dari Setting Fleet, bukan input manual */
+              <Field
+                label="Fleet"
+                htmlFor="dsp-fleet"
+                required
+                helper={t.dspFleetHelp}
+                error={nameErr}
+                errorMessage={t.dspErrFleet}
+              >
+                <Select
+                  id="dsp-fleet"
+                  value={fFleetId}
+                  onChange={(e) => {
+                    setFFleetId(e.target.value);
+                    if (e.target.value) setNameErr(false);
+                  }}
+                >
+                  {store.fleets.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {`Fleet ${f.digger} — ${f.units.length + 1} unit`}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : (
+              <Field
+                label={t.dspName}
+                htmlFor="dsp-name"
+                required
+                error={nameErr}
+                errorMessage={t.mdErrName}
+              >
+                <Input
+                  id="dsp-name"
+                  placeholder="TV Gate Utara"
+                  value={fName}
+                  onChange={(e) => {
+                    setFName(e.target.value);
+                    if (e.target.value.trim()) setNameErr(false);
+                  }}
+                />
+              </Field>
+            )}
             <Field
               label={t.dspRuntext}
               htmlFor="dsp-runtext"

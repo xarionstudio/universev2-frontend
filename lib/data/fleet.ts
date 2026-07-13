@@ -1,4 +1,7 @@
-/* Setting fleet — formasi: digger (leader) + unit OHT + lokasi kerja + bus default */
+/* Setting fleet — formasi: digger (leader) + unit OHT (maks. 13) + lokasi kerja
+   + bus default */
+export const FLEET_MAX_UNITS = 13;
+
 export type Fleet = {
   id: string;
   digger: string;
@@ -14,7 +17,21 @@ export const initialFleets: Fleet[] = [
     digger: "EX7001",
     loc: "PANEL EAST - ATAS SELATAN",
     bus: "B01",
-    units: ["RD5001", "RD5002", "RD5003", "RD5004", "RD5005", "RD5006"],
+    units: [
+      "RD5001",
+      "RD5002",
+      "RD5003",
+      "RD5004",
+      "RD5005",
+      "RD5006",
+      "RD5011",
+      "RD5013",
+      "RD5014",
+      "RD5015",
+      "RD5017",
+      "RD5022",
+      "RD5029",
+    ],
     active: true,
   },
   {

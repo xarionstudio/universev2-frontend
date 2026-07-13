@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Pencil, Plus, Trash2, Truck } from "lucide-react";
+import { Pencil, Plus, Trash2, Truck, X } from "lucide-react";
 
-import type { Fleet } from "@/lib/data/fleet";
+import { FLEET_MAX_UNITS, type Fleet } from "@/lib/data/fleet";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FormGrid } from "@/components/ui/field";
-import { Input, Textarea } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import {
   DNote,
   FootSum,
@@ -25,6 +25,7 @@ import {
   Panel,
   PanelFoot,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import {
   NameCell,
@@ -48,7 +49,8 @@ export default function FleetSettingPage() {
   const [fDigger, setFDigger] = React.useState("");
   const [fBus, setFBus] = React.useState("");
   const [fLoc, setFLoc] = React.useState("");
-  const [fUnits, setFUnits] = React.useState("");
+  const [fUnits, setFUnits] = React.useState<string[]>([]);
+  const [unitQ, setUnitQ] = React.useState("");
   const [fActive, setFActive] = React.useState(true);
   const [errDigger, setErrDigger] = React.useState(false);
   const [errUnits, setErrUnits] = React.useState("");
@@ -69,12 +71,42 @@ export default function FleetSettingPage() {
     .sort();
   const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name);
 
+  /* pilihan unit OHT — langsung dari Database Unit, unit milik fleet lain disembunyikan */
+  const usedElsewhere = new Set(
+    fleets.filter((f) => f.id !== editId).flatMap((f) => f.units)
+  );
+  const unitOpts = Array.from(
+    new Map(
+      all
+        .filter((u) => u.cls === "HD" && u.active && !usedElsewhere.has(u.code))
+        .map((u) => [u.code, u])
+    ).values()
+  ).sort((a, b) => a.code.localeCompare(b.code));
+  const unitOptsFiltered = unitOpts.filter((u) =>
+    u.code.toUpperCase().includes(unitQ.trim().toUpperCase())
+  );
+
+  function toggleUnit(code: string) {
+    if (fUnits.includes(code)) {
+      setFUnits(fUnits.filter((c) => c !== code));
+      setErrUnits("");
+      return;
+    }
+    if (fUnits.length >= FLEET_MAX_UNITS) {
+      setErrUnits(t.flErrMax);
+      return;
+    }
+    setFUnits([...fUnits, code]);
+    setErrUnits("");
+  }
+
   function openAdd() {
     setEditId(null);
     setFDigger(diggerOpts[0] || "");
     setFBus(busOpts[0] || "");
     setFLoc("");
-    setFUnits("");
+    setFUnits([]);
+    setUnitQ("");
     setFActive(true);
     setErrDigger(false);
     setErrUnits("");
@@ -86,7 +118,8 @@ export default function FleetSettingPage() {
     setFDigger(f.digger);
     setFBus(f.bus);
     setFLoc(f.loc);
-    setFUnits(f.units.join(", "));
+    setFUnits(f.units);
+    setUnitQ("");
     setFActive(f.active);
     setErrDigger(false);
     setErrUnits("");
@@ -100,26 +133,7 @@ export default function FleetSettingPage() {
       !digger || fleets.some((f) => f.digger === digger && f.id !== editId);
     setErrDigger(badDigger);
 
-    const list = Array.from(
-      new Set(
-        fUnits
-          .split(/[\n,]/)
-          .map((s) => s.trim().toUpperCase())
-          .filter(Boolean)
-      )
-    );
-    const known = new Set(all.map((u) => u.code.toUpperCase()));
-    const unknown = list.filter((c) => !known.has(c));
-    const used = list.filter((c) =>
-      fleets.some(
-        (f) => f.id !== editId && f.units.some((x) => x.toUpperCase() === c)
-      )
-    );
-    const unitsErr = unknown.length
-      ? `${t.flErrUnknown} ${unknown.join(", ")}`
-      : used.length
-        ? `${t.flErrUsed} ${used.join(", ")}`
-        : "";
+    const unitsErr = fUnits.length > FLEET_MAX_UNITS ? t.flErrMax : "";
     setErrUnits(unitsErr);
     if (badDigger || unitsErr) return;
 
@@ -127,7 +141,7 @@ export default function FleetSettingPage() {
       digger,
       loc: fLoc.trim(),
       bus: fBus,
-      units: list,
+      units: fUnits,
       active: fActive,
     };
     setFleets((prev) =>
@@ -293,19 +307,61 @@ export default function FleetSettingPage() {
             </Field>
             <Field
               className="col-span-full"
-              label={`${t.flUnits} (OHT)`}
-              htmlFor="fl-units"
+              label={`${t.flUnits} (OHT) — ${fUnits.length}/${FLEET_MAX_UNITS}`}
+              htmlFor="fl-unit-search"
               helper={t.flUnitsHelp}
               error={!!errUnits}
               errorMessage={errUnits}
             >
-              <Textarea
-                id="fl-units"
-                className="min-h-[72px]"
-                placeholder="RD5001, RD5002, RD5003…"
-                value={fUnits}
-                onChange={(e) => setFUnits(e.target.value)}
-              />
+              <div className="flex flex-col gap-2">
+                {fUnits.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {fUnits.map((c) => (
+                      <button
+                        type="button"
+                        key={c}
+                        onClick={() => toggleUnit(c)}
+                        aria-label={`${t.empDel} ${c}`}
+                        className="flex cursor-pointer items-center gap-1 rounded-chip border border-(--badge-info-border) bg-(--badge-info-fill) px-2 py-1 font-mono text-xs font-semibold text-(--color-primary-bright) hover:border-(--badge-danger-border) hover:text-(--color-danger-text)"
+                      >
+                        {c}
+                        <X className="size-3" />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <SearchInput
+                  id="fl-unit-search"
+                  placeholder={t.flUnitSearchPh}
+                  value={unitQ}
+                  onChange={(e) => setUnitQ(e.target.value)}
+                />
+                <div className="max-h-44 overflow-y-auto rounded-control border border-(--divider) bg-(--fill-subtle) p-1.5">
+                  {unitOptsFiltered.length ? (
+                    unitOptsFiltered.map((u) => (
+                      <label
+                        key={u.code}
+                        className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-(--fill-hover)"
+                      >
+                        <Checkbox
+                          checked={fUnits.includes(u.code)}
+                          onChange={() => toggleUnit(u.code)}
+                        />
+                        <span className="font-mono text-sm font-semibold">
+                          {u.code}
+                        </span>
+                        <span className="text-xs text-(--text-tertiary)">
+                          {u.egi} · {u.product}
+                        </span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="px-2 py-1.5 text-xs text-(--text-tertiary)">
+                      {t.noResTitle}
+                    </p>
+                  )}
+                </div>
+              </div>
             </Field>
           </FormGrid>
           <ToggleRow className="mt-4" htmlFor="fl-active">

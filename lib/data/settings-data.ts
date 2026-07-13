@@ -46,6 +46,8 @@ export type Display = {
   name: string;
   loc: string;
   content: DisplayKind;
+  /* display fleet terikat satu formasi dari Setting Fleet — nama mengikuti fleet */
+  fleetId?: string;
   runtext: string;
   online: boolean;
   hb: string;
@@ -99,9 +101,10 @@ export const initialDspAtt: Display[] = [
 export const initialDspFleet: Display[] = [
   {
     id: "DSP-F01",
-    name: "TV Workshop",
+    name: "Fleet EX7001",
     loc: "Workshop Plant",
     content: "fleet",
+    fleetId: "fl1",
     runtext: "Wajib P2H sebelum mengoperasikan unit.",
     online: true,
     hb: "2 dtk lalu",
@@ -109,9 +112,10 @@ export const initialDspFleet: Display[] = [
   },
   {
     id: "DSP-F02",
-    name: "TV Ruang Dispatch",
+    name: "Fleet EX7007",
     loc: "Kantor Operation",
     content: "fleet",
+    fleetId: "fl2",
     runtext:
       "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.",
     online: true,
@@ -120,9 +124,10 @@ export const initialDspFleet: Display[] = [
   },
   {
     id: "DSP-F03",
-    name: "TV Fuel Station",
+    name: "Fleet EX8001",
     loc: "KM 31",
     content: "fleet",
+    fleetId: "fl3",
     runtext: "Musim hujan: waspadai jalan licin di ramp Pit Tempudo.",
     online: false,
     hb: "1 j lalu",

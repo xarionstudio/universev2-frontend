@@ -229,7 +229,6 @@ export const en: Dict = {
     "Manage attendance, fit-to-work, and fingerprint kiosk TVs — content, running text, and status per display.",
   dspSubFleet:
     "Manage unit-status kiosk TVs — content, running text, and status per display.",
-  dspOpen: "Open Display",
   dspCloseKiosk: "Close kiosk",
   dspPreview: "Kiosk preview",
   dspListTitle: "Registered displays",
@@ -242,6 +241,10 @@ export const en: Dict = {
   dspRuntext: "Running text",
   dspConn: "Connection",
   dspRuntextHelp: "Taken from Master → Running Text (active entries only).",
+  dspFleetHelp:
+    "Taken from Fleet Setting — the display name follows the selected fleet.",
+  dspErrFleet:
+    "A fleet is required — create the formation in Fleet Setting first.",
   dspDlgB: "Changes reach the TV within ±30 seconds via the next heartbeat.",
   dspSumB: "displays",
   dspDelT: "Delete display",
@@ -387,10 +390,10 @@ export const en: Dict = {
   flBus: "Default bus",
   flUnits: "Units in fleet",
   flUnitsHelp:
-    "Comma-separated — codes must exist in the Unit Database and not be used by another fleet.",
+    "Pick from the Unit Database — units already used by another fleet are hidden.",
+  flUnitSearchPh: "Search unit code…",
   flErrDigger: "A digger is required and must not lead another fleet.",
-  flErrUnknown: "Codes not in the Unit Database:",
-  flErrUsed: "Already used by another fleet:",
+  flErrMax: "Maximum 13 units in one fleet.",
   flDlgB:
     "Formations are relatively fixed — daily operator allocation happens in Fleet Allocation.",
   flSumB: "fleet formations",
@@ -557,6 +560,11 @@ export const en: Dict = {
   stAktif: "Active",
   stArsip: "Archived",
   rdView: "View attendance →",
+  rdDetail: "View roster detail",
+  rdDetailTitle: "Roster Detail",
+  rdDetailSub:
+    "Full contents of the roster file — read-only; changes go through a new upload or an attendance revision.",
+  rdDetailFootB: "of 247 employees — read-only data.",
   rdDl: "Download roster file",
   rdDlT: "Roster file downloaded",
   rdUpload: "Upload new roster",

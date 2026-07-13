@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -156,10 +157,12 @@ export function Sidebar() {
       <aside
         aria-label="Navigasi utama"
         className={cn(
-          "relative z-30 flex flex-none flex-col rounded-panel px-3 py-5 shadow-[var(--shadow-panel),inset_0_1px_40px_var(--inset-glow)] glass-panel transition-[width] duration-250",
+          // sticky + tinggi viewport: menu Setting selalu terlihat di bawah
+          // meski konten halaman panjang — nav punya scroll sendiri
+          "sticky top-6 z-30 flex h-[calc(100vh-48px)] flex-none flex-col self-start rounded-panel px-3 py-5 shadow-[var(--shadow-panel),inset_0_1px_40px_var(--inset-glow)] glass-panel transition-[width] duration-250",
           collapsed ? "w-18 px-2 py-4" : "w-70",
           // tablet: off-canvas
-          "max-xl:fixed max-xl:top-0 max-xl:bottom-0 max-xl:left-0 max-xl:z-120 max-xl:w-[min(300px,84vw)] max-xl:rounded-l-none max-xl:bg-(--overlay-fill) max-xl:px-3 max-xl:py-5 max-xl:shadow-(--shadow-modal) max-xl:transition-transform",
+          "max-xl:fixed max-xl:top-0 max-xl:bottom-0 max-xl:left-0 max-xl:z-120 max-xl:h-auto max-xl:w-[min(300px,84vw)] max-xl:rounded-l-none max-xl:bg-(--overlay-fill) max-xl:px-3 max-xl:py-5 max-xl:shadow-(--shadow-modal) max-xl:transition-transform",
           sideOpen ? "max-xl:translate-x-0" : "max-xl:-translate-x-[105%]"
         )}
       >
@@ -169,9 +172,13 @@ export function Sidebar() {
             collapsed && "justify-center px-0 max-xl:justify-start max-xl:px-2"
           )}
         >
-          <div className="grid size-10 flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-base font-bold text-white shadow-[0_0_0_2px_var(--ring-avatar),0_0_18px_rgba(0,212,255,.35)]">
-            U
-          </div>
+          <Image
+            src="/logoV1.svg"
+            alt="UNIVERSE"
+            width={40}
+            height={40}
+            className="size-10 flex-none"
+          />
           <div className={cn(collapsed && "hidden max-xl:block")}>
             <b className="block text-base">{appName}</b>
             <span className="text-xs text-(--text-tertiary)">

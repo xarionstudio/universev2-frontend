@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Search, Upload } from "lucide-react";
+import { Download, Eye, Search, Upload } from "lucide-react";
 
 import { rosterMeta } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
@@ -131,6 +131,12 @@ export default function RosterDataPage() {
                       >
                         {t.rdView}
                       </Link>
+                      <IconButton
+                        aria-label={t.rdDetail}
+                        onClick={() => router.push(`/roster/detail?p=${r.key}`)}
+                      >
+                        <Eye />
+                      </IconButton>
                       <IconButton
                         aria-label={t.rdDl}
                         onClick={() => pushToast("success", t.rdDlT, r.file)}
