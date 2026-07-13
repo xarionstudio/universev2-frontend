@@ -41,6 +41,7 @@ import {
   ToolbarTitle,
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
   Table,
@@ -71,6 +72,7 @@ export default function EmployeesPage() {
 
   const [q, setQ] = React.useState("");
   const [fOpen, setFOpen] = React.useState(false);
+  const [fStatus, setFStatus] = React.useState("");
   const [fDepts, setFDepts] = React.useState<Record<string, boolean>>({});
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
@@ -90,7 +92,8 @@ export default function EmployeesPage() {
       r.name.toLowerCase().includes(needle) ||
       r.nik.includes(needle);
     const okD = fN === 0 || !!fDepts[r.dept];
-    return okQ && okD;
+    const okS = fStatus === "" || r.status === fStatus;
+    return okQ && okD && okS;
   });
 
   const perN = parseInt(per, 10);
@@ -132,6 +135,7 @@ export default function EmployeesPage() {
 
   function resetFilters() {
     setQ("");
+    setFStatus("");
     setFDepts({});
     setPage(1);
   }
@@ -164,6 +168,7 @@ export default function EmployeesPage() {
           <ToolbarTitle>{t.empListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
+              className="w-[240px]"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -177,6 +182,20 @@ export default function EmployeesPage() {
               }}
               clearLabel={t.clearSearch}
             />
+            <Select
+              wrapperClassName="w-[160px]"
+              aria-label={t.thStatus}
+              value={fStatus}
+              onChange={(e) => {
+                setFStatus(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">{t.allStatus}</option>
+              <option value="aktif">{t.stAktif}</option>
+              <option value="cuti">{t.stCuti}</option>
+              <option value="nonaktif">{t.stNonaktif}</option>
+            </Select>
             <DropMenuWrap open={fOpen} onClose={() => setFOpen(false)}>
               <Button
                 variant="secondary"

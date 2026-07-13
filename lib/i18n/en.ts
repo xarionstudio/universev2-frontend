@@ -233,6 +233,7 @@ export const en: Dict = {
   dspCloseKiosk: "Close kiosk",
   dspPreview: "Kiosk preview",
   dspListTitle: "Registered displays",
+  dspSearchPh: "Search display / fleet…",
   dspAdd: "Add Display",
   dspEditT: "Edit Display",
   dspSaveAdd: "Save display",
@@ -264,6 +265,8 @@ export const en: Dict = {
   umRolesT: "Roles",
   umSearchPh: "Search email / name / role…",
   umRoleSearchPh: "Search roles…",
+  umUserListT: "User list",
+  umRoleListT: "Role list",
   umFAll: "All statuses",
   umFAllRoles: "All roles",
   umToastImp: "Import processed",
@@ -330,6 +333,7 @@ export const en: Dict = {
   stSavedT: "Settings saved",
   stSavedD: "App name, description, and assets updated.",
   stAudioTitle: "Scheduled kiosk audio",
+  stAudioSearchPh: "Search audio title…",
   auAdd: "Add Audio",
   auEditT: "Edit Audio",
   auSaveAdd: "Save audio",
@@ -393,6 +397,8 @@ export const en: Dict = {
   flUnitsHelp:
     "Pick from the Unit Database — units already used by another fleet are hidden.",
   flUnitSearchPh: "Search unit code…",
+  flSearchPh: "Search fleet / digger…",
+  flListTitle: "Fleet formations",
   flErrDigger: "A digger is required and must not lead another fleet.",
   flErrMax: "Maximum 13 units in one fleet.",
   flDlgB:

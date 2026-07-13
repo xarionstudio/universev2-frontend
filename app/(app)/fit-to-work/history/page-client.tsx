@@ -26,6 +26,7 @@ import {
   ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
@@ -133,6 +134,7 @@ function FtwHistoryInner() {
     .slice(0, 10);
 
   const [fhOp, setFhOp] = React.useState(searchParams.get("nik") ?? "");
+  const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
   const [shift, setShift] = React.useState("");
   const [d1, setD1] = React.useState(startIso);
@@ -157,9 +159,16 @@ function FtwHistoryInner() {
   };
 
   const emps = empAll();
+  const needle = q.trim().toLowerCase();
   const rows: Row[] = [];
   for (const op of selectedOp ? [selectedOp] : ops) {
     if (shift && op.shift !== shift) continue;
+    if (
+      needle &&
+      !op.name.toLowerCase().includes(needle) &&
+      !op.nik.includes(needle)
+    )
+      continue;
     const emp = emps.find((e) => e.nik === op.nik);
     const company = emp?.company ?? "PT Unggul Dinamika Utama";
     const pos = emp?.pos ?? "—";
@@ -201,6 +210,16 @@ function FtwHistoryInner() {
         <Toolbar>
           <ToolbarTitle>{t.ftwHistTitle}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchEmp}
+              aria-label={t.searchEmp}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+            />
             <Select
               wrapperClassName="w-[250px]"
               value={fhOp}

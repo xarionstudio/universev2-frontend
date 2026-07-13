@@ -231,6 +231,7 @@ export const id = {
   dspCloseKiosk: "Tutup kiosk",
   dspPreview: "Pratinjau kiosk",
   dspListTitle: "Display terdaftar",
+  dspSearchPh: "Cari display / fleet…",
   dspAdd: "Tambah Display",
   dspEditT: "Edit Display",
   dspSaveAdd: "Simpan display",
@@ -262,6 +263,8 @@ export const id = {
   umRolesT: "Role",
   umSearchPh: "Cari email / nama / role…",
   umRoleSearchPh: "Cari role…",
+  umUserListT: "Daftar user",
+  umRoleListT: "Daftar role",
   umFAll: "Semua status",
   umFAllRoles: "Semua role",
   umToastImp: "Import diproses",
@@ -328,6 +331,7 @@ export const id = {
   stSavedT: "Pengaturan disimpan",
   stSavedD: "Nama, deskripsi, dan aset aplikasi diperbarui.",
   stAudioTitle: "Audio kiosk terjadwal",
+  stAudioSearchPh: "Cari judul audio…",
   auAdd: "Tambah Audio",
   auEditT: "Edit Audio",
   auSaveAdd: "Simpan audio",
@@ -390,6 +394,8 @@ export const id = {
   flUnitsHelp:
     "Pilih dari Database Unit — unit yang sudah dipakai fleet lain tidak muncul.",
   flUnitSearchPh: "Cari kode unit…",
+  flSearchPh: "Cari fleet / digger…",
+  flListTitle: "Daftar formasi fleet",
   flErrDigger: "Digger wajib dipilih dan belum memimpin fleet lain.",
   flErrMax: "Maksimal 13 unit dalam satu fleet.",
   flDlgB:

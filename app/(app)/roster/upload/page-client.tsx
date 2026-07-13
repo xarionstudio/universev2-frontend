@@ -16,9 +16,11 @@ import {
   Panel,
   PanelFoot,
   Toolbar,
+  ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
 import { Progress } from "@/components/ui/progress";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   Table,
   TableBody,
@@ -80,9 +82,26 @@ export default function RosterUploadPage() {
   }
 
   const preview = React.useMemo(() => upPreviewData(), []);
-  const pgPrev = usePagination(preview.rows);
+  const [qPrev, setQPrev] = React.useState("");
+  const needlePrev = qPrev.trim().toLowerCase();
+  const prevRows = preview.rows.filter(
+    (r) =>
+      !needlePrev ||
+      r.name.toLowerCase().includes(needlePrev) ||
+      r.nik.toLowerCase().includes(needlePrev)
+  );
+  const pgPrev = usePagination(prevRows);
   const errors = upErrorRows(lang);
-  const pgErr = usePagination(errors);
+  const [qErr, setQErr] = React.useState("");
+  const needleErr = qErr.trim().toLowerCase();
+  const errRows = errors.filter(
+    (e) =>
+      !needleErr ||
+      e.nik.toLowerCase().includes(needleErr) ||
+      e.emp.toLowerCase().includes(needleErr) ||
+      e.issue.toLowerCase().includes(needleErr)
+  );
+  const pgErr = usePagination(errRows);
   const legendGroups = legendGroupsFor(lang);
 
   const vchips = [
@@ -174,9 +193,18 @@ export default function RosterUploadPage() {
               <ToolbarTitle>
                 {t.upPrevTitle} — {upName}
               </ToolbarTitle>
-              <span className="text-xs text-(--text-tertiary)">
-                {t.upPrevHint}
-              </span>
+              <ToolbarGroup>
+                <SearchInput
+                  className="w-[240px]"
+                  placeholder={t.searchEmp}
+                  aria-label={t.searchEmp}
+                  value={qPrev}
+                  onChange={(e) => setQPrev(e.target.value)}
+                />
+                <span className="text-xs text-(--text-tertiary)">
+                  {t.upPrevHint}
+                </span>
+              </ToolbarGroup>
             </Toolbar>
             <div className="overflow-x-auto pb-2">
               <Table className="min-w-[1600px]">
@@ -237,6 +265,15 @@ export default function RosterUploadPage() {
               <ToolbarTitle>
                 {t.upResults} — {upName}
               </ToolbarTitle>
+              <ToolbarGroup>
+                <SearchInput
+                  className="w-[240px]"
+                  placeholder={t.searchEmp}
+                  aria-label={t.searchEmp}
+                  value={qErr}
+                  onChange={(e) => setQErr(e.target.value)}
+                />
+              </ToolbarGroup>
             </Toolbar>
             <div className="mb-5 flex flex-wrap gap-3">
               {vchips.map((c) => (

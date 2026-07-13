@@ -207,6 +207,16 @@ export default function UnitDbPage() {
         <Toolbar>
           <ToolbarTitle>{t.udbListTitle}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchUnit}
+              aria-label={t.searchUnit}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+            />
             <Select
               wrapperClassName="w-[170px]"
               value={cat}
@@ -239,16 +249,6 @@ export default function UnitDbPage() {
                 </option>
               ))}
             </Select>
-            <SearchInput
-              className="w-55"
-              placeholder={t.searchUnit}
-              aria-label={t.searchUnit}
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
-            />
             <Button
               variant="secondary"
               onClick={() =>

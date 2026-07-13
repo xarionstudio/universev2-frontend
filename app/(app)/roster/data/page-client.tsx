@@ -21,6 +21,7 @@ import {
   ToolbarTitle,
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
   NameCell,
@@ -40,8 +41,10 @@ export default function RosterDataPage() {
 
   const [date, setDate] = React.useState("");
   const [q, setQ] = React.useState("");
+  const [st, setSt] = React.useState("");
 
   const rows = rosterMeta(lang).filter((r) => {
+    if (st && r.status !== st) return false;
     if (date && r.month !== date.slice(0, 7)) return false;
     const needle = q.trim().toLowerCase();
     if (!needle) return true;
@@ -66,6 +69,23 @@ export default function RosterDataPage() {
         <Toolbar>
           <ToolbarTitle>{t.rdListTitle}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.rdSearchPh}
+              aria-label={t.rdSearchPh}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <Select
+              aria-label={t.allStatus}
+              wrapperClassName="w-[170px]"
+              value={st}
+              onChange={(e) => setSt(e.target.value)}
+            >
+              <option value="">{t.allStatus}</option>
+              <option value="aktif">{t.stAktif}</option>
+              <option value="arsip">{t.stArsip}</option>
+            </Select>
             <div className="flex items-center gap-2">
               <label
                 htmlFor="rd-tgl"
@@ -81,13 +101,6 @@ export default function RosterDataPage() {
                 className="w-[170px] font-mono"
               />
             </div>
-            <SearchInput
-              className="w-[250px]"
-              placeholder={t.rdSearchPh}
-              aria-label={t.rdSearchPh}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
           </ToolbarGroup>
         </Toolbar>
 

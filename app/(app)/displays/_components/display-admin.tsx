@@ -27,8 +27,10 @@ import {
   Panel,
   PanelFoot,
   Toolbar,
+  ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import {
   NameCell,
@@ -65,7 +67,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
 
   const rows = kind === "att" ? store.dspAtt : store.dspFleet;
   const setRows = kind === "att" ? store.setDspAtt : store.setDspFleet;
-  const pg = usePagination(rows, "5");
   const runtextOpts = store.mdData.runtext
     .filter((e) => e.active)
     .map((e) => e.name);
@@ -81,6 +82,20 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
     const fl = fleetOf(d);
     return fl ? `${fl.units.length + 1} unit · ${d.id}` : d.id;
   };
+
+  const [q, setQ] = React.useState("");
+  const [statusF, setStatusF] = React.useState("");
+  const filtered = rows.filter((d) => {
+    const needle = q.trim().toLowerCase();
+    const okQ =
+      !needle ||
+      displayNameOf(d).toLowerCase().includes(needle) ||
+      d.id.toLowerCase().includes(needle) ||
+      d.runtext.toLowerCase().includes(needle);
+    const okS = statusF === "" || d.active === (statusF === "1");
+    return okQ && okS;
+  });
+  const pg = usePagination(filtered, "5");
 
   /* dialog tambah/edit — satu site, tanpa lokasi & konten */
   const [dlgOpen, setDlgOpen] = React.useState(false);
@@ -171,10 +186,29 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       <Panel>
         <Toolbar>
           <ToolbarTitle>{t.dspListTitle}</ToolbarTitle>
-          <Button variant="secondary" onClick={openAdd}>
-            <Plus />
-            {t.dspAdd}
-          </Button>
+          <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.dspSearchPh}
+              aria-label={t.dspSearchPh}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <Select
+              wrapperClassName="w-[160px]"
+              aria-label={t.thStatus}
+              value={statusF}
+              onChange={(e) => setStatusF(e.target.value)}
+            >
+              <option value="">{t.allStatus}</option>
+              <option value="1">{t.stAktif}</option>
+              <option value="0">{t.stNonaktif}</option>
+            </Select>
+            <Button variant="secondary" onClick={openAdd}>
+              <Plus />
+              {t.dspAdd}
+            </Button>
+          </ToolbarGroup>
         </Toolbar>
         <Table>
           <TableHeader>

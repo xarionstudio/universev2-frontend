@@ -165,6 +165,16 @@ export default function UnitStatusPage() {
         <Toolbar>
           <ToolbarTitle>{t.usListTitle}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchUnit}
+              aria-label={t.searchUnit}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+            />
             <Segmented role="group" aria-label="Filter status">
               {(
                 [
@@ -186,16 +196,6 @@ export default function UnitStatusPage() {
                 </SegmentedButton>
               ))}
             </Segmented>
-            <SearchInput
-              className="w-50"
-              placeholder={t.searchUnit}
-              aria-label={t.searchUnit}
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
-            />
           </ToolbarGroup>
         </Toolbar>
 

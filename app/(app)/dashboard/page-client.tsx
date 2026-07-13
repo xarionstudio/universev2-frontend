@@ -23,6 +23,7 @@ import {
   ToolbarTitle,
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 import { StateBox } from "@/components/ui/state-box";
@@ -119,6 +120,7 @@ export default function DashboardPage() {
   const attToday = attDayRows(lang, false).filter((r) => r.st !== "off");
   const belumAbsen = attToday.filter((r) => r.st === "belum");
   const [q, setQ] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState("");
 
@@ -159,18 +161,15 @@ export default function DashboardPage() {
   const firstName = userName.trim().split(/\s+/).slice(0, 2).join(" ");
   const dateLine = `${new Date().toLocaleDateString(lang === "en" ? "en-GB" : "id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${t.shiftNote}`;
 
-  const rows = attentionRows(
-    lang === "en",
-    breakUnits,
-    kurang,
-    belumAbsen
-  ).filter((r) => {
+  const allRows = attentionRows(lang === "en", breakUnits, kurang, belumAbsen);
+  const badgeOpts = Array.from(new Set(allRows.map((r) => r.badge)));
+  const rows = allRows.filter((r) => {
     const needle = q.toLowerCase();
-    return (
+    const okQ =
       r.name.toLowerCase().includes(needle) ||
       r.sub.toLowerCase().includes(needle) ||
-      r.issue.toLowerCase().includes(needle)
-    );
+      r.issue.toLowerCase().includes(needle);
+    return okQ && (statusFilter === "" || r.badge === statusFilter);
   });
 
   const pg = usePagination(rows);
@@ -262,11 +261,25 @@ export default function DashboardPage() {
           <ToolbarTitle>{t.panelTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
+              className="w-[240px]"
               placeholder={t.searchPh}
               aria-label={t.searchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
+            <Select
+              wrapperClassName="w-[170px]"
+              aria-label={t.thStatus}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">{t.allStatus}</option>
+              {badgeOpts.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </Select>
           </ToolbarGroup>
         </Toolbar>
 

@@ -25,8 +25,10 @@ import {
   Panel,
   PanelFoot,
   Toolbar,
+  ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -45,7 +47,15 @@ export function AudioTab() {
   const { t } = useI18n();
   const { pushToast } = useToast();
   const { audios, setAudios } = useAppStore();
-  const pg = usePagination(audios, "5");
+
+  const [q, setQ] = React.useState("");
+  const [statusF, setStatusF] = React.useState("");
+  const filtered = audios.filter((a) => {
+    const okQ = a.title.toLowerCase().includes(q.trim().toLowerCase());
+    const okS = statusF === "" || a.active === (statusF === "aktif");
+    return okQ && okS;
+  });
+  const pg = usePagination(filtered, "5");
 
   const freqLabel: Record<Audio["freq"], string> = {
     sekali: t.auFreqOnce,
@@ -142,10 +152,29 @@ export function AudioTab() {
       <Panel>
         <Toolbar>
           <ToolbarTitle>{t.stAudioTitle}</ToolbarTitle>
-          <Button onClick={openAdd}>
-            <Plus />
-            {t.auAdd}
-          </Button>
+          <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.stAudioSearchPh}
+              aria-label={t.stAudioSearchPh}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <Select
+              wrapperClassName="w-[160px]"
+              aria-label={t.thStatus}
+              value={statusF}
+              onChange={(e) => setStatusF(e.target.value)}
+            >
+              <option value="">{t.allStatus}</option>
+              <option value="aktif">{t.stAktif}</option>
+              <option value="nonaktif">{t.stNonaktif}</option>
+            </Select>
+            <Button onClick={openAdd}>
+              <Plus />
+              {t.auAdd}
+            </Button>
+          </ToolbarGroup>
         </Toolbar>
         <Table>
           <TableHeader>

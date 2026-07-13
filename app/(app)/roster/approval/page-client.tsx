@@ -27,6 +27,7 @@ import {
   ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Segmented, SegmentedButton } from "@/components/ui/segmented";
 import { StateBox } from "@/components/ui/state-box";
 import {
@@ -54,6 +55,7 @@ export default function RosterApprovalPage() {
   const en = lang === "en";
 
   const [filter, setFilter] = React.useState<Filter>("pending");
+  const [q, setQ] = React.useState("");
   const [noteFor, setNoteFor] = React.useState<number | null>(null);
   const [note, setNote] = React.useState("");
   const [noFor, setNoFor] = React.useState<number | null>(null);
@@ -67,9 +69,17 @@ export default function RosterApprovalPage() {
         : t.stRejected;
 
   const pendingN = apRows.filter((r) => r.status === "pending").length;
+  const needle = q.trim().toLowerCase();
   const list = apRows
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => filter === "all" || r.status === filter);
+    .filter(({ r }) => filter === "all" || r.status === filter)
+    .filter(
+      ({ r }) =>
+        !needle ||
+        r.name.toLowerCase().includes(needle) ||
+        r.nik.toLowerCase().includes(needle) ||
+        (en ? r.whatEn : r.whatId).toLowerCase().includes(needle)
+    );
   const pg = usePagination(list);
 
   function decide(i: number | null, ok: boolean, extra?: string) {
@@ -115,6 +125,13 @@ export default function RosterApprovalPage() {
         <Toolbar>
           <ToolbarTitle>{t.apQueue}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchEmp}
+              aria-label={t.searchEmp}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <Segmented role="group" aria-label="Filter status">
               {segs.map((s) => (
                 <SegmentedButton

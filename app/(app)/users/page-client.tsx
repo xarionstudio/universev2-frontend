@@ -35,6 +35,7 @@ import {
   PanelFoot,
   Toolbar,
   ToolbarGroup,
+  ToolbarTitle,
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
@@ -187,9 +188,10 @@ export default function UsersPage() {
 
       <Panel>
         <Toolbar>
-          <ToolbarGroup className="justify-start">
+          <ToolbarTitle>{t.umUserListT}</ToolbarTitle>
+          <ToolbarGroup>
             <SearchInput
-              className="w-55"
+              className="w-[240px]"
               placeholder={t.umSearchPh}
               aria-label={t.umSearchPh}
               value={q}
@@ -218,8 +220,6 @@ export default function UsersPage() {
                 </option>
               ))}
             </Select>
-          </ToolbarGroup>
-          <ToolbarGroup>
             <Button variant="secondary" onClick={() => impRef.current?.click()}>
               <Upload />
               Import

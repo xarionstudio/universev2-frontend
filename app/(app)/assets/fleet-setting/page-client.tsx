@@ -24,6 +24,9 @@ import {
   PageTitle,
   Panel,
   PanelFoot,
+  Toolbar,
+  ToolbarGroup,
+  ToolbarTitle,
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
@@ -58,15 +61,25 @@ export default function FleetSettingPage() {
   /* dialog hapus */
   const [delTarget, setDelTarget] = React.useState<Fleet | null>(null);
 
-  /* pagination daftar fleet */
+  /* pencarian + pagination daftar fleet */
+  const [listQ, setListQ] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [per, setPer] = React.useState("5");
+  const listNeedle = listQ.trim().toLowerCase();
+  const listRows = listNeedle
+    ? fleets.filter(
+        (f) =>
+          f.digger.toLowerCase().includes(listNeedle) ||
+          f.loc.toLowerCase().includes(listNeedle) ||
+          f.bus.toLowerCase().includes(listNeedle)
+      )
+    : fleets;
   const perN = Number(per);
-  const pageCount = Math.max(1, Math.ceil(fleets.length / perN));
+  const pageCount = Math.max(1, Math.ceil(listRows.length / perN));
   const p = Math.min(page, pageCount);
-  const pageRows = fleets.slice((p - 1) * perN, p * perN);
-  const range = fleets.length
-    ? `${(p - 1) * perN + 1}–${Math.min(fleets.length, p * perN)}`
+  const pageRows = listRows.slice((p - 1) * perN, p * perN);
+  const range = listRows.length
+    ? `${(p - 1) * perN + 1}–${Math.min(listRows.length, p * perN)}`
     : "0";
 
   const all = udbAll();
@@ -190,6 +203,21 @@ export default function FleetSettingPage() {
       </PageTitle>
 
       <Panel>
+        <Toolbar>
+          <ToolbarTitle>{t.flListTitle}</ToolbarTitle>
+          <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.flSearchPh}
+              aria-label={t.flSearchPh}
+              value={listQ}
+              onChange={(e) => {
+                setListQ(e.target.value);
+                setPage(1);
+              }}
+            />
+          </ToolbarGroup>
+        </Toolbar>
         <Table>
           <TableHeader>
             <tr>
@@ -254,7 +282,7 @@ export default function FleetSettingPage() {
         </Table>
         <PanelFoot>
           <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{fleets.length}</b>{" "}
+            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{listRows.length}</b>{" "}
             {t.flSumB}
           </FootSum>
           <Pagination

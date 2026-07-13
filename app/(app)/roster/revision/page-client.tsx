@@ -101,6 +101,13 @@ export default function RosterRevisionPage() {
         <Toolbar>
           <ToolbarTitle>{t.rvListTitle}</ToolbarTitle>
           <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchEmp}
+              aria-label={t.searchEmp}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <Select
               aria-label={t.allStatus}
               wrapperClassName="w-[170px]"
@@ -112,13 +119,6 @@ export default function RosterRevisionPage() {
               <option value="approved">{t.stApproved}</option>
               <option value="rejected">{t.stRejected}</option>
             </Select>
-            <SearchInput
-              className="w-[240px]"
-              placeholder={t.searchEmp}
-              aria-label={t.searchEmp}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
           </ToolbarGroup>
         </Toolbar>
 

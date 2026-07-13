@@ -120,30 +120,13 @@ function AttendanceInner() {
         <Toolbar>
           <ToolbarTitle>{t.attLog}</ToolbarTitle>
           <ToolbarGroup>
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="att-from"
-                className="text-xs text-(--text-tertiary)"
-              >
-                {t.lblDate}
-              </label>
-              <Input
-                id="att-from"
-                type="date"
-                className="w-[160px] font-mono"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
-              <span className="text-(--text-tertiary)">–</span>
-              <Input
-                id="att-to"
-                type="date"
-                className="w-[160px] font-mono"
-                aria-label={t.lblDateTo}
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-              />
-            </div>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchEmp}
+              aria-label={t.searchEmp}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <Select
               aria-label={t.allStatus}
               wrapperClassName="w-[170px]"
@@ -169,13 +152,30 @@ function AttendanceInner() {
               <option>HRGA</option>
               <option>Plant</option>
             </Select>
-            <SearchInput
-              className="w-[220px]"
-              placeholder={t.searchEmp}
-              aria-label={t.searchEmp}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="att-from"
+                className="text-xs text-(--text-tertiary)"
+              >
+                {t.lblDate}
+              </label>
+              <Input
+                id="att-from"
+                type="date"
+                className="w-[160px] font-mono"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+              <span className="text-(--text-tertiary)">–</span>
+              <Input
+                id="att-to"
+                type="date"
+                className="w-[160px] font-mono"
+                aria-label={t.lblDateTo}
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
             <Button
               variant="secondary"
               onClick={() =>

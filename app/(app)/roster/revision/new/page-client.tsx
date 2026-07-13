@@ -27,8 +27,10 @@ import {
   Panel,
   PanelFoot,
   Toolbar,
+  ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
@@ -80,9 +82,15 @@ export default function RosterRevisionNewPage() {
 
   const [entries, setEntries] = React.useState<Entry[]>([]);
   const [reviewOpen, setReviewOpen] = React.useState(false);
-  const pg = usePagination(entries, "5");
-  /* offset indeks asli — baris pada halaman aktif adalah slice dari entries */
-  const baseIdx = (pg.page - 1) * Number(pg.per);
+  const [q, setQ] = React.useState("");
+  const needle = q.trim().toLowerCase();
+  const shown = entries.filter(
+    (e) =>
+      !needle ||
+      e.name.toLowerCase().includes(needle) ||
+      e.nik.toLowerCase().includes(needle)
+  );
+  const pg = usePagination(shown, "5");
 
   function addEntry() {
     const next = {
@@ -274,9 +282,18 @@ export default function RosterRevisionNewPage() {
         <Panel>
           <Toolbar className="mb-4">
             <ToolbarTitle>{t.revListTitle}</ToolbarTitle>
-            <span className="text-xs text-(--text-tertiary)">
-              {entries.length} {t.revCount}
-            </span>
+            <ToolbarGroup>
+              <SearchInput
+                className="w-[240px]"
+                placeholder={t.searchEmp}
+                aria-label={t.searchEmp}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              <span className="text-xs text-(--text-tertiary)">
+                {entries.length} {t.revCount}
+              </span>
+            </ToolbarGroup>
           </Toolbar>
           {entries.length === 0 ? (
             <StateBox
@@ -296,8 +313,8 @@ export default function RosterRevisionNewPage() {
                   </tr>
                 </TableHeader>
                 <TableBody>
-                  {pg.rows.map((e, i) => (
-                    <TableRow key={baseIdx + i}>
+                  {pg.rows.map((e) => (
+                    <TableRow key={entries.indexOf(e)}>
                       <TableCell>
                         <NameCell name={e.name} sub={e.nik} />
                       </TableCell>
@@ -318,10 +335,9 @@ export default function RosterRevisionNewPage() {
                           danger
                           aria-label={t.delEntry}
                           onClick={() =>
-                            /* hapus pakai indeks asli, bukan indeks slice */
-                            setEntries((prev) =>
-                              prev.filter((_, j) => j !== baseIdx + i)
-                            )
+                            /* hapus berbasis identitas entri — aman saat
+                               daftar sedang difilter */
+                            setEntries((prev) => prev.filter((x) => x !== e))
                           }
                         >
                           <Trash2 />

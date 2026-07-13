@@ -204,7 +204,7 @@ export default function FitToWorkPage() {
           <ToolbarTitle>{t.ftwLog}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-50"
+              className="w-[240px]"
               placeholder={t.searchOp}
               aria-label={t.searchOp}
               value={q}

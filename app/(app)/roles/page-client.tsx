@@ -189,16 +189,15 @@ export default function RolesPage() {
       <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start gap-6 max-[1360px]:grid-cols-1">
         <Panel>
           <Toolbar>
-            <ToolbarGroup className="justify-start">
+            <ToolbarTitle>{t.umRoleListT}</ToolbarTitle>
+            <ToolbarGroup>
               <SearchInput
-                className="w-50"
+                className="w-[240px]"
                 placeholder={t.umRoleSearchPh}
                 aria-label={t.umRoleSearchPh}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
-            </ToolbarGroup>
-            <ToolbarGroup>
               <Button
                 variant="secondary"
                 onClick={() => impRef.current?.click()}

@@ -15,8 +15,10 @@ import {
   Panel,
   PanelFoot,
   Toolbar,
+  ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   Table,
   TableBody,
@@ -38,7 +40,15 @@ export default function RosterDetailPage() {
   const meta = metas.find((m) => m.key === key) ?? metas[0];
 
   const preview = React.useMemo(() => upPreviewData(), []);
-  const pg = usePagination(preview.rows);
+  const [q, setQ] = React.useState("");
+  const needle = q.trim().toLowerCase();
+  const rows = preview.rows.filter(
+    (r) =>
+      !needle ||
+      r.name.toLowerCase().includes(needle) ||
+      r.nik.toLowerCase().includes(needle)
+  );
+  const pg = usePagination(rows);
   const legendGroups = legendGroupsFor(lang);
 
   return (
@@ -65,7 +75,14 @@ export default function RosterDetailPage() {
       <Panel>
         <Toolbar className="mb-4">
           <ToolbarTitle>{meta.file}</ToolbarTitle>
-          <div className="flex items-center gap-3">
+          <ToolbarGroup>
+            <SearchInput
+              className="w-[240px]"
+              placeholder={t.searchEmp}
+              aria-label={t.searchEmp}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <span className="text-xs text-(--text-tertiary)">
               {meta.emp} {t.thEmpN.toLowerCase()} · {meta.rows}{" "}
               {t.thRows.toLowerCase()} · {meta.by} · {meta.date}
@@ -76,7 +93,7 @@ export default function RosterDetailPage() {
             >
               {meta.status === "aktif" ? t.stAktif : t.stArsip}
             </Badge>
-          </div>
+          </ToolbarGroup>
         </Toolbar>
         <div className="overflow-x-auto pb-2">
           <Table className="min-w-[1600px]">

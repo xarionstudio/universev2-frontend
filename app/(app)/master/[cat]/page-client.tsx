@@ -75,6 +75,7 @@ export default function MasterDataPage() {
   const { mdData, setMdData } = useAppStore();
 
   const [q, setQ] = React.useState("");
+  const [stF, setStF] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [per, setPer] = React.useState("10");
   const [sort, setSort] = React.useState<{ key: SortKey; dir: 1 | -1 } | null>(
@@ -205,6 +206,8 @@ export default function MasterDataPage() {
   const entries = mdData[cat];
   const needle = q.trim().toLowerCase();
   const filtered = entries.filter((r) => {
+    if (stF === "1" && !r.active) return false;
+    if (stF === "0" && r.active) return false;
     if (!needle) return true;
     return (
       r.name.toLowerCase().includes(needle) ||
@@ -312,6 +315,7 @@ export default function MasterDataPage() {
           <ToolbarTitle>{catLabel}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
+              className="w-[240px]"
               placeholder={t.mdSearchPh}
               aria-label={t.mdSearchPh}
               value={q}
@@ -320,6 +324,19 @@ export default function MasterDataPage() {
                 setPage(1);
               }}
             />
+            <Select
+              wrapperClassName="w-[160px]"
+              value={stF}
+              onChange={(e) => {
+                setStF(e.target.value);
+                setPage(1);
+              }}
+              aria-label={t.allStatus}
+            >
+              <option value="">{t.allStatus}</option>
+              <option value="1">{t.stAktif}</option>
+              <option value="0">{t.stNonaktif}</option>
+            </Select>
             <Button onClick={openAdd}>
               <Plus />
               {t.mdAdd}
