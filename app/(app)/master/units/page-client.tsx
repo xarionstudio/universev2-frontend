@@ -201,7 +201,12 @@ export default function UnitDbPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle title={t.navUnitDb} sub={t.udbSub} />
+      <PageTitle title={t.navUnitDb} sub={t.udbSub}>
+        <Button onClick={openAdd}>
+          <Plus />
+          {t.udbAdd}
+        </Button>
+      </PageTitle>
 
       <Panel>
         <Toolbar>
@@ -261,10 +266,6 @@ export default function UnitDbPage() {
             <Button variant="secondary" onClick={openImport}>
               <Upload />
               {t.udbImport}
-            </Button>
-            <Button onClick={openAdd}>
-              <Plus />
-              {t.udbAdd}
             </Button>
           </ToolbarGroup>
         </Toolbar>

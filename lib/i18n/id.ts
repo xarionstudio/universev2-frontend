@@ -72,6 +72,7 @@ export const id = {
   noResTitle: "Tidak ada hasil",
   noResBody: "Tidak ada karyawan atau unit yang cocok dengan pencarian Anda.",
   empListTitle: "Data Karyawan",
+  empSub: "Data induk karyawan — profil, departemen, dan kompetensi.",
   filter: "Filter",
   clearSearch: "Bersihkan pencarian",
   empAdd: "Tambah Karyawan",

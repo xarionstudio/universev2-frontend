@@ -181,7 +181,12 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       <PageTitle
         title={kind === "att" ? t.navDispAtt : t.navDispFleet}
         sub={kind === "att" ? t.dspSubAtt : t.dspSubFleet}
-      />
+      >
+        <Button onClick={openAdd}>
+          <Plus />
+          {t.dspAdd}
+        </Button>
+      </PageTitle>
 
       <Panel>
         <Toolbar>
@@ -204,10 +209,6 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
               <option value="1">{t.stAktif}</option>
               <option value="0">{t.stNonaktif}</option>
             </Select>
-            <Button variant="secondary" onClick={openAdd}>
-              <Plus />
-              {t.dspAdd}
-            </Button>
           </ToolbarGroup>
         </Toolbar>
         <Table>

@@ -308,7 +308,12 @@ export default function MasterDataPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle title={catLabel} sub={t.mdSub} />
+      <PageTitle title={catLabel} sub={t.mdSub}>
+        <Button onClick={openAdd}>
+          <Plus />
+          {t.mdAdd}
+        </Button>
+      </PageTitle>
 
       <Panel>
         <Toolbar>
@@ -337,10 +342,6 @@ export default function MasterDataPage() {
               <option value="1">{t.stAktif}</option>
               <option value="0">{t.stNonaktif}</option>
             </Select>
-            <Button onClick={openAdd}>
-              <Plus />
-              {t.mdAdd}
-            </Button>
           </ToolbarGroup>
         </Toolbar>
 

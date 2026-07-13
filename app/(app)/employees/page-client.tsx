@@ -34,6 +34,7 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import {
   FootSum,
+  PageTitle,
   Panel,
   PanelFoot,
   Toolbar,
@@ -163,6 +164,13 @@ export default function EmployeesPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageTitle title={t.navEmployees} sub={t.empSub}>
+        <Button onClick={() => router.push("/employees/new")}>
+          <Plus />
+          {t.empAdd}
+        </Button>
+      </PageTitle>
+
       <Panel>
         <Toolbar>
           <ToolbarTitle>{t.empListTitle}</ToolbarTitle>
@@ -228,10 +236,6 @@ export default function EmployeesPage() {
             <Button variant="secondary" onClick={exportNow}>
               <Download />
               {t.export}
-            </Button>
-            <Button onClick={() => router.push("/employees/new")}>
-              <Plus />
-              {t.empAdd}
             </Button>
           </ToolbarGroup>
         </Toolbar>

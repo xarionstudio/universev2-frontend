@@ -74,6 +74,7 @@ export const en: Dict = {
   noResTitle: "No results",
   noResBody: "No employees or units match your search.",
   empListTitle: "Employee Data",
+  empSub: "Employee master data — profiles, departments, and competencies.",
   filter: "Filter",
   clearSearch: "Clear search",
   empAdd: "Add Employee",

@@ -179,7 +179,7 @@ export default function RosterRevisionPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.apEmptyB}
           />
