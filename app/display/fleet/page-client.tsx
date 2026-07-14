@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Clock, Truck, UserX } from "lucide-react";
+import {
+  AlertTriangle,
+  Bus,
+  CheckCircle2,
+  Clock,
+  Truck,
+  UserX,
+} from "lucide-react";
 
 import { displayRuntext, fleetDisplayCards } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
@@ -47,8 +54,22 @@ export default function DisplayFleetPage() {
 
   return (
     <DisplayShell
-      title={`Fleet ${fleet?.digger ?? ""} — Status Unit`}
-      deviceName={deviceName ?? (fleet ? `Fleet ${fleet.digger}` : undefined)}
+      title={fleet ? `Fleet ${fleet.digger}` : "Fleet — Status Unit"}
+      meta={
+        fleet ? (
+          <>
+            <span className="truncate">{fleet.loc}</span>
+            {/* bus antar-jemput fleet — informasi penting operator, di-highlight */}
+            <span className="inline-flex flex-none items-center gap-2.5 rounded-full border border-(--badge-info-border) bg-(--badge-info-fill) px-4.5 py-1 font-bold text-(--color-primary-bright)">
+              <Bus className="size-6" />
+              Bus {fleet.bus}
+            </span>
+          </>
+        ) : undefined
+      }
+      deviceName={
+        deviceName !== `Fleet ${fleet?.digger}` ? deviceName : undefined
+      }
       runtext={displayRuntext.fleet}
       stats={[
         {

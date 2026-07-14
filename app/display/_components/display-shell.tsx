@@ -25,12 +25,15 @@ export type DisplayStat = {
 
 export function DisplayShell({
   title,
+  meta,
   deviceName,
   stats,
   runtext,
   children,
 }: {
   title: string;
+  /* info tambahan di baris bawah judul (mis. lokasi + chip bus fleet) */
+  meta?: React.ReactNode;
   /* nama display terdaftar (mis. "TV Gate Utara") — dikirim lewat ?name= */
   deviceName?: string;
   stats: DisplayStat[];
@@ -39,11 +42,9 @@ export function DisplayShell({
 }) {
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const [clock, setClock] = React.useState("--:--:--");
-  const [fresh, setFresh] = React.useState("—");
   const [stale, setStale] = React.useState("—");
   const [dateLine, setDateLine] = React.useState("");
   const [online, setOnline] = React.useState(true);
-  const onlineRef = React.useRef(true);
 
   /* letterbox scale-to-fit: kanvas tetap 1920×1080 */
   React.useEffect(() => {
@@ -82,32 +83,30 @@ export function DisplayShell({
     };
   }, []);
 
-  /* jam nyata + kesegaran data (refresh tiap 30 dtk saat online) */
+  /* jam nyata + baris tanggal */
   React.useEffect(() => {
     const now = new Date();
     const t0 = setTimeout(() => {
       setClock(fmt(now));
-      setFresh(`${fmt(now)} WITA`);
       setDateLine(
-        `${now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · Site Karang Joang`
+        now.toLocaleDateString("id-ID", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
       );
     }, 0);
     const tick = setInterval(() => setClock(fmt(new Date())), 1000);
-    const freshTick = setInterval(() => {
-      if (onlineRef.current) setFresh(`${fmt(new Date())} WITA`);
-    }, 30000);
     return () => {
       clearTimeout(t0);
       clearInterval(tick);
-      clearInterval(freshTick);
     };
   }, []);
 
   function setConn(on: boolean) {
-    onlineRef.current = on;
     setOnline(on);
     if (!on) setStale(`${fmt(new Date())} WITA`);
-    else setFresh(`${fmt(new Date())} WITA`);
   }
 
   return (
@@ -128,32 +127,28 @@ export function DisplayShell({
             <div className="grid size-16 flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-[26px] font-bold text-white shadow-[0_0_0_3px_rgba(255,255,255,.28),0_0_28px_rgba(0,212,255,.4)]">
               U
             </div>
-            <div>
-              <h1 className="text-[40px] leading-tight font-bold">{title}</h1>
-              <p className="mt-1 text-2xl text-(--text-secondary)">
-                {dateLine}
-              </p>
+            <div className="min-w-0">
+              <h1 className="truncate text-[40px] leading-tight font-bold">
+                {title}
+              </h1>
+              {meta ? (
+                <div className="mt-1.5 flex min-w-0 items-center gap-3 text-2xl text-(--text-secondary)">
+                  {meta}
+                </div>
+              ) : null}
             </div>
             {deviceName ? (
-              <div className="flex items-center gap-3 rounded-full px-6 py-3 glass-card">
+              <div className="flex flex-none items-center gap-3 rounded-full px-6 py-3 glass-card">
                 <Monitor className="size-6 text-(--color-primary-bright)" />
                 <span className="text-[22px] font-semibold">{deviceName}</span>
               </div>
             ) : null}
-            <div className="ml-auto flex items-center gap-5">
-              <div className="flex items-center gap-3 text-[22px] text-(--text-secondary)">
-                <span
-                  className={cn(
-                    "size-3.5 rounded-full",
-                    online
-                      ? "bg-(--color-success) shadow-[0_0_12px_rgba(23,206,100,.9)]"
-                      : "display-offline-dot [animation:kblink_1.2s_infinite] bg-(--color-danger) shadow-[0_0_12px_rgba(252,60,59,.9)]"
-                  )}
-                />
-                Diperbarui{" "}
-                <b className="font-mono font-semibold text-(--text-primary) tabular-nums">
-                  {fresh}
-                </b>
+            <div className="ml-auto flex flex-none items-center gap-6">
+              <div className="text-right leading-snug">
+                <div className="text-[22px] font-semibold">{dateLine}</div>
+                <div className="text-lg text-(--text-secondary)">
+                  Site Karang Joang
+                </div>
               </div>
               <div className="flex flex-col items-center gap-0.5 rounded-full px-8.5 py-3.5 glass-card">
                 <span className="font-mono text-[44px] leading-none font-bold tabular-nums">
