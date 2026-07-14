@@ -10,6 +10,7 @@ import {
 import { initialFleets, type Fleet } from "@/lib/data/fleet";
 import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
 import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
+import { initialNotifs, type Notif } from "@/lib/data/notifications";
 import { apInitialRows, type ApRow } from "@/lib/data/roster";
 import {
   initialAudios,
@@ -45,6 +46,9 @@ type AppStore = {
   setUserName: (v: string) => void;
   userEmail: string;
   setUserEmail: (v: string) => void;
+  /* notifikasi in-app */
+  notifs: Notif[];
+  setNotifs: React.Dispatch<React.SetStateAction<Notif[]>>;
   /* karyawan — master + mutasi lokal */
   empOverrides: Record<string, Partial<Employee>>;
   empAdded: Employee[];
@@ -103,6 +107,7 @@ const AppStoreContext = React.createContext<AppStore | null>(null);
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = React.useState("First Angel Paustine");
   const [userEmail, setUserEmail] = React.useState("angel@unggul.co.id");
+  const [notifs, setNotifs] = React.useState<Notif[]>(initialNotifs);
   const [empOverrides, setEmpOverrides] = React.useState<
     Record<string, Partial<Employee>>
   >({});
@@ -220,6 +225,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setUserName,
     userEmail,
     setUserEmail,
+    notifs,
+    setNotifs,
     empOverrides,
     empAdded,
     empDeleted,
