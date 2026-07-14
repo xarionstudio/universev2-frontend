@@ -21,6 +21,7 @@ import { useAppStore } from "@/components/providers/app-store";
 import { Spinner } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { LogoBadge, UniverseLogo } from "@/components/ui/logo";
 
 /* Layout dua panel mengikuti referensi universe-2 (Figma 1512:2810):
    kartu 1200×760, panel kiri = foto armada + brand + hero + fitur,
@@ -96,9 +97,7 @@ export default function LoginPage() {
             <div className="relative z-10 flex h-full flex-col justify-between px-[60px] py-[50px]">
               {/* brand — kiri atas */}
               <div className="flex items-center gap-3">
-                <div className="grid size-[46px] flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-lg font-bold text-white shadow-[0_0_0_2px_rgba(255,255,255,.28),0_0_20px_rgba(0,212,255,.4)]">
-                  U
-                </div>
+                <UniverseLogo priority className="size-[46px]" />
                 <div className="leading-tight">
                   <p className="text-[28px] font-bold tracking-(--tracking-brand)">
                     {appName}
@@ -149,9 +148,7 @@ export default function LoginPage() {
             <div className="flex h-full flex-col items-center justify-between px-20 py-10 max-lg:gap-8 max-lg:px-8">
               {/* logo + heading */}
               <div className="flex flex-col items-center gap-5 text-center">
-                <div className="grid size-24 place-items-center rounded-full bg-(image:--gradient-logo) text-4xl font-bold text-white shadow-[0_0_0_3px_var(--ring-avatar),0_0_28px_rgba(0,212,255,.4)]">
-                  U
-                </div>
+                <LogoBadge className="size-24" logoClassName="size-11" />
                 <div className="flex flex-col items-center gap-1">
                   <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
                     {t.loginWelcome}{" "}

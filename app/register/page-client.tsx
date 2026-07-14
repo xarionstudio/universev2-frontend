@@ -21,6 +21,7 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Input } from "@/components/ui/input";
+import { LogoBadge, UniverseLogo } from "@/components/ui/logo";
 import { Select } from "@/components/ui/select";
 
 /* Register dua panel mengikuti referensi universe-2 (kartu 1300×900):
@@ -111,9 +112,7 @@ export default function RegisterPage() {
           {/* bar atas: brand + kembali */}
           <div className="flex items-center justify-between px-10 py-6">
             <div className="flex items-center gap-3">
-              <div className="grid size-9 flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-sm font-bold text-white shadow-[0_0_0_2px_rgba(255,255,255,.28),0_0_16px_rgba(0,212,255,.4)]">
-                U
-              </div>
+              <UniverseLogo className="size-9" />
               <div className="leading-tight">
                 <p className="text-xl font-bold tracking-(--tracking-brand)">
                   {appName}
@@ -224,9 +223,7 @@ export default function RegisterPage() {
 
             <div className="relative z-10 flex h-full flex-col justify-between px-[60px] py-[50px]">
               <div className="flex items-center gap-3">
-                <div className="grid size-[46px] flex-none place-items-center rounded-full bg-(image:--gradient-logo) text-lg font-bold text-white shadow-[0_0_0_2px_rgba(255,255,255,.28),0_0_20px_rgba(0,212,255,.4)]">
-                  U
-                </div>
+                <UniverseLogo priority className="size-[46px]" />
                 <div className="leading-tight">
                   <p className="text-[28px] font-bold tracking-(--tracking-brand)">
                     {appName}
@@ -274,9 +271,7 @@ export default function RegisterPage() {
           {/* ── panel kanan: form — overlap 20px di atas panel kiri ── */}
           <div className="absolute top-0 left-[570px] z-10 h-full w-[730px] rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
             <div className="flex h-full flex-col items-center px-10 py-[50px] max-lg:px-8">
-              <div className="grid size-[90px] place-items-center rounded-full bg-(image:--gradient-logo) text-3xl font-bold text-white shadow-[0_0_0_3px_var(--ring-avatar),0_0_28px_rgba(0,212,255,.4)]">
-                U
-              </div>
+              <LogoBadge className="size-[90px]" logoClassName="size-10" />
               <div className="mt-5 flex flex-col items-center gap-0.5 text-center">
                 <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
                   {t.regTitle}
