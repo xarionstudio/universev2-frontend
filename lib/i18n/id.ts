@@ -648,6 +648,27 @@ export const id = {
   lblDateTo: "Sampai tanggal",
   toastExportT: "Export dimulai",
   toastExportD: "attendance_2026-07-11.xlsx sedang disiapkan.",
+
+  /* --- profil saya --- */
+  pfSub: "Kelola informasi akun dan password Anda.",
+  pfName: "Nama lengkap",
+  pfEmail: "Email",
+  pfSave: "Simpan perubahan",
+  pfSavedT: "Profil disimpan",
+  pfSavedD: "nama dan email akun diperbarui.",
+  pfErrEmail: "Format email tidak valid.",
+  pfPwT: "Ubah password",
+  pfPwOpt: "Kosongkan bila tidak ingin mengganti password.",
+  pfPwCur: "Password saat ini",
+  pfPwNew: "Password baru",
+  pfPwConf: "Konfirmasi password baru",
+  pfPwHelp: "Minimal 8 karakter.",
+  pfPwBtn: "Ubah password",
+  pfPwErrCur: "Password saat ini wajib diisi.",
+  pfPwErrLen: "Minimal 8 karakter.",
+  pfPwErrConf: "Konfirmasi tidak sama dengan password baru.",
+  pfPwSavedT: "Password diubah",
+  pfPwSavedD: "gunakan password baru saat login berikutnya.",
 } as const;
 
 export type Dict = { [K in keyof typeof id]: string };

@@ -47,7 +47,7 @@ export function Topbar() {
   const router = useRouter();
   const { t, lang, setLang } = useI18n();
   const { pref, resolved, setTheme } = useTheme();
-  const { userName } = useAppStore();
+  const { userName, userEmail } = useAppStore();
   const { setSideOpen } = useShell();
   const { refreshing, refresh } = useRefresh();
   const { pushToast } = useToast();
@@ -69,6 +69,7 @@ export function Topbar() {
   else if (pathname.startsWith("/fit-to-work")) cur = t.navFtw;
   else if (pathname.startsWith("/employees")) cur = t.navEmployees;
   else if (pathname.startsWith("/settings")) cur = t.navSettings;
+  else if (pathname.startsWith("/profile")) cur = t.profile;
   else if (pathname.startsWith("/master/") && params?.cat)
     cur = mdCatLabels[params.cat as MdCat]?.[lang] ?? cur;
 
@@ -263,10 +264,15 @@ export function Topbar() {
             <div className="mb-2 border-b border-(--divider) px-3 pt-2 pb-3">
               <b className="block text-[13px]">{userName}</b>
               <span className="font-mono text-[11px] text-(--text-tertiary)">
-                first.angel@unggul.co.id
+                {userEmail}
               </span>
             </div>
-            <DropMenuItem onClick={close}>
+            <DropMenuItem
+              onClick={() => {
+                close();
+                router.push("/profile");
+              }}
+            >
               <User />
               {t.profile}
             </DropMenuItem>

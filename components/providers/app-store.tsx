@@ -40,7 +40,11 @@ export type MenuVis = {
 };
 
 type AppStore = {
+  /* akun yang sedang login (profil) */
   userName: string;
+  setUserName: (v: string) => void;
+  userEmail: string;
+  setUserEmail: (v: string) => void;
   /* karyawan — master + mutasi lokal */
   empOverrides: Record<string, Partial<Employee>>;
   empAdded: Employee[];
@@ -97,6 +101,8 @@ type AppStore = {
 const AppStoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
+  const [userName, setUserName] = React.useState("First Angel Paustine");
+  const [userEmail, setUserEmail] = React.useState("angel@unggul.co.id");
   const [empOverrides, setEmpOverrides] = React.useState<
     Record<string, Partial<Employee>>
   >({});
@@ -210,7 +216,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value: AppStore = {
-    userName: "First Angel Paustine",
+    userName,
+    setUserName,
+    userEmail,
+    setUserEmail,
     empOverrides,
     empAdded,
     empDeleted,
