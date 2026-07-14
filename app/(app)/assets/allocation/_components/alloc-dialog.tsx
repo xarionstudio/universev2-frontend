@@ -53,7 +53,7 @@ export function AllocDialog({
         {t.faAssignT} {unit?.code}
       </DialogTitle>
       <DialogBody>{t.faDlgB}</DialogBody>
-      <div className="mt-4 flex flex-col gap-1">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {unit
           ? ops.map((o) => {
               const match = displayKomp(o, unit.tegi);

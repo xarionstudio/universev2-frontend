@@ -105,50 +105,52 @@ export function AutoDialog({
       <DialogTitle id="faauto-t">{t.faAutoT}</DialogTitle>
       <DialogBody>{t.faAutoB}</DialogBody>
 
-      {proposals.length ? (
-        <div className="mt-4 flex max-h-[300px] flex-col gap-1 overflow-y-auto">
-          {proposals.map((p) => (
-            <div
-              key={p.code}
-              className="flex items-center gap-3 rounded-icon px-3 py-2"
-            >
-              <b className="w-[76px] flex-none font-mono text-[13px]">
-                {p.code}
-              </b>
-              <div className="min-w-0 flex-1">
-                <b className="block text-[13px] font-semibold">{p.name}</b>
-                <span className="text-xs text-(--text-tertiary)">
-                  {p.type} · {p.komp}
-                </span>
-              </div>
-              <Badge variant="success" dot>
-                Fit
-              </Badge>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-4 flex items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-(--color-danger-text)">
-          <CircleAlert className="mt-0.5 size-4 flex-none" />
-          <span>{t.faAutoNone}</span>
-        </div>
-      )}
-
-      {skipped.length ? (
-        <div className="mt-4">
-          <div className="mb-2 text-xs font-semibold tracking-[.05em] text-(--text-tertiary) uppercase">
-            {t.faAutoSkipT}
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {skipped.map((sk) => (
-              <div key={sk.name} className="flex gap-2 py-1 text-sm">
-                <span className="font-medium">{sk.name}</span>
-                <span className="text-(--text-tertiary)">— {sk.why}</span>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {proposals.length ? (
+          <div className="mt-4 flex flex-col gap-1">
+            {proposals.map((p) => (
+              <div
+                key={p.code}
+                className="flex items-center gap-3 rounded-icon px-3 py-2"
+              >
+                <b className="w-[76px] flex-none font-mono text-[13px]">
+                  {p.code}
+                </b>
+                <div className="min-w-0 flex-1">
+                  <b className="block text-[13px] font-semibold">{p.name}</b>
+                  <span className="text-xs text-(--text-tertiary)">
+                    {p.type} · {p.komp}
+                  </span>
+                </div>
+                <Badge variant="success" dot>
+                  Fit
+                </Badge>
               </div>
             ))}
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div className="mt-4 flex items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-(--color-danger-text)">
+            <CircleAlert className="mt-0.5 size-4 flex-none" />
+            <span>{t.faAutoNone}</span>
+          </div>
+        )}
+
+        {skipped.length ? (
+          <div className="mt-4">
+            <div className="mb-2 text-xs font-semibold tracking-[.05em] text-(--text-tertiary) uppercase">
+              {t.faAutoSkipT}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {skipped.map((sk) => (
+                <div key={sk.name} className="flex gap-2 py-1 text-sm">
+                  <span className="font-medium">{sk.name}</span>
+                  <span className="text-(--text-tertiary)">— {sk.why}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <DialogActions>
         <Button variant="ghost" onClick={onClose}>

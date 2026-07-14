@@ -42,7 +42,9 @@ function Dialog({
         aria-modal="true"
         aria-labelledby={labelledBy}
         className={cn(
-          "w-[min(460px,100%)] rounded-panel border border-(--glass-2-border) bg-(--overlay-fill) p-6 shadow-(--shadow-modal)",
+          /* flex-col + max-h viewport: konten panjang scroll di area min-h-0,
+             tombol aksi tetap terlihat di layar pendek */
+          "flex max-h-[calc(100dvh-48px)] w-[min(460px,100%)] flex-col rounded-panel border border-(--glass-2-border) bg-(--overlay-fill) p-6 shadow-(--shadow-modal)",
           className
         )}
       >
@@ -109,7 +111,7 @@ function DialogActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-actions"
-      className={cn("mt-6 flex justify-end gap-2", className)}
+      className={cn("mt-6 flex flex-none justify-end gap-2", className)}
       {...props}
     />
   );
