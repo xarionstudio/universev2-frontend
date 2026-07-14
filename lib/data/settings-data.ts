@@ -68,7 +68,7 @@ export const initialDspAtt: Display[] = [
   },
   {
     id: "DSP-A02",
-    name: "TV Mess Karang Joang",
+    name: "TV Mess 31",
     loc: "Lobi mess",
     content: "att",
     runtext: "Wajib P2H sebelum mengoperasikan unit.",

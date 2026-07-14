@@ -181,7 +181,7 @@ export const displayMachines: DisplayMachine[] = [
   },
   {
     id: "FP-11",
-    loc: "Mess Karang Joang",
+    loc: "Mess 31",
     online: false,
     meta: "terakhir aktif kemarin 21:14",
   },

@@ -147,7 +147,7 @@ export function DisplayShell({
               <div className="text-right leading-snug">
                 <div className="text-[22px] font-semibold">{dateLine}</div>
                 <div className="text-lg text-(--text-secondary)">
-                  Site Karang Joang
+                  Site Indexim
                 </div>
               </div>
               <div className="flex flex-col items-center gap-0.5 rounded-full px-8.5 py-3.5 glass-card">

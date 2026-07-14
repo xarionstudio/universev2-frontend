@@ -430,8 +430,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   onChange={(e) => up("mess", e.target.value)}
                 >
                   <option value="">{t.optNoMess}</option>
-                  <option>Mess Karang Joang — Blok A</option>
-                  <option>Mess Karang Joang — Blok C</option>
+                  <option>Mess 31 — Blok A</option>
+                  <option>Mess 31 — Blok C</option>
                   <option>Mess KM 12 — Blok B</option>
                 </Select>
               </Field>
