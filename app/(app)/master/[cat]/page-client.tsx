@@ -189,6 +189,11 @@ export default function MasterDataPage() {
           { key: "a", label: "Bus", kind: "select", opts: busOpts },
           { key: "b", label: "Tempudo", kind: "select", opts: tempudoOpts },
         ];
+      case "mess":
+        return [
+          { key: "name", label: t.mdNama },
+          { key: "a", label: en ? "Block" : "Blok" },
+        ];
       case "runtext":
         return [
           { key: "name", label: en ? "Text" : "Teks" },

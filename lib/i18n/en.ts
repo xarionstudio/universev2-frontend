@@ -537,6 +537,8 @@ export const en: Dict = {
   flowApproval: "Approval",
   flowAtt: "Attendance",
   lblDate: "Date",
+  lblMonth: "Month",
+  allMonths: "All months",
   thEmp: "Employee",
   thAct: "Action",
   upSub:

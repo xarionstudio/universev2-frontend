@@ -9,7 +9,6 @@ import { rosterMeta } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
@@ -39,18 +38,30 @@ export default function RosterDataPage() {
   const { pushToast } = useToast();
   const router = useRouter();
 
-  const [date, setDate] = React.useState("");
+  const [month, setMonth] = React.useState("");
+  const [dept, setDept] = React.useState("");
   const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
 
-  const rows = rosterMeta(lang).filter((r) => {
+  const all = rosterMeta(lang);
+  const depts = Array.from(new Set(all.map((r) => r.dept))).sort();
+  const monthNames = React.useMemo(() => {
+    const loc = lang === "en" ? "en-GB" : "id-ID";
+    return Array.from({ length: 12 }, (_, i) =>
+      new Date(2026, i, 1).toLocaleDateString(loc, { month: "long" })
+    );
+  }, [lang]);
+
+  const rows = all.filter((r) => {
     if (st && r.status !== st) return false;
-    if (date && r.month !== date.slice(0, 7)) return false;
+    if (dept && r.dept !== dept) return false;
+    if (month && r.month.slice(5) !== month) return false;
     const needle = q.trim().toLowerCase();
     if (!needle) return true;
     return (
       r.label.toLowerCase().includes(needle) ||
       r.file.toLowerCase().includes(needle) ||
+      r.dept.toLowerCase().includes(needle) ||
       r.by.toLowerCase().includes(needle)
     );
   });
@@ -77,6 +88,19 @@ export default function RosterDataPage() {
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
+              aria-label={t.allDepts}
+              wrapperClassName="w-[180px]"
+              value={dept}
+              onChange={(e) => setDept(e.target.value)}
+            >
+              <option value="">{t.allDepts}</option>
+              {depts.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+            <Select
               aria-label={t.allStatus}
               wrapperClassName="w-[170px]"
               value={st}
@@ -86,21 +110,19 @@ export default function RosterDataPage() {
               <option value="aktif">{t.stAktif}</option>
               <option value="arsip">{t.stArsip}</option>
             </Select>
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="rd-tgl"
-                className="text-xs text-(--text-tertiary)"
-              >
-                {t.lblDate}
-              </label>
-              <Input
-                id="rd-tgl"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-[170px] font-mono"
-              />
-            </div>
+            <Select
+              aria-label={t.lblMonth}
+              wrapperClassName="w-[160px]"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            >
+              <option value="">{t.allMonths}</option>
+              {monthNames.map((m, i) => (
+                <option key={m} value={String(i + 1).padStart(2, "0")}>
+                  {m}
+                </option>
+              ))}
+            </Select>
           </ToolbarGroup>
         </Toolbar>
 
@@ -109,6 +131,7 @@ export default function RosterDataPage() {
             <TableHeader>
               <tr>
                 <TableHead>{t.thPeriod}</TableHead>
+                <TableHead>{t.thDept}</TableHead>
                 <TableHead className="max-xl:hidden">{t.thUploaded}</TableHead>
                 <TableHead>{t.thEmpN}</TableHead>
                 <TableHead>{t.thRows}</TableHead>
@@ -122,6 +145,7 @@ export default function RosterDataPage() {
                   <TableCell>
                     <NameCell name={r.label} sub={r.file} />
                   </TableCell>
+                  <TableCell>{r.dept}</TableCell>
                   <TableCell className="max-xl:hidden">
                     <NameCell
                       name={<span className="font-medium">{r.by}</span>}

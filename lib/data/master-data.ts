@@ -6,7 +6,7 @@ import {
   unitsDb,
 } from "./units-db";
 
-/* Master data dinamis (EGI, product, class, area, tempudo, bus, lokasi ex, running text) */
+/* Master data dinamis (EGI, product, class, area, tempudo, bus, lokasi ex, mess, running text) */
 export type MdEntry = {
   id: string;
   name: string;
@@ -23,6 +23,7 @@ export type MdCat =
   | "tempudo"
   | "bus"
   | "lokasiex"
+  | "mess"
   | "runtext";
 
 export const mdCats: MdCat[] = [
@@ -33,6 +34,7 @@ export const mdCats: MdCat[] = [
   "tempudo",
   "bus",
   "lokasiex",
+  "mess",
   "runtext",
 ];
 
@@ -45,6 +47,7 @@ export const mdCatLabels: Record<MdCat, { id: string; en: string }> = {
   tempudo: { id: "Titik Tempudo", en: "Tempudo Points" },
   bus: { id: "Bus", en: "Buses" },
   lokasiex: { id: "Lokasi Excavator", en: "Excavator Locations" },
+  mess: { id: "Mess", en: "Mess" },
   runtext: { id: "Running Text", en: "Running Texts" },
 };
 
@@ -100,6 +103,14 @@ export function mdInit(): Record<MdCat, MdEntry[]> {
       ["EX5001", "UD-BU07", "TP-03"],
       ["EX7003", "UD-BU08", "TP-01"],
       ["EX7004", "UD-BU06", "TP-04"],
+    ]),
+    /* mess per blok — sumber dropdown "Mess" di form data karyawan */
+    mess: mk("mess", [
+      ["Mess 31", "Blok A"],
+      ["Mess 31", "Blok C"],
+      ["Mess 31", "Blok D"],
+      ["Mess KM 12", "Blok B"],
+      ["Mess KM 12", "Blok A", "", false],
     ]),
     runtext: mk("runtext", [
       [

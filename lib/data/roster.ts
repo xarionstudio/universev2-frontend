@@ -1,10 +1,11 @@
 import type { Lang } from "@/lib/i18n";
 
-/* ===== Data roster (list per bulan) ===== */
+/* ===== Data roster (list per bulan, satu file per departemen) ===== */
 export type RosterMeta = {
   key: string;
   label: string;
   month: string;
+  dept: string;
   file: string;
   emp: string;
   rows: string;
@@ -21,10 +22,37 @@ export function rosterMeta(lang: Lang): RosterMeta[] {
       key: "jul",
       label: "Juli 2026",
       month: "2026-07",
-      file: "roster_juli_2026.xlsx",
-      emp: "247",
-      rows: en ? "2,140" : "2.140",
+      dept: "Operation",
+      file: "roster_juli_2026_operation.xlsx",
+      emp: "158",
+      rows: en ? "1,364" : "1.364",
       by: "First Angel",
+      date: "01 Jul 2026",
+      dateISO: new Date().toISOString().slice(0, 10),
+      status: "aktif",
+    },
+    {
+      key: "jul-plant",
+      label: "Juli 2026",
+      month: "2026-07",
+      dept: "Plant",
+      file: "roster_juli_2026_plant.xlsx",
+      emp: "46",
+      rows: "397",
+      by: "First Angel",
+      date: "01 Jul 2026",
+      dateISO: new Date().toISOString().slice(0, 10),
+      status: "aktif",
+    },
+    {
+      key: "jul-sdi",
+      label: "Juli 2026",
+      month: "2026-07",
+      dept: "SDI",
+      file: "roster_juli_2026_sdi.xlsx",
+      emp: "24",
+      rows: "207",
+      by: "Rahmat Hidayat",
       date: "01 Jul 2026",
       dateISO: new Date().toISOString().slice(0, 10),
       status: "aktif",
@@ -33,9 +61,23 @@ export function rosterMeta(lang: Lang): RosterMeta[] {
       key: "jun",
       label: "Juni 2026",
       month: "2026-06",
-      file: "roster_juni_2026.xlsx",
-      emp: "243",
-      rows: en ? "2,065" : "2.065",
+      dept: "Operation",
+      file: "roster_juni_2026_operation.xlsx",
+      emp: "155",
+      rows: en ? "1,338" : "1.338",
+      by: "First Angel",
+      date: "01 Jun 2026",
+      dateISO: "2026-06-30",
+      status: "arsip",
+    },
+    {
+      key: "jun-plant",
+      label: "Juni 2026",
+      month: "2026-06",
+      dept: "Plant",
+      file: "roster_juni_2026_plant.xlsx",
+      emp: "45",
+      rows: "389",
       by: "First Angel",
       date: "01 Jun 2026",
       dateISO: "2026-06-30",
@@ -45,9 +87,10 @@ export function rosterMeta(lang: Lang): RosterMeta[] {
       key: "mei",
       label: "Mei 2026",
       month: "2026-05",
-      file: "roster_mei_2026.xlsx",
-      emp: "241",
-      rows: en ? "2,098" : "2.098",
+      dept: "Operation",
+      file: "roster_mei_2026_operation.xlsx",
+      emp: "152",
+      rows: en ? "1,312" : "1.312",
       by: "Rahmat Hidayat",
       date: "02 Mei 2026",
       dateISO: "2026-05-31",

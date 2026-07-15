@@ -534,6 +534,8 @@ export const id = {
   flowApproval: "Approval",
   flowAtt: "Attendance",
   lblDate: "Tanggal",
+  lblMonth: "Bulan",
+  allMonths: "Semua bulan",
   thEmp: "Karyawan",
   thAct: "Aksi",
   upSub:

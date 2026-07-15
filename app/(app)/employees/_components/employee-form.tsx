@@ -52,7 +52,7 @@ type Fields = {
 export function EmployeeForm({ nik }: { nik?: string }) {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { empAll, saveEmployee } = useAppStore();
+  const { empAll, saveEmployee, mdData } = useAppStore();
   const router = useRouter();
 
   const [record] = React.useState<Employee | undefined>(() =>
@@ -76,6 +76,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   }));
   const [kompRows, setKompRows] = React.useState<Komp[]>(() =>
     (record?.komp ?? []).map((k) => ({ ...k }))
+  );
+  /* opsi mess dari master data (Master Data → Mess) — bukan daftar hardcoded */
+  const messOpts = React.useMemo(
+    () =>
+      mdData.mess
+        .filter((r) => r.active)
+        .map((r) => (r.a ? `${r.name} — ${r.a}` : r.name)),
+    [mdData.mess]
   );
   const [dzLabel, setDzLabel] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
@@ -430,9 +438,15 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   onChange={(e) => up("mess", e.target.value)}
                 >
                   <option value="">{t.optNoMess}</option>
-                  <option>Mess 31 — Blok A</option>
-                  <option>Mess 31 — Blok C</option>
-                  <option>Mess KM 12 — Blok B</option>
+                  {/* nilai lama yang tak lagi ada di master tetap dipertahankan */}
+                  {f.mess && !messOpts.includes(f.mess) ? (
+                    <option value={f.mess}>{f.mess}</option>
+                  ) : null}
+                  {messOpts.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
                 </Select>
               </Field>
               <Field label={t.kRoom} htmlFor="ef-kamar">

@@ -54,7 +54,7 @@ export default function RosterDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle
-        title={`${t.rdDetailTitle} — ${meta.label}`}
+        title={`${t.rdDetailTitle} — ${meta.label} · ${meta.dept}`}
         sub={t.rdDetailSub}
       >
         <div className="flex gap-2">
