@@ -30,7 +30,7 @@ function Field({
       className={cn(
         "flex flex-col gap-2",
         error &&
-          "[&_[data-slot=input]]:border-(--color-danger) [&_[data-slot=input]]:shadow-[0_0_0_3px_rgba(252,60,59,.18)] [&_[data-slot=select]]:border-(--color-danger) [&_[data-slot=select]]:shadow-[0_0_0_3px_rgba(252,60,59,.18)] [&_[data-slot=textarea]]:border-(--color-danger) [&_[data-slot=textarea]]:shadow-[0_0_0_3px_rgba(252,60,59,.18)]",
+          "**:data-[slot=input]:border-danger **:data-[slot=input]:shadow-[0_0_0_3px_rgba(252,60,59,.18)] **:data-[slot=select]:border-danger **:data-[slot=select]:shadow-[0_0_0_3px_rgba(252,60,59,.18)] **:data-[slot=textarea]:border-danger **:data-[slot=textarea]:shadow-[0_0_0_3px_rgba(252,60,59,.18)]",
         className
       )}
       {...props}
@@ -38,14 +38,12 @@ function Field({
       {label !== undefined ? (
         <label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
-          {required ? (
-            <span className="text-(--color-danger-text)"> *</span>
-          ) : null}
+          {required ? <span className="text-danger-text"> *</span> : null}
         </label>
       ) : null}
       {children}
       {error && errorMessage ? (
-        <span className="inline-flex items-center gap-[5px] text-xs text-(--color-danger-text)">
+        <span className="inline-flex items-center gap-1.25 text-xs text-danger-text">
           <CircleAlert className="size-3 flex-none" strokeWidth={2.5} />
           {errorMessage}
         </span>

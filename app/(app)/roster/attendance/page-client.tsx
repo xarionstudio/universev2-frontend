@@ -121,7 +121,7 @@ function AttendanceInner() {
           <ToolbarTitle>{t.attLog}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -129,7 +129,7 @@ function AttendanceInner() {
             />
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
@@ -142,7 +142,7 @@ function AttendanceInner() {
             </Select>
             <Select
               aria-label={t.allDepts}
-              wrapperClassName="w-[180px]"
+              wrapperClassName="w-45"
               value={dept}
               onChange={(e) => setDept(e.target.value)}
             >
@@ -162,7 +162,7 @@ function AttendanceInner() {
               <Input
                 id="att-from"
                 type="date"
-                className="w-[160px] font-mono"
+                className="w-40 font-mono"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
@@ -170,7 +170,7 @@ function AttendanceInner() {
               <Input
                 id="att-to"
                 type="date"
-                className="w-[160px] font-mono"
+                className="w-40 font-mono"
                 aria-label={t.lblDateTo}
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
@@ -233,7 +233,7 @@ function AttendanceInner() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.attEmptyB}
           />

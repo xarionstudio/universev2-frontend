@@ -17,7 +17,7 @@ export default function DisplayFingerprintPage() {
       runtext={displayRuntext.finger}
       stats={[
         {
-          icon: <LayoutGrid className="text-(--color-primary-bright)" />,
+          icon: <LayoutGrid className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
           value: "12",
           label: "Total Mesin",
@@ -30,13 +30,13 @@ export default function DisplayFingerprintPage() {
           label: "Online",
         },
         {
-          icon: <WifiOff className="text-(--color-danger-text)" />,
+          icon: <WifiOff className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
           value: "2",
           label: "Offline",
         },
         {
-          icon: <Fingerprint className="text-(--color-primary-bright)" />,
+          icon: <Fingerprint className="text-primary-bright" />,
           iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
           value: "1.208",
           label: "Scan Hari Ini",
@@ -67,7 +67,7 @@ export default function DisplayFingerprintPage() {
                 {m.online ? (
                   <Wifi className="text-(--badge-success-text)" />
                 ) : (
-                  <WifiOff className="text-(--color-danger-text)" />
+                  <WifiOff className="text-danger-text" />
                 )}
               </span>
             </div>
@@ -75,7 +75,7 @@ export default function DisplayFingerprintPage() {
             <div
               className={cn(
                 "mt-auto text-lg text-(--text-tertiary)",
-                !m.online && "text-(--color-danger-text)"
+                !m.online && "text-danger-text"
               )}
             >
               {m.online ? (
@@ -86,7 +86,7 @@ export default function DisplayFingerprintPage() {
                   </b>
                 </>
               ) : (
-                <b className="font-mono font-semibold text-(--color-danger-text) tabular-nums">
+                <b className="font-mono font-semibold text-danger-text tabular-nums">
                   {m.meta}
                 </b>
               )}

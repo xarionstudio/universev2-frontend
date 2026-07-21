@@ -200,7 +200,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
               {t.secPhoto}
             </SectionTitle>
             <div className="flex items-start gap-5">
-              <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+              <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
                 {initialsOf(f.nama || record?.name || "")}
               </div>
               <Dropzone
@@ -463,7 +463,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
           <div className="sticky bottom-4 z-20 flex items-center justify-end gap-3 rounded-panel px-6 py-4 glass-panel">
             {dirty ? (
               <span className="mr-auto inline-flex items-center gap-1.5 text-xs text-(--text-tertiary)">
-                <span className="size-[7px] rounded-full bg-(--color-warning)" />
+                <span className="size-1.75 rounded-full bg-warning" />
                 {t.efUnsaved}
               </span>
             ) : null}

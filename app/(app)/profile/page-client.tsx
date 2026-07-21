@@ -4,7 +4,10 @@ import * as React from "react";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
+import { hashPassword, newSalt, verifyPassword } from "@/lib/password";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
+import { useSession } from "@/components/providers/session";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,9 +15,6 @@ import { Field, FormGrid } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PageTitle, Panel, SectionTitle } from "@/components/ui/panel";
 import { useToast } from "@/components/ui/toast";
-
-/* akun sesi demo = u1 (First Angel Paustine) di user management */
-const SESSION_UID = "u1";
 
 export default function ProfilePage() {
   const { t } = useI18n();
@@ -24,12 +24,15 @@ export default function ProfilePage() {
     setUserName,
     userEmail,
     setUserEmail,
-    umUsers,
     setUmUsers,
     umRoles,
   } = useAppStore();
 
-  const me = umUsers.find((u) => u.id === SESSION_UID);
+  /* Dulu akun sesi dipatok konstanta SESSION_UID = "u1"; sekarang diambil
+     dari sesi yang benar-benar login, jadi halaman ini mengikuti siapa pun
+     yang masuk. */
+  const { user: me } = usePermissions();
+  const { signIn } = useSession();
   const roleNames = (me?.roles ?? []).flatMap((rid) => {
     const role = umRoles.find((r) => r.id === rid);
     return role ? [role.name] : [];
@@ -37,6 +40,18 @@ export default function ProfilePage() {
 
   const [name, setName] = React.useState(userName);
   const [email, setEmail] = React.useState(userEmail);
+
+  /* Sesi baru terbaca setelah hydrate, jadi form diisi ulang begitu akun yang
+     login diketahui. Memakai pola resmi React "menyesuaikan state saat render"
+     — bukan useEffect — supaya tidak ada render berantai. Hanya berjalan saat
+     identitasnya berganti, bukan tiap kali record-nya berubah. */
+  const [seededFor, setSeededFor] = React.useState<string | null>(null);
+  if (me && seededFor !== me.id) {
+    setSeededFor(me.id);
+    setName(me.kar ?? "");
+    setEmail(me.email);
+  }
+
   /* password opsional — dikosongkan berarti tidak diganti */
   const [pwCur, setPwCur] = React.useState("");
   const [pwNew, setPwNew] = React.useState("");
@@ -49,7 +64,8 @@ export default function ProfilePage() {
     conf?: boolean;
   }>({});
 
-  function save() {
+  async function save() {
+    if (!me) return;
     const wantPw = Boolean(pwCur || pwNew || pwConf);
     const e = {
       name: !name.trim(),
@@ -60,16 +76,41 @@ export default function ProfilePage() {
     };
     setErr(e);
     if (Object.values(e).some(Boolean)) return;
+
+    /* Password lama diverifikasi hanya bila memang sudah pernah diatur —
+       akun hasil undangan belum punya, jadi tidak ada yang bisa dicocokkan. */
+    let cred: Partial<typeof me> = {};
+    if (wantPw) {
+      if (me.pwHash && me.pwSalt) {
+        const ok = await verifyPassword(pwCur, me.pwSalt, me.pwHash);
+        if (!ok) {
+          setErr((p) => ({ ...p, cur: true }));
+          return;
+        }
+      }
+      const salt = newSalt();
+      cred = {
+        pwSalt: salt,
+        pwHash: await hashPassword(pwNew, salt),
+        pwAt: new Date().toISOString(),
+      };
+    }
+
+    const nextEmail = email.trim();
     setUserName(name.trim());
-    setUserEmail(email.trim());
+    setUserEmail(nextEmail);
     /* sinkron ke daftar akun di User Management */
     setUmUsers((prev) =>
       prev.map((u) =>
-        u.id === SESSION_UID
-          ? { ...u, kar: name.trim(), email: email.trim() }
+        u.id === me.id
+          ? { ...u, kar: name.trim(), email: nextEmail, ...cred }
           : u
       )
     );
+    /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah
+       agar identitas tidak putus dan user tidak terlempar keluar. */
+    if (nextEmail.toLowerCase() !== me.email.toLowerCase()) signIn(nextEmail);
+
     if (wantPw) {
       setPwCur("");
       setPwNew("");
@@ -83,7 +124,7 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle title={t.profile} sub={t.pfSub} />
-      <Panel className="max-w-[760px]">
+      <Panel className="max-w-190">
         {/* identitas akun — NIK & role cukup tampil di sini (read-only) */}
         <div className="mb-5 flex items-center gap-4">
           <Avatar className="size-14 text-lg">{initialsOf(userName)}</Avatar>
@@ -222,12 +263,12 @@ function PwInput({
         onClick={() => setShow((v) => !v)}
         aria-pressed={show}
         aria-label={t.pwToggle}
-        className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-(--color-primary)"
+        className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-primary"
       >
         {show ? (
-          <EyeOff className="size-[17px]" />
+          <EyeOff className="size-4.25" />
         ) : (
-          <Eye className="size-[17px]" />
+          <Eye className="size-4.25" />
         )}
       </button>
     </div>

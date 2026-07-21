@@ -213,7 +213,7 @@ export default function UnitDbPage() {
           <ToolbarTitle>{t.udbListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchUnit}
               aria-label={t.searchUnit}
               value={q}
@@ -223,7 +223,7 @@ export default function UnitDbPage() {
               }}
             />
             <Select
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               value={cat}
               onChange={(e) => {
                 setCat(e.target.value);
@@ -239,7 +239,7 @@ export default function UnitDbPage() {
               ))}
             </Select>
             <Select
-              wrapperClassName="w-[180px]"
+              wrapperClassName="w-45"
               value={prod}
               onChange={(e) => {
                 setProd(e.target.value);
@@ -342,7 +342,7 @@ export default function UnitDbPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.usEmptyB}
           />

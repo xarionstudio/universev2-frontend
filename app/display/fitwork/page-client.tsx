@@ -26,7 +26,7 @@ export default function DisplayFitworkPage() {
       runtext={displayRuntext.ftw}
       stats={[
         {
-          icon: <ClipboardCheck className="text-(--color-primary-bright)" />,
+          icon: <ClipboardCheck className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
           value: String(n("Fit") + n("Kurang tidur")),
           label: "Sudah Lapor",
@@ -46,7 +46,7 @@ export default function DisplayFitworkPage() {
           label: "Belum Lapor",
         },
         {
-          icon: <AlertTriangle className="text-(--color-danger-text)" />,
+          icon: <AlertTriangle className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
           value: String(n("Kurang tidur")),
           label: "Kurang Tidur",

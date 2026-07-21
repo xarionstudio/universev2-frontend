@@ -325,7 +325,7 @@ export default function MasterDataPage() {
           <ToolbarTitle>{catLabel}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.mdSearchPh}
               aria-label={t.mdSearchPh}
               value={q}
@@ -335,7 +335,7 @@ export default function MasterDataPage() {
               }}
             />
             <Select
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               value={stF}
               onChange={(e) => {
                 setStF(e.target.value);
@@ -385,7 +385,7 @@ export default function MasterDataPage() {
               {rows.map((r) => (
                 <TableRow key={r.id}>
                   {cols.map((c) => (
-                    <TableCell key={c.key} className="max-w-[420px]">
+                    <TableCell key={c.key} className="max-w-105">
                       {c.kind === "color" ? (
                         <span className="inline-flex items-center gap-2">
                           <i
@@ -437,7 +437,7 @@ export default function MasterDataPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.mdEmptyB}
           />

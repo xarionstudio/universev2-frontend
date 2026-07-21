@@ -8,14 +8,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
 import { openDisplay } from "@/lib/open-display";
+import { moduleOfNav } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 
 import { groupOfPath, navItems, settingsItem, type NavItem } from "./nav";
 import { useShell } from "./shell-context";
 
 const navBtnClass =
-  "relative flex h-11 w-full flex-none cursor-pointer items-center gap-3 rounded-control border border-transparent px-3 text-left text-sm font-medium text-(--text-secondary) transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-primary)";
+  "relative flex h-11 w-full flex-none cursor-pointer items-center gap-3 rounded-control border border-transparent px-3 text-left text-sm font-medium text-(--text-secondary) transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary";
 
 const activeClass =
   "border-[rgba(0,212,255,.5)] bg-(image:--gradient-nav-active) font-semibold text-(--text-primary) shadow-[0_0_10px_rgba(0,212,255,.4)]";
@@ -25,6 +27,7 @@ export function Sidebar() {
   const router = useRouter();
   const { t, lang } = useI18n();
   const { appName, menuVis } = useAppStore();
+  const { can } = usePermissions();
   const { collapsed, setCollapsed, sideOpen, setSideOpen } = useShell();
   const items = navItems(lang);
   const currentGroup = groupOfPath(pathname, lang);
@@ -49,7 +52,12 @@ export function Sidebar() {
     item.href ? pathname.startsWith(item.href) : false;
 
   function renderTop(item: NavItem) {
+    // visibilitas global (Setting Menu) — berlaku untuk semua user
     if (item.visKey && !menuVis[item.visKey]) return null;
+    // permission per user — menu tanpa permission TIDAK dirender (bukan
+    // disabled), sesuai kontrak RBAC di i18n `umRbacNote`
+    const mod = moduleOfNav(item);
+    if (mod && !can(mod, "view")) return null;
     const Icon = item.icon;
     const label = t[item.labelKey];
     if (!item.children) {
@@ -109,13 +117,13 @@ export function Sidebar() {
         <div
           className={cn(
             "flex-none overflow-hidden transition-[max-height] duration-250 ease-in-out",
-            expanded ? "max-h-[520px] py-2 pb-3" : "max-h-0",
+            expanded ? "max-h-130 py-2 pb-3" : "max-h-0",
             collapsed && "hidden max-xl:block"
           )}
         >
           {item.children.map((c) => {
             const kidClass = cn(
-              "relative ml-7.5 flex h-10 w-[calc(100%-30px)] items-center gap-2 rounded-control border border-transparent px-3 text-left text-[13px] text-(--text-secondary) no-underline transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) hover:no-underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-primary) [&+a]:mt-2 [&+button]:mt-2"
+              "relative ml-7.5 flex h-10 w-[calc(100%-30px)] items-center gap-2 rounded-control border border-transparent px-3 text-left text-[13px] text-(--text-secondary) no-underline transition-colors duration-100 hover:bg-(--fill-hover) hover:text-(--text-primary) hover:no-underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary [&+a]:mt-2 [&+button]:mt-2"
             );
             const label = c.labelKey ? t[c.labelKey] : c.label;
             if (c.displayUrl) {
@@ -150,7 +158,7 @@ export function Sidebar() {
       <div
         onClick={() => setSideOpen(false)}
         className={cn(
-          "fixed inset-0 z-110 hidden bg-(--scrim) backdrop-blur-[4px]",
+          "fixed inset-0 z-110 hidden bg-(--scrim) backdrop-blur-xs",
           sideOpen && "max-xl:block"
         )}
       />
@@ -163,7 +171,7 @@ export function Sidebar() {
           collapsed ? "w-18 px-2 py-4" : "w-70",
           // tablet: off-canvas
           "max-xl:fixed max-xl:top-0 max-xl:bottom-0 max-xl:left-0 max-xl:z-120 max-xl:h-auto max-xl:w-[min(300px,84vw)] max-xl:rounded-l-none max-xl:bg-(--overlay-fill) max-xl:px-3 max-xl:py-5 max-xl:shadow-(--shadow-modal) max-xl:transition-transform",
-          sideOpen ? "max-xl:translate-x-0" : "max-xl:-translate-x-[105%]"
+          sideOpen ? "max-xl:translate-x-0" : "max-xl:translate-x-[-105%]"
         )}
       >
         <div
@@ -190,7 +198,7 @@ export function Sidebar() {
             aria-label="Ciutkan sidebar"
             title="Ciutkan sidebar"
             className={cn(
-              "ml-auto grid size-7 flex-none cursor-pointer place-items-center rounded-lg border border-(--glass-1-border) bg-(--fill-subtle) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) max-xl:hidden",
+              "ml-auto grid size-7 flex-none cursor-pointer place-items-center rounded-lg border border-(--glass-1-border) bg-(--fill-subtle) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary max-xl:hidden",
               collapsed && "hidden"
             )}
           >

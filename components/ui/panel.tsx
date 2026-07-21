@@ -130,7 +130,7 @@ function Fresh({ className, children, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     >
-      <span className="size-[7px] rounded-full bg-success shadow-[0_0_6px_rgba(23,206,100,.8)]" />
+      <span className="size-1.75 rounded-full bg-success shadow-[0_0_6px_rgba(23,206,100,.8)]" />
       {children}
     </div>
   );

@@ -90,7 +90,7 @@ function AppTab() {
   }
 
   return (
-    <Panel className="max-w-[760px]">
+    <Panel className="max-w-190">
       <SectionTitle>
         <Rows3 />
         {t.stTabApp}
@@ -196,6 +196,7 @@ function MenuTab() {
     { key: "employees", label: t.navEmployees },
     { key: "ftw", label: t.navFtw },
     { key: "asset", label: t.navAsset },
+    { key: "prestasi", label: t.navPrestasi },
     { key: "master", label: t.navMaster },
     { key: "users", label: t.navUsers },
   ];
@@ -203,7 +204,7 @@ function MenuTab() {
   const locked = [t.navDashboard, t.navSettings];
 
   return (
-    <Panel className="max-w-[640px]">
+    <Panel className="max-w-160">
       <SectionTitle>
         <Menu />
         {t.stTabMenu}

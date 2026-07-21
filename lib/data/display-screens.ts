@@ -1,6 +1,6 @@
 import { attDayRows } from "@/lib/data/attendance";
 import { employees } from "@/lib/data/employees";
-import { ftwData, ftwHistoryFor } from "@/lib/data/ftw";
+import { ftwData, ftwHistoryFor, type FtwStatus } from "@/lib/data/ftw";
 import { unitsDb } from "@/lib/data/units-db";
 
 /* Data layar display (TV) — display tampil id-only.
@@ -79,13 +79,17 @@ export type DisplayFtwRow = {
   label: string;
 };
 
+/* Diketik dengan FtwStatus (bukan string) supaya penambahan status baru
+   ketahuan saat kompilasi — versi Record<string,…> sebelumnya membuat
+   status tak dikenal lolos dan baru meledak saat render. */
 const FTW_TONE: Record<
-  string,
+  FtwStatus,
   { tone: DisplayTone; label: string; rank: number }
 > = {
-  kurang: { tone: "danger", label: "Kurang tidur", rank: 0 },
-  belum: { tone: "warning", label: "Belum lapor", rank: 1 },
-  fit: { tone: "success", label: "Fit", rank: 2 },
+  pulang: { tone: "danger", label: "Dipulangkan", rank: 0 },
+  spare: { tone: "warning", label: "Spare", rank: 1 },
+  belum: { tone: "warning", label: "Belum lapor", rank: 2 },
+  fit: { tone: "success", label: "Fit", rank: 3 },
 };
 
 export function displayFtwRowsNow(): DisplayFtwRow[] {
@@ -98,11 +102,13 @@ export function displayFtwRowsNow(): DisplayFtwRow[] {
         dept: r.dept,
         sleep: r.sleep,
         note:
-          r.st === "kurang"
-            ? "Jam tidur di bawah ambang — butuh penggantian"
-            : r.st === "belum"
-              ? "Belum mengirim log — hubungi sebelum shift"
-              : `Lapor ${ftwHistoryFor(r, "id", 1)[0].sendTime}`,
+          r.st === "pulang"
+            ? "Tidur < 4 jam — dipulangkan, butuh penggantian"
+            : r.st === "spare"
+              ? `Spare — istirahat ${r.restHours} jam sebelum boleh bekerja`
+              : r.st === "belum"
+                ? "Belum mengirim log — hubungi sebelum shift"
+                : `Lapor ${ftwHistoryFor(r, "id", 1)[0].sendTime}`,
         tone: FTW_TONE[r.st].tone,
         label: FTW_TONE[r.st].label,
       },

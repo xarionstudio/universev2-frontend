@@ -126,7 +126,7 @@ export default function RosterApprovalPage() {
           <ToolbarTitle>{t.apQueue}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -155,7 +155,7 @@ export default function RosterApprovalPage() {
                 <TableHead>{t.thSubmission}</TableHead>
                 <TableHead>{t.thWhen}</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
-                <TableHead className="w-[330px]">{t.thAct}</TableHead>
+                <TableHead className="w-82.5">{t.thAct}</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -165,7 +165,7 @@ export default function RosterApprovalPage() {
                   <TableCell className="font-mono text-(--text-secondary) tabular-nums">
                     {r.nik}
                   </TableCell>
-                  <TableCell className="max-w-[360px]">
+                  <TableCell className="max-w-90">
                     {en ? r.whatEn : r.whatId}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-(--text-secondary)">

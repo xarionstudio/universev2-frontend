@@ -60,7 +60,7 @@ export default function DisplayFleetPage() {
           <>
             <span className="truncate">{fleet.loc}</span>
             {/* bus antar-jemput fleet — informasi penting operator, di-highlight */}
-            <span className="inline-flex flex-none items-center gap-2.5 rounded-full border border-(--badge-info-border) bg-(--badge-info-fill) px-4.5 py-1 font-bold text-(--color-primary-bright)">
+            <span className="inline-flex flex-none items-center gap-2.5 rounded-full border border-(--badge-info-border) bg-(--badge-info-fill) px-4.5 py-1 font-bold text-primary-bright">
               <Bus className="size-6" />
               Bus {fleet.bus}
             </span>
@@ -73,7 +73,7 @@ export default function DisplayFleetPage() {
       runtext={displayRuntext.fleet}
       stats={[
         {
-          icon: <Truck className="text-(--color-primary-bright)" />,
+          icon: <Truck className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
           value: String(cards.length),
           label: "Total Unit",
@@ -86,7 +86,7 @@ export default function DisplayFleetPage() {
           label: "Ready",
         },
         {
-          icon: <AlertTriangle className="text-(--color-danger-text)" />,
+          icon: <AlertTriangle className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
           value: String(count("danger")),
           label: "Breakdown",
@@ -115,7 +115,7 @@ export default function DisplayFleetPage() {
             {/* foto karyawan memenuhi kartu (placeholder inisial) */}
             {c.opName ? (
               <div className="absolute inset-0 grid place-items-center bg-(image:--gradient-cta)">
-                <span className="text-[88px] font-bold text-(--color-on-cta) opacity-80">
+                <span className="text-[88px] font-bold text-on-cta opacity-80">
                   {initialsOf(c.opName)}
                 </span>
               </div>

@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n/id";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import {
@@ -57,6 +58,7 @@ const MODULE_LABEL_KEYS: Record<UmModule, keyof Dict> = {
   roster: "navRoster",
   ftw: "navFtw",
   asset: "navAsset",
+  prestasi: "navPrestasi",
   master: "navMaster",
   users: "navUsers",
   settings: "navSettings",
@@ -72,6 +74,10 @@ export default function RolesPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
   const { umRoles, setUmRoles, umUsers } = useAppStore();
+  const { can } = usePermissions();
+  /* Role adalah bagian modul "users" — mengubah role sama kuatnya dengan
+     mengubah user, jadi ikut permission Kelola yang sama. */
+  const canManage = can("users", "manage");
   const impRef = React.useRef<HTMLInputElement>(null);
 
   const [q, setQ] = React.useState("");
@@ -100,7 +106,10 @@ export default function RolesPage() {
   );
   const pg = usePagination(rows);
   const rbacRole = umRoles.find((r) => r.id === rbacSel) ?? umRoles[0];
-  const locked = !!editing?.locked;
+  /* Dialog jadi read-only bila role-nya terkunci (Superadmin) ATAU user
+     hanya punya permission Lihat — keduanya menonaktifkan kontrol dan
+     menyembunyikan tombol simpan lewat jalur yang sama. */
+  const locked = !!editing?.locked || !canManage;
 
   const permStr = (r: UmRole) => {
     const vals = Object.values(r.perms);
@@ -180,10 +189,14 @@ export default function RolesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle title={t.umRolesT} sub={t.umRoleSub}>
-        <Button onClick={openAdd}>
-          <Plus />
-          {t.umRoleAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={openAdd}>
+            <Plus />
+            {t.umRoleAdd}
+          </Button>
+        ) : (
+          <Badge variant="neutral">{t.umReadOnly}</Badge>
+        )}
       </PageTitle>
 
       <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start gap-6 max-[1360px]:grid-cols-1">
@@ -192,19 +205,21 @@ export default function RolesPage() {
             <ToolbarTitle>{t.umRoleListT}</ToolbarTitle>
             <ToolbarGroup>
               <SearchInput
-                className="w-[240px]"
+                className="w-60"
                 placeholder={t.umRoleSearchPh}
                 aria-label={t.umRoleSearchPh}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
-              <Button
-                variant="secondary"
-                onClick={() => impRef.current?.click()}
-              >
-                <Upload />
-                Import
-              </Button>
+              {canManage ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => impRef.current?.click()}
+                >
+                  <Upload />
+                  Import
+                </Button>
+              ) : null}
               <Button variant="secondary" onClick={exportCsv}>
                 <Download />
                 Export
@@ -225,7 +240,7 @@ export default function RolesPage() {
                 <TableHead className="max-xl:hidden">{t.umDesc}</TableHead>
                 <TableHead>Permission</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead className="w-[110px]">{t.thAct}</TableHead>
+                <TableHead className="w-27.5">{t.thAct}</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -241,13 +256,14 @@ export default function RolesPage() {
                   <TableCell className="font-mono">{userCount(r.id)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      {/* tanpa Kelola, matriks tetap bisa dibuka read-only */}
                       <IconButton
                         aria-label={t.udbEditT}
                         onClick={() => openEdit(r)}
                       >
                         <Pencil />
                       </IconButton>
-                      {!r.locked ? (
+                      {canManage && !r.locked ? (
                         <IconButton
                           danger
                           aria-label={t.empDel}
@@ -282,7 +298,7 @@ export default function RolesPage() {
           <Toolbar>
             <ToolbarTitle>{t.umRbacT}</ToolbarTitle>
             <Select
-              wrapperClassName="w-[180px]"
+              wrapperClassName="w-45"
               aria-label={t.umRbacT}
               value={rbacSel}
               onChange={(e) => setRbacSel(e.target.value)}
@@ -415,7 +431,7 @@ export default function RolesPage() {
             </div>
             {locked ? (
               <p className="mt-3 text-xs text-(--text-tertiary)">
-                {t.umLockedNote}
+                {editing?.locked ? t.umLockedNote : t.umReadOnlyB}
               </p>
             ) : null}
           </div>

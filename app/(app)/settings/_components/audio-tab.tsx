@@ -154,14 +154,14 @@ export function AudioTab() {
           <ToolbarTitle>{t.stAudioTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.stAudioSearchPh}
               aria-label={t.stAudioSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}
@@ -185,7 +185,7 @@ export function AudioTab() {
               <TableHead className="max-xl:hidden">{t.auFile}</TableHead>
               <TableHead>{t.auDisplays}</TableHead>
               <TableHead>{t.thStatus}</TableHead>
-              <TableHead className="w-[110px]">{t.thAct}</TableHead>
+              <TableHead className="w-27.5">{t.thAct}</TableHead>
             </tr>
           </TableHeader>
           <TableBody>
@@ -196,12 +196,12 @@ export function AudioTab() {
                 <TableCell>{freqLabel[a.freq]}</TableCell>
                 <TableCell className="max-xl:hidden">
                   <span className="inline-flex items-center gap-2 text-(--text-secondary)">
-                    <Volume2 className="size-3.5 flex-none text-(--color-primary-bright)" />
+                    <Volume2 className="size-3.5 flex-none text-primary-bright" />
                     {a.file}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex max-w-[200px] flex-wrap gap-1">
+                  <div className="flex max-w-50 flex-wrap gap-1">
                     {a.displays.map((d) => (
                       <Badge key={d} variant="info">
                         {dispLabel[d]}

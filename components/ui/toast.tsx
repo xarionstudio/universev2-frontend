@@ -70,15 +70,15 @@ const icons: Record<ToastType, React.ElementType> = {
 };
 
 const accent: Record<ToastType, string> = {
-  success: "border-l-(--color-success)",
-  error: "border-l-(--color-danger)",
-  info: "border-l-(--color-primary)",
+  success: "border-l-success",
+  error: "border-l-danger",
+  info: "border-l-primary",
 };
 
 const iconColor: Record<ToastType, string> = {
   success: "text-(--badge-success-text)",
-  error: "text-(--color-danger-text)",
-  info: "text-(--color-primary-bright)",
+  error: "text-danger-text",
+  info: "text-primary-bright",
 };
 
 function Toaster() {

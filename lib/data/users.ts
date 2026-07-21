@@ -9,6 +9,7 @@ export type UmModule =
   | "roster"
   | "ftw"
   | "asset"
+  | "prestasi"
   | "master"
   | "users"
   | "settings";
@@ -20,6 +21,7 @@ export const umModules: UmModule[] = [
   "roster",
   "ftw",
   "asset",
+  "prestasi",
   "master",
   "users",
   "settings",
@@ -32,6 +34,13 @@ export type UmUser = {
   nik: string | null;
   roles: string[];
   on: boolean;
+  /* Kredensial — HANYA digest, tidak pernah password apa adanya, dan tidak
+     pernah dikirim balik ke form. Kosong = belum pernah diatur (user sudah
+     diundang tapi belum memasang password); lihat lib/password.ts. */
+  pwSalt?: string;
+  pwHash?: string;
+  /* ISO timestamp terakhir password diubah — dipakai kolom "Password" */
+  pwAt?: string;
 };
 
 export type UmRole = {
@@ -98,6 +107,7 @@ export const initialUmRoles: UmRole[] = [
       roster: "manage",
       ftw: "manage",
       asset: "manage",
+      prestasi: "manage",
       master: "manage",
       users: "manage",
       settings: "manage",
@@ -115,6 +125,7 @@ export const initialUmRoles: UmRole[] = [
       roster: "manage",
       ftw: "manage",
       asset: "manage",
+      prestasi: "view",
       master: "manage",
       users: "none",
       settings: "none",
@@ -132,6 +143,7 @@ export const initialUmRoles: UmRole[] = [
       roster: "view",
       ftw: "view",
       asset: "view",
+      prestasi: "view",
       master: "view",
       users: "none",
       settings: "none",

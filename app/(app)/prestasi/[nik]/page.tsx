@@ -1,0 +1,9 @@
+import type { Metadata } from "next";
+
+import PageClient from "./page-client";
+
+export const metadata: Metadata = { title: "Riwayat Prestasi" };
+
+export default function Page() {
+  return <PageClient />;
+}

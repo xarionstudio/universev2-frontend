@@ -54,12 +54,12 @@ function Dropzone({
         if (name) onDropFile?.(name);
       }}
       className={cn(
-        "cursor-pointer rounded-card border-[1.5px] border-dashed border-(--border-input) bg-(--fill-input) p-6 text-center transition-[border-color,background-color] duration-150 hover:border-(--color-primary) hover:bg-[rgba(0,212,255,.07)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)",
-        dragging && "border-(--color-primary) bg-[rgba(0,212,255,.07)]",
+        "cursor-pointer rounded-card border-[1.5px] border-dashed border-(--border-input) bg-(--fill-input) p-6 text-center transition-[border-color,background-color] duration-150 hover:border-primary hover:bg-[rgba(0,212,255,.07)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        dragging && "border-primary bg-[rgba(0,212,255,.07)]",
         className
       )}
     >
-      <div className="mx-auto mb-3 grid size-11 place-items-center rounded-icon border border-(--glass-2-border) bg-(--glass-2-fill) [&_svg]:size-5 [&_svg]:text-(--color-primary-bright)">
+      <div className="mx-auto mb-3 grid size-11 place-items-center rounded-icon border border-(--glass-2-border) bg-(--glass-2-fill) [&_svg]:size-5 [&_svg]:text-primary-bright">
         {icon}
       </div>
       <b className="block text-sm font-semibold">{title}</b>

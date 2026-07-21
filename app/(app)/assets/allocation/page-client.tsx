@@ -227,7 +227,7 @@ export default function FleetAllocationPage() {
         <div className="flex items-center gap-3">
           <Input
             type="date"
-            className="w-[160px] font-mono"
+            className="w-40 font-mono"
             value={faDate}
             onChange={(e) => {
               setFaDate(e.target.value);
@@ -372,7 +372,7 @@ export default function FleetAllocationPage() {
 
               {kind === "bd" ? (
                 <div>
-                  <div className="flex min-h-[62px] items-center justify-center rounded-icon border border-dashed border-(--divider) bg-(--fill-subtle) p-3 text-[13px] text-(--text-tertiary)">
+                  <div className="flex min-h-15.5 items-center justify-center rounded-icon border border-dashed border-(--divider) bg-(--fill-subtle) p-3 text-[13px] text-(--text-tertiary)">
                     {t.faBdNoAlloc}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -409,7 +409,7 @@ export default function FleetAllocationPage() {
                 </div>
               ) : (
                 <div>
-                  <div className="flex min-h-[62px] items-center justify-center rounded-icon border border-dashed border-(--divider) bg-(--fill-subtle) p-3 text-[13px] text-(--text-tertiary)">
+                  <div className="flex min-h-15.5 items-center justify-center rounded-icon border border-dashed border-(--divider) bg-(--fill-subtle) p-3 text-[13px] text-(--text-tertiary)">
                     {t.faNoOp}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -421,7 +421,7 @@ export default function FleetAllocationPage() {
               )}
 
               {kind === "warn" ? (
-                <p className="text-xs leading-[1.4] text-(--color-danger-text)">
+                <p className="text-xs leading-[1.4] text-danger-text">
                   {t.faWarnNote}
                 </p>
               ) : null}
@@ -430,7 +430,7 @@ export default function FleetAllocationPage() {
                 {kind === "warn" ? (
                   <Button
                     variant="destructive"
-                    className="h-[34px] flex-1 text-[13px]"
+                    className="h-8.5 flex-1 text-[13px]"
                     onClick={() => setAllocFor(u)}
                   >
                     {t.faReplace}
@@ -439,14 +439,14 @@ export default function FleetAllocationPage() {
                   <>
                     <Button
                       variant="secondary"
-                      className="h-[34px] flex-1 text-[13px]"
+                      className="h-8.5 flex-1 text-[13px]"
                       onClick={() => setAllocFor(u)}
                     >
                       {t.faChange}
                     </Button>
                     <Button
                       variant="secondary"
-                      className="h-[34px] flex-1 text-[13px]"
+                      className="h-8.5 flex-1 text-[13px]"
                       onClick={() => release(u)}
                     >
                       {t.faRelease}
@@ -454,7 +454,7 @@ export default function FleetAllocationPage() {
                   </>
                 ) : kind === "none" ? (
                   <Button
-                    className="h-[34px] flex-1 text-[13px]"
+                    className="h-8.5 flex-1 text-[13px]"
                     onClick={() => setAllocFor(u)}
                   >
                     {t.faAssign}
@@ -462,7 +462,7 @@ export default function FleetAllocationPage() {
                 ) : (
                   <Button
                     variant="secondary"
-                    className="h-[34px] flex-1 text-[13px]"
+                    className="h-8.5 flex-1 text-[13px]"
                     onClick={() => router.push("/assets/status")}
                   >
                     {t.faGoStatus}

@@ -176,7 +176,7 @@ export default function EmployeesPage() {
           <ToolbarTitle>{t.empListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -191,7 +191,7 @@ export default function EmployeesPage() {
               clearLabel={t.clearSearch}
             />
             <Select
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               aria-label={t.thStatus}
               value={fStatus}
               onChange={(e) => {
@@ -214,11 +214,11 @@ export default function EmployeesPage() {
                 {t.filter}
               </Button>
               {fN > 0 ? (
-                <span className="absolute -top-1.5 -right-1.5 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-(--color-primary) px-[5px] text-[11px] font-bold text-(--color-on-cta)">
+                <span className="absolute -top-1.5 -right-1.5 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1.25 text-[11px] font-bold text-on-cta">
                   {fN}
                 </span>
               ) : null}
-              <DropMenu open={fOpen} className="w-[220px] p-3 text-left">
+              <DropMenu open={fOpen} className="w-55 p-3 text-left">
                 <DropMenuHeading className="px-1 pt-0 pb-2">
                   {t.thDept}
                 </DropMenuHeading>
@@ -258,7 +258,7 @@ export default function EmployeesPage() {
                 <TableHead>{t.thPos}</TableHead>
                 <TableHead>SIMPER</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
-                <TableHead className="w-[140px]">{t.thAct}</TableHead>
+                <TableHead className="w-35">{t.thAct}</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -290,7 +290,7 @@ export default function EmployeesPage() {
                     <TableCell>{r.pos}</TableCell>
                     <TableCell>
                       {komps.length ? (
-                        <div className="flex max-w-[220px] flex-wrap gap-1">
+                        <div className="flex max-w-55 flex-wrap gap-1">
                           {komps.map((k) => (
                             <Badge
                               key={k.cls}
@@ -340,7 +340,7 @@ export default function EmployeesPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.empEmptyB}
           >

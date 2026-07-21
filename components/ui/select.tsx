@@ -25,7 +25,7 @@ function Select({
       >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-[15px] -translate-y-1/2 text-(--text-secondary)" />
+      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-3.75 -translate-y-1/2 text-(--text-secondary)" />
     </span>
   );
 }

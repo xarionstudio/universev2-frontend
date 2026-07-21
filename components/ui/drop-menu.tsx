@@ -84,7 +84,7 @@ function DropMenuRadio({
       <Check
         strokeWidth={2.5}
         className={cn(
-          "ml-auto size-3.5 flex-none text-(--color-primary-bright)",
+          "ml-auto size-3.5 flex-none text-primary-bright",
           checked ? "opacity-100" : "opacity-0"
         )}
       />
@@ -97,7 +97,7 @@ function DropMenuItem({ className, ...props }: React.ComponentProps<"button">) {
     <button
       role="menuitem"
       className={cn(
-        "flex h-9.5 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium tracking-(--tracking-brand) text-(--text-secondary) hover:bg-(--fill-hover) hover:text-(--text-primary) [&_svg]:size-[15px]",
+        "flex h-9.5 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left text-[13px] font-medium tracking-(--tracking-brand) text-(--text-secondary) hover:bg-(--fill-hover) hover:text-(--text-primary) [&_svg]:size-3.75",
         className
       )}
       {...props}

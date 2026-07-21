@@ -117,12 +117,12 @@ export function DisplayShell({
     >
       <div
         ref={canvasRef}
-        className="absolute top-0 left-0 h-[1080px] w-[1920px] origin-top-left overflow-hidden bg-(image:--gradient-kiosk)"
+        className="absolute top-0 left-0 h-270 w-480 origin-top-left overflow-hidden bg-(image:--gradient-kiosk)"
       >
         <div className="pointer-events-none absolute -top-50 -right-35 z-0 size-160 rounded-full bg-(--blob-cyan) blur-[140px]" />
         <div className="pointer-events-none absolute -bottom-55 -left-30 z-0 size-140 rounded-full bg-(--blob-blue) blur-[140px]" />
 
-        <div className="display-stage relative z-1 flex h-[1080px] [animation:pxshift_480s_steps(1)_infinite] flex-col gap-7 px-14 pt-10 pb-22">
+        <div className="display-stage relative z-1 flex h-270 [animation:pxshift_480s_steps(1)_infinite] flex-col gap-7 px-14 pt-10 pb-22">
           {/* header */}
           <header className="flex flex-none items-center gap-7">
             <LogoBadge className="size-16" logoClassName="size-8" />
@@ -138,7 +138,7 @@ export function DisplayShell({
             </div>
             {deviceName ? (
               <div className="flex flex-none items-center gap-3 rounded-full px-6 py-3 glass-card">
-                <Monitor className="size-6 text-(--color-primary-bright)" />
+                <Monitor className="size-6 text-primary-bright" />
                 <span className="text-[22px] font-semibold">{deviceName}</span>
               </div>
             ) : null}
@@ -165,15 +165,15 @@ export function DisplayShell({
               className="flex flex-none items-center gap-4 rounded-card border border-(--badge-danger-border) bg-(--badge-danger-fill) px-7 py-4.5"
             >
               <WifiOff
-                className="size-8 flex-none text-(--color-danger-text)"
+                className="size-8 flex-none text-danger-text"
                 strokeWidth={2}
               />
               <div>
-                <b className="text-[26px] font-bold text-(--color-danger-text)">
+                <b className="text-[26px] font-bold text-danger-text">
                   Koneksi terputus — data tidak diperbarui
                 </b>
                 <br />
-                <span className="text-xl text-(--color-danger-text) opacity-85">
+                <span className="text-xl text-danger-text opacity-85">
                   Menampilkan data terakhir {stale}. Menghubungkan ulang…
                 </span>
               </div>
@@ -214,7 +214,7 @@ export function DisplayShell({
         {runtext ? (
           <div className="absolute inset-x-0 bottom-0 z-1 flex h-16 items-center gap-5 border-t border-(--glass-1-border) bg-(--glass-1-fill) px-14 backdrop-blur-md">
             <span className="grid size-10 flex-none place-items-center rounded-full border border-(--badge-info-border) bg-(--badge-info-fill)">
-              <Megaphone className="size-5 text-(--color-primary-bright)" />
+              <Megaphone className="size-5 text-primary-bright" />
             </span>
             <div className="relative min-w-0 flex-1 overflow-hidden">
               <div className="display-marquee w-max [animation:kmarquee_28s_linear_infinite] text-2xl whitespace-nowrap text-(--text-secondary)">
@@ -246,7 +246,7 @@ export function DisplayShell({
             className={cn(
               "cursor-pointer rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold",
               online === on
-                ? "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.12)] text-(--color-primary-bright)"
+                ? "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.12)] text-primary-bright"
                 : "text-(--text-secondary) hover:bg-[rgba(255,255,255,.08)] hover:text-(--text-primary)"
             )}
           >

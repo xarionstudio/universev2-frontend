@@ -81,7 +81,7 @@ export default function RosterDataPage() {
           <ToolbarTitle>{t.rdListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.rdSearchPh}
               aria-label={t.rdSearchPh}
               value={q}
@@ -89,7 +89,7 @@ export default function RosterDataPage() {
             />
             <Select
               aria-label={t.allDepts}
-              wrapperClassName="w-[180px]"
+              wrapperClassName="w-45"
               value={dept}
               onChange={(e) => setDept(e.target.value)}
             >
@@ -102,7 +102,7 @@ export default function RosterDataPage() {
             </Select>
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               value={st}
               onChange={(e) => setSt(e.target.value)}
             >
@@ -112,7 +112,7 @@ export default function RosterDataPage() {
             </Select>
             <Select
               aria-label={t.lblMonth}
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             >
@@ -190,7 +190,7 @@ export default function RosterDataPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.rdEmptyB}
           />

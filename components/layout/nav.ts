@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Monitor,
   Settings,
+  Trophy,
   Truck,
   UserPlus,
   Users,
@@ -89,6 +90,13 @@ export function navItems(lang: Lang): NavItem[] {
         { href: "/assets/allocation", labelKey: "navFleetAlloc" },
         { href: "/assets/fleet-setting", labelKey: "navFleetSetting" },
       ],
+    },
+    {
+      key: "prestasi",
+      labelKey: "navPrestasi",
+      icon: Trophy,
+      href: "/prestasi",
+      visKey: "prestasi",
     },
     {
       key: "master",

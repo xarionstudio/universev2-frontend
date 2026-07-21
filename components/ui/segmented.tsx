@@ -27,7 +27,7 @@ function SegmentedButton({
     <button
       data-slot="segmented-button"
       className={cn(
-        "cursor-pointer rounded-lg border border-transparent px-3.5 py-[7px] text-[13px] font-semibold tracking-(--tracking-brand) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
+        "cursor-pointer rounded-lg border border-transparent px-3.5 py-1.75 text-[13px] font-semibold tracking-(--tracking-brand) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
         active
           ? "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.12)] text-primary-bright"
           : "text-(--text-secondary) hover:bg-(--fill-hover) hover:text-(--text-primary)",

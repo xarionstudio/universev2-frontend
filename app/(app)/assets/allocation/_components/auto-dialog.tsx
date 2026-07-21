@@ -64,8 +64,11 @@ export function AutoDialog({
         skipped.push({ name: op.name, why: t.faWhyBelum });
         continue;
       }
-      if (op.ftw === "kurang") {
-        skipped.push({ name: op.name, why: t.ftwStatKurang });
+      /* Dipulangkan = tidak boleh bekerja shift ini, jadi tidak ikut
+         alokasi otomatis. Spare tetap ikut: dia boleh bekerja setelah
+         istirahat tambahan. */
+      if (op.ftw === "pulang") {
+        skipped.push({ name: op.name, why: t.ftwStatPulang });
         continue;
       }
       const unit = freeUnits.find(
@@ -113,9 +116,7 @@ export function AutoDialog({
                 key={p.code}
                 className="flex items-center gap-3 rounded-icon px-3 py-2"
               >
-                <b className="w-[76px] flex-none font-mono text-[13px]">
-                  {p.code}
-                </b>
+                <b className="w-19 flex-none font-mono text-[13px]">{p.code}</b>
                 <div className="min-w-0 flex-1">
                   <b className="block text-[13px] font-semibold">{p.name}</b>
                   <span className="text-xs text-(--text-tertiary)">
@@ -129,7 +130,7 @@ export function AutoDialog({
             ))}
           </div>
         ) : (
-          <div className="mt-4 flex items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-(--color-danger-text)">
+          <div className="mt-4 flex items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-danger-text">
             <CircleAlert className="mt-0.5 size-4 flex-none" />
             <span>{t.faAutoNone}</span>
           </div>

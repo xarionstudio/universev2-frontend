@@ -21,7 +21,7 @@ export default function DisplayAttendancePage() {
       runtext={displayRuntext.att}
       stats={[
         {
-          icon: <Users className="text-(--color-primary-bright)" />,
+          icon: <Users className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
           value: String(rows.length),
           label: "Total Roster",
@@ -41,7 +41,7 @@ export default function DisplayAttendancePage() {
           label: "Terlambat",
         },
         {
-          icon: <AlertTriangle className="text-(--color-danger-text)" />,
+          icon: <AlertTriangle className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
           value: String(n("Belum absen")),
           label: "Belum Absen",

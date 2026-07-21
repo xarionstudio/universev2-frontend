@@ -21,12 +21,15 @@ import { notifToneDot } from "@/lib/data/notifications";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { useRefresh } from "@/components/providers/refresh";
+import { useSession } from "@/components/providers/session";
 import {
   useTheme,
   type ThemePref,
 } from "@/components/providers/theme-provider";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropMenu,
   DropMenuHeading,
@@ -40,7 +43,7 @@ import { activeChild, groupOfPath } from "./nav";
 import { useShell } from "./shell-context";
 
 const hbtnClass =
-  "relative inline-flex h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-(--glass-1-border) bg-(--fill-subtle) px-2 text-xs font-bold text-(--text-secondary) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) [&_svg]:size-4";
+  "relative inline-flex h-9 min-w-9 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-(--glass-1-border) bg-(--fill-subtle) px-2 text-xs font-bold text-(--text-secondary) hover:border-[rgba(0,212,255,.4)] hover:bg-[rgba(0,212,255,.14)] hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&_svg]:size-4";
 
 export function Topbar() {
   const pathname = usePathname();
@@ -48,7 +51,23 @@ export function Topbar() {
   const router = useRouter();
   const { t, lang, setLang } = useI18n();
   const { pref, resolved, setTheme } = useTheme();
-  const { userName, userEmail, notifs, setNotifs } = useAppStore();
+  const {
+    userName: storeName,
+    userEmail: storeEmail,
+    notifs,
+    setNotifs,
+    umRoles,
+  } = useAppStore();
+  const { signOut } = useSession();
+  const { user: me } = usePermissions();
+  /* Identitas nyata dari sesi; store dipakai sebagai cadangan saat sesi
+     belum terbaca agar tidak ada kedip teks kosong. */
+  const userName = me?.kar ?? storeName;
+  const userEmail = me?.email ?? storeEmail;
+  const myRoles = (me?.roles ?? []).flatMap((rid) => {
+    const r = umRoles.find((x) => x.id === rid);
+    return r ? [r.name] : [];
+  });
   const { setSideOpen } = useShell();
   const { refreshing, refresh } = useRefresh();
   const { pushToast } = useToast();
@@ -69,6 +88,7 @@ export function Topbar() {
   else if (pathname.startsWith("/fit-to-work/history")) cur = t.ftwHistPage;
   else if (pathname.startsWith("/fit-to-work")) cur = t.navFtw;
   else if (pathname.startsWith("/employees")) cur = t.navEmployees;
+  else if (pathname.startsWith("/prestasi")) cur = t.navPrestasi;
   else if (pathname.startsWith("/settings")) cur = t.navSettings;
   else if (pathname.startsWith("/profile")) cur = t.profile;
   else if (pathname.startsWith("/notifications")) cur = t.notifTitle;
@@ -139,7 +159,7 @@ export function Topbar() {
             <Globe />
             <span>{lang.toUpperCase()}</span>
           </button>
-          <DropMenu open={openDrop === "lang"} className="w-[190px]">
+          <DropMenu open={openDrop === "lang"} className="w-47.5">
             {(
               [
                 ["id", "Bahasa Indonesia"],
@@ -171,7 +191,7 @@ export function Topbar() {
           >
             {resolved === "dark" ? <Moon /> : <Sun />}
           </button>
-          <DropMenu open={openDrop === "theme"} className="w-[190px]">
+          <DropMenu open={openDrop === "theme"} className="w-47.5">
             {(
               [
                 ["system", t.themeSystem],
@@ -204,12 +224,12 @@ export function Topbar() {
           >
             <Bell />
             {unread > 0 ? (
-              <span className="absolute top-[5px] right-[5px] grid h-[15px] min-w-[15px] place-items-center rounded-lg bg-(--color-danger) px-1 text-[9px] font-bold text-white shadow-[0_0_0_2px_var(--scrim)]">
+              <span className="absolute top-1.25 right-1.25 grid h-3.75 min-w-3.75 place-items-center rounded-lg bg-danger px-1 text-[9px] font-bold text-white shadow-[0_0_0_2px_var(--scrim)]">
                 {unread}
               </span>
             ) : null}
           </button>
-          <DropMenu open={openDrop === "notif"} className="w-[340px]">
+          <DropMenu open={openDrop === "notif"} className="w-85">
             <div className="flex items-center justify-between pr-2">
               <DropMenuHeading>{t.notifTitle}</DropMenuHeading>
               {unread > 0 ? (
@@ -231,7 +251,7 @@ export function Topbar() {
               >
                 <span
                   className={cn(
-                    "mt-1.5 size-[7px] flex-none rounded-full",
+                    "mt-1.5 size-1.75 flex-none rounded-full",
                     n.read ? "bg-(--text-disabled)" : notifToneDot[n.tone]
                   )}
                 />
@@ -267,7 +287,7 @@ export function Topbar() {
                   close();
                   router.push("/notifications");
                 }}
-                className="flex h-9 cursor-pointer items-center rounded-lg px-3 text-[13px] font-medium whitespace-nowrap text-(--color-primary-bright) hover:bg-(--fill-hover)"
+                className="flex h-9 cursor-pointer items-center rounded-lg px-3 text-[13px] font-medium whitespace-nowrap text-primary-bright hover:bg-(--fill-hover)"
               >
                 {t.ntfViewAll}
               </button>
@@ -281,15 +301,17 @@ export function Topbar() {
             onClick={() => toggle("user")}
             aria-expanded={openDrop === "user"}
             aria-haspopup="menu"
-            className="flex h-11 cursor-pointer items-center gap-3 rounded-full border border-transparent pr-2 pl-1 text-(--text-primary) hover:border-(--glass-1-border) hover:bg-(--fill-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)"
+            className="flex h-11 cursor-pointer items-center gap-3 rounded-full border border-transparent pr-2 pl-1 text-(--text-primary) hover:border-(--glass-1-border) hover:bg-(--fill-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <Avatar>{initialsOf(userName)}</Avatar>
             <span className="max-md:hidden">
               <b className="block text-left text-[13px] leading-tight font-semibold">
                 {userShort}
               </b>
+              {/* role sebenarnya dari sesi — dulu label ini dipatok
+                  "Superadmin" untuk semua orang, menyesatkan di UI RBAC */}
               <span className="text-[11px] text-(--text-tertiary)">
-                {t.userRole}
+                {myRoles.length ? myRoles.join(" · ") : t.userRole}
               </span>
             </span>
             <ChevronDown className="size-3.5 text-(--text-tertiary) max-md:hidden" />
@@ -300,6 +322,15 @@ export function Topbar() {
               <span className="font-mono text-[11px] text-(--text-tertiary)">
                 {userEmail}
               </span>
+              {myRoles.length ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {myRoles.map((r) => (
+                    <Badge key={r} variant="info">
+                      {r}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <DropMenuItem
               onClick={() => {
@@ -320,11 +351,11 @@ export function Topbar() {
               {t.navSettings}
             </DropMenuItem>
             <DropMenuItem
-              className="text-(--color-danger-text) hover:bg-(--badge-danger-fill) hover:text-(--color-danger-text)"
+              className="text-danger-text hover:bg-(--badge-danger-fill) hover:text-danger-text"
               onClick={() => {
-                try {
-                  localStorage.removeItem("universe-auth");
-                } catch {}
+                // lewat provider agar state sesi ikut kosong, bukan hanya
+                // localStorage — kalau tidak, RBAC masih memakai user lama
+                signOut();
                 router.push("/login");
               }}
             >

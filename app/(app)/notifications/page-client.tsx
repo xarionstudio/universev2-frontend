@@ -78,7 +78,7 @@ export default function NotificationsPage() {
           <ToolbarTitle>{t.ntfListT}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.ntfSearchPh}
               aria-label={t.ntfSearchPh}
               value={q}

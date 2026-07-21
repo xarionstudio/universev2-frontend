@@ -70,7 +70,7 @@ function Timeline({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="timeline"
       className={cn(
-        "relative m-0 list-none p-0 before:absolute before:top-2 before:bottom-2 before:left-[7px] before:w-px before:bg-(--divider) before:content-['']",
+        "relative m-0 list-none p-0 before:absolute before:top-2 before:bottom-2 before:left-1.75 before:w-px before:bg-(--divider) before:content-['']",
         className
       )}
       {...props}
@@ -92,7 +92,7 @@ function TimelineItem({
   return (
     <li className="relative pb-5 pl-6 last:pb-0">
       <span
-        className="absolute top-1 left-0.5 size-[11px] rounded-full border-2 bg-(--overlay-fill)"
+        className="absolute top-1 left-0.5 size-2.75 rounded-full border-2 bg-(--overlay-fill)"
         style={{ borderColor: dotColor }}
       />
       <div className="font-mono text-xs text-(--text-tertiary)">{when}</div>

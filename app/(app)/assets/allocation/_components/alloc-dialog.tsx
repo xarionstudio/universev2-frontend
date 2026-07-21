@@ -84,7 +84,7 @@ export function AllocDialog({
                       "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.1)]"
                   )}
                 >
-                  <Avatar className="size-[30px] text-[11px]">
+                  <Avatar className="size-7.5 text-[11px]">
                     {initialsOf(o.name)}
                   </Avatar>
                   <div className="min-w-0 flex-1">

@@ -1,4 +1,5 @@
 import type { Employee, Komp } from "@/lib/data/employees";
+import type { FtwStatus } from "@/lib/data/ftw";
 import type { Dict } from "@/lib/i18n/id";
 import type { BadgeVariant } from "@/components/ui/badge";
 
@@ -12,7 +13,7 @@ export type FaUnit = {
 };
 
 /* Operator = karyawan aktif ber-kompetensi + status FTW hari ini */
-export type FaOp = Employee & { ftw: "fit" | "kurang" | "belum" };
+export type FaOp = Employee & { ftw: FtwStatus };
 
 export function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -37,7 +38,8 @@ export function ftwBadgeOf(
   t: Dict
 ): { variant: BadgeVariant; label: string } {
   if (op.ftw === "fit") return { variant: "success", label: "Fit" };
-  if (op.ftw === "kurang")
-    return { variant: "warning", label: t.ftwStatKurang };
+  /* spare masih boleh dialokasikan, tapi baru setelah istirahat tambahan */
+  if (op.ftw === "spare") return { variant: "warning", label: t.ftwStatSpare };
+  if (op.ftw === "pulang") return { variant: "danger", label: t.ftwStatPulang };
   return { variant: "neutral", label: t.ftwStatBelum };
 }

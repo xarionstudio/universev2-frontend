@@ -51,7 +51,7 @@ function expTone(exp: string): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const d = new Date(`${exp}T00:00:00`);
-  if (d.getTime() < today.getTime()) return "text-(--color-danger-text)";
+  if (d.getTime() < today.getTime()) return "text-danger-text";
   const days = (d.getTime() - today.getTime()) / 86400000;
   return days <= 60 ? "text-(--badge-warning-text)" : "text-(--text-tertiary)";
 }
@@ -87,7 +87,7 @@ export default function EmployeeDetailPage({
     <div className="flex flex-col gap-6">
       <Panel>
         <div className="flex flex-wrap items-center gap-6">
-          <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-(--color-on-cta) shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+          <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
             {initialsOf(emp.name)}
           </div>
           <div className="min-w-65 flex-1">

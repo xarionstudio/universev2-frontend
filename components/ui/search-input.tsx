@@ -27,7 +27,7 @@ function SearchInput({
         className
       )}
     >
-      <Search className="size-[15px] flex-none text-(--text-tertiary)" />
+      <Search className="size-3.75 flex-none text-(--text-tertiary)" />
       <input
         type="search"
         value={value}

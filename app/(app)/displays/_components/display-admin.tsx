@@ -193,14 +193,14 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
           <ToolbarTitle>{t.dspListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.dspSearchPh}
               aria-label={t.dspSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}
@@ -218,7 +218,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
               <TableHead>{t.dspRuntext}</TableHead>
               <TableHead>{t.dspConn}</TableHead>
               <TableHead>{t.thStatus}</TableHead>
-              <TableHead className="w-[110px]">{t.thAct}</TableHead>
+              <TableHead className="w-27.5">{t.thAct}</TableHead>
             </tr>
           </TableHeader>
           <TableBody>
@@ -227,7 +227,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                 <TableCell>
                   <NameCell name={displayNameOf(d)} sub={displaySubOf(d)} />
                 </TableCell>
-                <TableCell className="max-w-[360px] text-(--text-secondary)">
+                <TableCell className="max-w-90 text-(--text-secondary)">
                   {d.runtext}
                 </TableCell>
                 <TableCell>

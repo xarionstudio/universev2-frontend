@@ -195,7 +195,7 @@ export default function RosterUploadPage() {
               </ToolbarTitle>
               <ToolbarGroup>
                 <SearchInput
-                  className="w-[240px]"
+                  className="w-60"
                   placeholder={t.searchEmp}
                   aria-label={t.searchEmp}
                   value={qPrev}
@@ -207,11 +207,11 @@ export default function RosterUploadPage() {
               </ToolbarGroup>
             </Toolbar>
             <div className="overflow-x-auto pb-2">
-              <Table className="min-w-[1600px]">
+              <Table className="min-w-400">
                 <TableHeader>
                   <tr>
-                    <TableHead className="w-[110px]">NIK</TableHead>
-                    <TableHead className="w-[190px]">{t.thNama}</TableHead>
+                    <TableHead className="w-27.5">NIK</TableHead>
+                    <TableHead className="w-47.5">{t.thNama}</TableHead>
                     {preview.days.map((d) => (
                       <TableHead
                         key={d}
@@ -267,7 +267,7 @@ export default function RosterUploadPage() {
               </ToolbarTitle>
               <ToolbarGroup>
                 <SearchInput
-                  className="w-[240px]"
+                  className="w-60"
                   placeholder={t.searchEmp}
                   aria-label={t.searchEmp}
                   value={qErr}
@@ -279,7 +279,7 @@ export default function RosterUploadPage() {
               {vchips.map((c) => (
                 <div
                   key={c.label}
-                  className="flex min-w-[180px] flex-1 items-center gap-3 rounded-card border px-4 py-3"
+                  className="flex min-w-45 flex-1 items-center gap-3 rounded-card border px-4 py-3"
                   style={{ background: c.bg, borderColor: c.border }}
                 >
                   <div>
@@ -299,7 +299,7 @@ export default function RosterUploadPage() {
             <Table>
               <TableHeader>
                 <tr>
-                  <TableHead className="w-[90px]">{t.thRow}</TableHead>
+                  <TableHead className="w-22.5">{t.thRow}</TableHead>
                   <TableHead>NIK</TableHead>
                   <TableHead>{t.thEmp}</TableHead>
                   <TableHead>{t.thIssue}</TableHead>
@@ -372,7 +372,7 @@ export default function RosterUploadPage() {
                   key={c.k}
                   className="flex items-center gap-2 rounded-lg border border-(--divider) bg-(--fill-subtle) px-2 py-1.5 text-xs text-(--text-secondary)"
                 >
-                  <b className="min-w-[38px] flex-none rounded-md border border-[rgba(0,212,255,.3)] bg-[rgba(0,212,255,.12)] px-1 py-[3px] text-center font-mono text-[11px] font-bold text-(--color-primary-bright)">
+                  <b className="min-w-9.5 flex-none rounded-md border border-[rgba(0,212,255,.3)] bg-[rgba(0,212,255,.12)] px-1 py-0.75 text-center font-mono text-[11px] font-bold text-primary-bright">
                     {c.k}
                   </b>
                   {c.v}

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex flex-none cursor-pointer items-center justify-center gap-2 rounded-control border border-transparent text-sm font-semibold whitespace-nowrap text-(--text-primary) transition-[box-shadow,background-color,border-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed [&_svg]:size-[15px] [&_svg]:flex-none",
+  "inline-flex flex-none cursor-pointer items-center justify-center gap-2 rounded-control border border-transparent text-sm font-semibold whitespace-nowrap text-(--text-primary) transition-[box-shadow,background-color,border-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed [&_svg]:size-3.75 [&_svg]:flex-none",
   {
     variants: {
       variant: {
@@ -68,7 +68,7 @@ function Spinner({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "size-[15px] flex-none animate-rot rounded-full border-2 border-(--border-btn-secondary) border-t-current",
+        "size-3.75 flex-none animate-rot rounded-full border-2 border-(--border-btn-secondary) border-t-current",
         className
       )}
     />

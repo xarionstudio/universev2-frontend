@@ -26,7 +26,7 @@ function StatCard({
     <>
       {href ? (
         <span className="absolute top-4 right-4 grid size-6.5 place-items-center rounded-lg border border-(--glass-1-border) bg-(--fill-subtle) group-hover:border-[rgba(0,212,255,.4)] group-hover:bg-[rgba(0,212,255,.16)]">
-          <ArrowUpRight className="size-[13px] text-(--text-tertiary) group-hover:text-primary-bright" />
+          <ArrowUpRight className="size-3.25 text-(--text-tertiary) group-hover:text-primary-bright" />
         </span>
       ) : null}
       <div

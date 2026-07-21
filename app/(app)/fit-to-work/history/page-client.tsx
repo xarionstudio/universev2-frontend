@@ -9,12 +9,14 @@ import {
   ftwHistoryFor,
   type FtwHistEntry,
   type FtwRecord,
+  type FtwStatus,
 } from "@/lib/data/ftw";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExportButtons } from "@/components/ui/export-buttons";
 import { Input } from "@/components/ui/input";
 import { PageButton } from "@/components/ui/pagination";
 import {
@@ -39,7 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type StKey = "fit" | "kurang" | "belum";
+type StKey = FtwStatus;
 
 type Row = {
   op: FtwRecord;
@@ -49,13 +51,11 @@ type Row = {
   entry: FtwHistEntry;
 };
 
-const stOf = (n: number): StKey =>
-  n === 1 ? "fit" : n === 0 ? "kurang" : "belum";
-
 const sleepClass = (st: StKey) =>
   cn(
     "font-mono",
-    st === "kurang" && "font-semibold text-(--color-danger-text)",
+    st === "pulang" && "font-semibold text-danger-text",
+    st === "spare" && "font-semibold text-(--badge-warning-text)",
     st === "belum" && "text-(--text-tertiary)",
     st === "fit" && "text-(--text-secondary)"
   );
@@ -148,7 +148,8 @@ function FtwHistoryInner() {
   const stBadge = (key: StKey) => {
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
       fit: { v: "success", l: t.bFit },
-      kurang: { v: "warning", l: t.ftwStatKurang },
+      spare: { v: "warning", l: t.ftwStatSpare },
+      pulang: { v: "danger", l: t.ftwStatPulang },
       belum: { v: "neutral", l: t.ftwStatBelum },
     };
     return (
@@ -175,7 +176,7 @@ function FtwHistoryInner() {
     for (const entry of ftwHistoryFor(op, lang, 90)) {
       if (d1 && entry.iso < d1) continue;
       if (d2 && entry.iso > d2) continue;
-      const key = stOf(entry.st);
+      const key = entry.status;
       if (st && key !== st) continue;
       rows.push({ op, company, pos, st: key, entry });
     }
@@ -183,6 +184,67 @@ function FtwHistoryInner() {
   rows.sort((a, b) =>
     a.entry.iso < b.entry.iso ? 1 : a.entry.iso > b.entry.iso ? -1 : 0
   );
+
+  /* Payload ekspor — seluruh baris hasil filter, bukan hanya halaman aktif */
+  const buildExport = () => {
+    const stLabel: Record<StKey, string> = {
+      fit: t.bFit,
+      spare: t.ftwStatSpare,
+      pulang: t.ftwStatPulang,
+      belum: t.ftwStatBelum,
+    };
+    const tone: Record<StKey, "success" | "warning" | "danger" | "neutral"> = {
+      fit: "success",
+      spare: "warning",
+      pulang: "danger",
+      belum: "neutral",
+    };
+    const filters = [
+      st
+        ? `${t.thStatus}: ${stLabel[st as StKey]}`
+        : `${t.thStatus}: ${t.expAll}`,
+      shift
+        ? `${t.thShift}: ${shift === "malam" ? t.shiftNight : t.shiftDay}`
+        : `${t.thShift}: ${t.expAll}`,
+      d1 || d2 ? `${t.lblDate}: ${d1 || "…"} — ${d2 || "…"}` : null,
+      q.trim() ? `${t.searchOp}: “${q.trim()}”` : null,
+    ].filter(Boolean) as string[];
+
+    return {
+      fileBase: "fit-to-work-riwayat-detail",
+      title: t.expReportFtwHist,
+      /* cap waktu & jumlah baris ditambahkan oleh <ExportButtons> per format */
+      meta: [`${t.expFilter}: ${filters.join(" · ")}`],
+      sheetName: t.tabHistory,
+      columns: [
+        { header: t.lblDate, width: 14 },
+        { header: t.thOperator, width: 26 },
+        { header: "NIK", width: 14 },
+        { header: t.thCompany, width: 26 },
+        { header: t.thDept, width: 16 },
+        { header: t.thPos, width: 22 },
+        { header: t.thShift, width: 10 },
+        { header: t.thSleep, width: 12, align: "right" as const },
+        { header: t.thStatus, width: 15 },
+        { header: t.ftwThRest, width: 11, align: "right" as const },
+        { header: t.thSendTime, width: 14 },
+      ],
+      rows: rows.map((r) => [
+        r.entry.date,
+        r.op.name,
+        r.op.nik,
+        r.company,
+        r.op.dept,
+        r.pos,
+        r.op.shift === "malam" ? t.shiftNight : t.shiftDay,
+        r.entry.sleep,
+        { text: stLabel[r.st], tone: tone[r.st] },
+        r.entry.restHours > 0 ? `+${r.entry.restHours} ${t.hourShort}` : "—",
+        r.entry.sendTime,
+      ]),
+      landscape: true,
+    };
+  };
 
   const perN = parseInt(per, 10);
   const total = rows.length;
@@ -211,7 +273,7 @@ function FtwHistoryInner() {
           <ToolbarTitle>{t.ftwHistTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -221,7 +283,7 @@ function FtwHistoryInner() {
               }}
             />
             <Select
-              wrapperClassName="w-[250px]"
+              wrapperClassName="w-62.5"
               value={fhOp}
               onChange={(e) => {
                 setFhOp(e.target.value);
@@ -237,7 +299,7 @@ function FtwHistoryInner() {
               ))}
             </Select>
             <Select
-              wrapperClassName="w-[160px]"
+              wrapperClassName="w-40"
               value={st}
               onChange={(e) => {
                 setSt(e.target.value);
@@ -247,11 +309,12 @@ function FtwHistoryInner() {
             >
               <option value="">{t.allStatus}</option>
               <option value="belum">{t.ftwStatBelum}</option>
-              <option value="kurang">{t.ftwStatKurang}</option>
+              <option value="pulang">{t.ftwStatPulang}</option>
+              <option value="spare">{t.ftwStatSpare}</option>
               <option value="fit">{t.bFit}</option>
             </Select>
             <Select
-              wrapperClassName="w-[140px]"
+              wrapperClassName="w-35"
               value={shift}
               onChange={(e) => {
                 setShift(e.target.value);
@@ -286,12 +349,14 @@ function FtwHistoryInner() {
                 aria-label={t.lblDateTo}
               />
             </div>
+            {/* ekspor mengikuti filter aktif: yang diunduh = yang terlihat */}
+            <ExportButtons build={buildExport} />
           </ToolbarGroup>
         </Toolbar>
 
         {shown.length ? (
           <div className="overflow-x-auto">
-            <Table className="min-w-[1280px]">
+            <Table className="min-w-7xl">
               <TableHeader>
                 <tr>
                   <TableHead>{t.lblDate}</TableHead>
@@ -330,7 +395,7 @@ function FtwHistoryInner() {
           </div>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.ftwEmptyB}
           />

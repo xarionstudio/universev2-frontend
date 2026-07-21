@@ -166,7 +166,7 @@ export default function UnitStatusPage() {
           <ToolbarTitle>{t.usListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchUnit}
               aria-label={t.searchUnit}
               value={q}
@@ -254,7 +254,7 @@ export default function UnitStatusPage() {
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.usEmptyT}
             body={t.usEmptyB}
           />

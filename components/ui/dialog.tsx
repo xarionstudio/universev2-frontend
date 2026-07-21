@@ -65,11 +65,11 @@ function DialogIcon({
   children: React.ReactNode;
 }) {
   const styles = {
-    info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.14)] [&_svg]:text-(--color-primary-bright)",
+    info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.14)] [&_svg]:text-primary-bright",
     warning:
       "border-(--badge-warning-border) bg-(--badge-warning-fill) [&_svg]:text-(--badge-warning-text)",
     danger:
-      "border-(--badge-danger-border) bg-(--badge-danger-fill) [&_svg]:text-(--color-danger-text)",
+      "border-(--badge-danger-border) bg-(--badge-danger-fill) [&_svg]:text-danger-text",
   }[variant];
   return (
     <div

@@ -5,6 +5,7 @@ import {
   Ban,
   CheckCircle2,
   Download,
+  KeyRound,
   Pencil,
   Plus,
   Search,
@@ -14,7 +15,15 @@ import {
 
 import type { UmUser } from "@/lib/data/users";
 import { useI18n } from "@/lib/i18n";
+import {
+  hashPassword,
+  newSalt,
+  passwordIssues,
+  type PwIssue,
+} from "@/lib/password";
+import { effectivePerms, can as rbacCan } from "@/lib/rbac";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
@@ -37,6 +46,7 @@ import {
   ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { PasswordInput } from "@/components/ui/password-input";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
@@ -56,7 +66,12 @@ export default function UsersPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
   const { umUsers, setUmUsers, umRoles, empAll } = useAppStore();
+  const { user: me, can } = usePermissions();
   const impRef = React.useRef<HTMLInputElement>(null);
+
+  /* Modul "users": Kelola = boleh ubah, Lihat = hanya baca.
+     Halaman ini hanya bisa dibuka kalau minimal punya Lihat (dijaga layout). */
+  const canManage = can("users", "manage");
 
   const [q, setQ] = React.useState("");
   const [statusF, setStatusF] = React.useState("all");
@@ -74,8 +89,49 @@ export default function UsersPage() {
   /* dialog nonaktifkan */
   const [offTarget, setOffTarget] = React.useState<UmUser | null>(null);
 
+  /* dialog atur ulang password */
+  const [pwTarget, setPwTarget] = React.useState<UmUser | null>(null);
+  const [pwNew, setPwNew] = React.useState("");
+  const [pwConf, setPwConf] = React.useState("");
+  const [pwErr, setPwErr] = React.useState<PwIssue | "conf" | null>(null);
+  const [pwBusy, setPwBusy] = React.useState(false);
+
   const roleName = (id: string) => umRoles.find((r) => r.id === id)?.name ?? id;
   const karOpts = empAll().map((e) => `${e.name} — ${e.nik}`);
+
+  /* ---- Pagar pengaman RBAC ----
+     Mencegah admin mengunci dirinya sendiri atau menghapus Superadmin
+     terakhir sehingga tidak ada lagi yang bisa mengelola user. */
+  const superRoleIds = umRoles.filter((r) => r.locked).map((r) => r.id);
+  const isSuperUser = (u: UmUser) =>
+    u.roles.some((r) => superRoleIds.includes(r));
+  const activeSupers = umUsers.filter((u) => u.on && isSuperUser(u));
+  const isLastActiveSuper = (u: UmUser) =>
+    activeSupers.length <= 1 && activeSupers[0]?.id === u.id;
+
+  /* Mengembalikan pesan penolakan, atau null bila perubahan boleh dilakukan */
+  function guard(
+    target: UmUser,
+    nextRoles: string[],
+    nextOn: boolean
+  ): string | null {
+    const isSelf = me?.id === target.id;
+    if (isSelf && !nextOn) return t.umGuardSelfOff;
+    if (isSelf) {
+      const after = effectivePerms(
+        { ...target, roles: nextRoles, on: nextOn },
+        umRoles
+      );
+      if (!rbacCan(after, "users", "manage")) return t.umGuardSelfRole;
+    }
+    if (isLastActiveSuper(target)) {
+      const stillSuper =
+        nextOn && nextRoles.some((r) => superRoleIds.includes(r));
+      if (!stillSuper)
+        return nextOn ? t.umGuardLastSuperRole : t.umGuardLastSuper;
+    }
+    return null;
+  }
 
   const rows = umUsers.filter((u) => {
     const needle = q.toLowerCase();
@@ -125,6 +181,11 @@ export default function UsersPage() {
     const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
     const data = { email, kar, nik, roles, on: fActive };
     if (editing) {
+      const blocked = guard(editing, roles, fActive);
+      if (blocked) {
+        pushToast("error", t.umUserEditT, blocked);
+        return;
+      }
       setUmUsers((prev) =>
         prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
       );
@@ -138,12 +199,69 @@ export default function UsersPage() {
 
   function offDo() {
     if (!offTarget) return;
+    const blocked = guard(offTarget, offTarget.roles, false);
+    if (blocked) {
+      pushToast("error", t.umOff, blocked);
+      setOffTarget(null);
+      return;
+    }
     setUmUsers((prev) =>
       prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
     );
     pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
     setOffTarget(null);
   }
+
+  /* ---- Atur ulang password (khusus permission Kelola) ----
+     Tidak meminta password lama: admin memang tidak seharusnya tahu password
+     user. Yang disimpan hanya salt + digest, tidak pernah teks aslinya. */
+  function openPw(u: UmUser) {
+    setPwTarget(u);
+    setPwNew("");
+    setPwConf("");
+    setPwErr(null);
+  }
+
+  async function pwSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pwTarget) return;
+    const issues = passwordIssues(pwNew);
+    if (issues.length) {
+      setPwErr(issues[0]);
+      return;
+    }
+    if (pwNew !== pwConf) {
+      setPwErr("conf");
+      return;
+    }
+    setPwErr(null);
+    setPwBusy(true);
+    const salt = newSalt();
+    const hash = await hashPassword(pwNew, salt);
+    setUmUsers((prev) =>
+      prev.map((u) =>
+        u.id === pwTarget.id
+          ? { ...u, pwSalt: salt, pwHash: hash, pwAt: new Date().toISOString() }
+          : u
+      )
+    );
+    setPwBusy(false);
+    setPwTarget(null);
+    setPwNew("");
+    setPwConf("");
+    pushToast("success", t.umPwToastT, `${pwTarget.email} — ${t.umPwToastD}`);
+  }
+
+  const pwErrText =
+    pwErr === "len"
+      ? t.umPwErrLen
+      : pwErr === "num"
+        ? t.umPwErrNum
+        : pwErr === "letter"
+          ? t.umPwErrLetter
+          : pwErr === "conf"
+            ? t.umPwErrConf
+            : undefined;
 
   function onDo(u: UmUser) {
     setUmUsers((prev) =>
@@ -180,10 +298,14 @@ export default function UsersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle title={t.umUsersT} sub={t.umSub}>
-        <Button onClick={openAdd}>
-          <Plus />
-          {t.umUserAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={openAdd}>
+            <Plus />
+            {t.umUserAdd}
+          </Button>
+        ) : (
+          <Badge variant="neutral">{t.umReadOnly}</Badge>
+        )}
       </PageTitle>
 
       <Panel>
@@ -191,14 +313,14 @@ export default function UsersPage() {
           <ToolbarTitle>{t.umUserListT}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.umSearchPh}
               aria-label={t.umSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-[150px]"
+              wrapperClassName="w-37.5"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}
@@ -208,7 +330,7 @@ export default function UsersPage() {
               <option value="off">{t.stNonaktif}</option>
             </Select>
             <Select
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               aria-label="Role"
               value={roleF}
               onChange={(e) => setRoleF(e.target.value)}
@@ -220,10 +342,16 @@ export default function UsersPage() {
                 </option>
               ))}
             </Select>
-            <Button variant="secondary" onClick={() => impRef.current?.click()}>
-              <Upload />
-              Import
-            </Button>
+            {canManage ? (
+              <Button
+                variant="secondary"
+                onClick={() => impRef.current?.click()}
+              >
+                <Upload />
+                Import
+              </Button>
+            ) : null}
+            {/* Export tetap tersedia untuk permission Lihat — hanya membaca */}
             <Button variant="secondary" onClick={exportCsv}>
               <Download />
               Export
@@ -246,8 +374,11 @@ export default function UsersPage() {
                 <TableHead className="max-xl:hidden">{t.umLinked}</TableHead>
                 <TableHead className="max-xl:hidden">NIK</TableHead>
                 <TableHead>Roles</TableHead>
+                <TableHead className="max-xl:hidden">{t.umPwCol}</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
-                <TableHead className="w-[110px]">{t.thAct}</TableHead>
+                {canManage ? (
+                  <TableHead className="w-35">{t.thAct}</TableHead>
+                ) : null}
               </tr>
             </TableHeader>
             <TableBody>
@@ -278,41 +409,76 @@ export default function UsersPage() {
                       ))}
                     </div>
                   </TableCell>
+                  {/* status password — nilainya sendiri tidak pernah ditampilkan */}
+                  <TableCell className="max-xl:hidden">
+                    {u.pwHash ? (
+                      <span
+                        className="text-(--text-secondary)"
+                        title={
+                          u.pwAt ? new Date(u.pwAt).toLocaleString() : undefined
+                        }
+                      >
+                        {t.umPwSet}
+                        {u.pwAt ? (
+                          <span className="text-(--text-tertiary)">
+                            {" · "}
+                            {new Date(u.pwAt).toLocaleDateString()}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="text-(--text-tertiary)">
+                        {t.umPwNever}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={u.on ? "success" : "danger"} dot>
                       {u.on ? t.stAktif : t.stNonaktif}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <IconButton
-                        aria-label={t.udbEditT}
-                        onClick={() => openEdit(u)}
-                      >
-                        <Pencil />
-                      </IconButton>
-                      {u.on ? (
+                  {canManage ? (
+                    <TableCell>
+                      <div className="flex gap-2">
                         <IconButton
-                          danger
-                          aria-label={t.umOff}
-                          onClick={() => setOffTarget(u)}
+                          aria-label={t.udbEditT}
+                          onClick={() => openEdit(u)}
                         >
-                          <Ban />
+                          <Pencil />
                         </IconButton>
-                      ) : (
-                        <IconButton aria-label={t.umOn} onClick={() => onDo(u)}>
-                          <CheckCircle2 />
+                        <IconButton
+                          aria-label={`${t.umPwT} — ${u.email}`}
+                          title={t.umPwT}
+                          onClick={() => openPw(u)}
+                        >
+                          <KeyRound />
                         </IconButton>
-                      )}
-                    </div>
-                  </TableCell>
+                        {u.on ? (
+                          <IconButton
+                            danger
+                            aria-label={t.umOff}
+                            onClick={() => setOffTarget(u)}
+                          >
+                            <Ban />
+                          </IconButton>
+                        ) : (
+                          <IconButton
+                            aria-label={t.umOn}
+                            onClick={() => onDo(u)}
+                          >
+                            <CheckCircle2 />
+                          </IconButton>
+                        )}
+                      </div>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.empEmptyB}
           />
@@ -414,6 +580,69 @@ export default function UsersPage() {
             </Button>
             <Button type="submit">
               {editing ? t.udbSaveEdit : t.umUserSaveAdd}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* dialog atur ulang password — hanya untuk permission Kelola */}
+      <Dialog
+        open={pwTarget !== null}
+        onClose={() => setPwTarget(null)}
+        className="w-[min(480px,100%)]"
+        labelledBy="umpw-t"
+      >
+        <DialogIcon variant="warning">
+          <KeyRound />
+        </DialogIcon>
+        <DialogTitle id="umpw-t">
+          {`${t.umPwT} — ${pwTarget?.email ?? ""}`}
+        </DialogTitle>
+        <DialogBody>{t.umPwB}</DialogBody>
+        <form onSubmit={pwSave} noValidate>
+          <Field
+            className="mt-4"
+            label={t.umPwNew}
+            htmlFor="um-pw-new"
+            required
+            helper={t.umPwHelp}
+            error={pwErr !== null && pwErr !== "conf"}
+            errorMessage={pwErrText}
+          >
+            <PasswordInput
+              id="um-pw-new"
+              value={pwNew}
+              onChange={setPwNew}
+              autoComplete="new-password"
+              toggleLabel={t.umPwShow}
+            />
+          </Field>
+          <Field
+            className="mt-4"
+            label={t.umPwConf}
+            htmlFor="um-pw-conf"
+            required
+            error={pwErr === "conf"}
+            errorMessage={t.umPwErrConf}
+          >
+            <PasswordInput
+              id="um-pw-conf"
+              value={pwConf}
+              onChange={setPwConf}
+              autoComplete="new-password"
+              toggleLabel={t.umPwShow}
+            />
+          </Field>
+          <DialogActions>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setPwTarget(null)}
+            >
+              {t.btnCancel}
+            </Button>
+            <Button type="submit" disabled={pwBusy}>
+              {t.umPwSave}
             </Button>
           </DialogActions>
         </form>

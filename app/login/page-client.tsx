@@ -16,12 +16,16 @@ import {
 } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n";
+import { verifyPassword } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
+import { useSession } from "@/components/providers/session";
 import { Spinner } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DepthScene } from "@/components/ui/depth-scene";
 import { Input } from "@/components/ui/input";
-import { LogoBadge, UniverseLogo } from "@/components/ui/logo";
+import { UniverseLogo } from "@/components/ui/logo";
+import { LogoBadge3D } from "@/components/ui/logo-3d";
 
 /* Layout dua panel mengikuti referensi universe-2 (Figma 1512:2810):
    kartu 1200×760, panel kiri = foto armada + brand + hero + fitur,
@@ -30,30 +34,65 @@ import { LogoBadge, UniverseLogo } from "@/components/ui/logo";
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { appName } = useAppStore();
+  const { appName, umUsers } = useAppStore();
+  const { signIn } = useSession();
   const emailRef = React.useRef<HTMLInputElement>(null);
   const pwRef = React.useRef<HTMLInputElement>(null);
   const [showPw, setShowPw] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState(false);
+  const [errMsg, setErrMsg] = React.useState<string | null>(null);
 
-  function onSubmit(e: React.FormEvent) {
+  /* Login kini benar-benar mencari akunnya di User Management supaya RBAC
+     punya subjek yang nyata — sebelumnya email apa pun diterima dan tidak
+     pernah dipakai lagi. Password diverifikasi hanya bila sudah pernah
+     diatur admin; akun yang baru diundang (belum punya password) tetap bisa
+     masuk, mengikuti alur undangan yang sudah tertulis di UI. */
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const email = emailRef.current?.value.trim() || "";
     const pw = pwRef.current?.value || "";
     if (!email.includes("@") || !pw) {
       setErr(true);
+      setErrMsg(null);
       emailRef.current?.focus();
       return;
     }
+
+    const account = umUsers.find(
+      (u) => u.email.toLowerCase() === email.toLowerCase()
+    );
+    if (!account) {
+      setErr(true);
+      setErrMsg(t.loginErrUnknown);
+      emailRef.current?.focus();
+      return;
+    }
+    if (!account.on) {
+      setErr(true);
+      setErrMsg(t.loginErrOff);
+      return;
+    }
+
     setErr(false);
+    setErrMsg(null);
     setBusy(true);
+
+    if (account.pwHash && account.pwSalt) {
+      const ok = await verifyPassword(pw, account.pwSalt, account.pwHash);
+      if (!ok) {
+        setBusy(false);
+        setErr(true);
+        setErrMsg(t.loginErrPw);
+        pwRef.current?.focus();
+        return;
+      }
+    }
+
     setTimeout(() => {
-      try {
-        localStorage.setItem("universe-auth", email);
-      } catch {}
+      signIn(account.email);
       router.push("/dashboard");
-    }, 900);
+    }, 600);
   }
 
   const features = [
@@ -65,17 +104,20 @@ export default function LoginPage() {
   return (
     <div>
       <div className="fixed inset-0 z-0 bg-(image:--gradient-auth)" />
-      <div className="pointer-events-none fixed -top-30 -right-25 z-0 size-130 rounded-full bg-(--blob-cyan) blur-[130px]" />
-      <div className="pointer-events-none fixed -bottom-35 -left-20 z-0 size-120 rounded-full bg-(--blob-blue) blur-[130px]" />
+      {/* blob lama — kini ikut hanyut pelan agar latar terasa hidup */}
+      <div className="pointer-events-none fixed -top-30 -right-25 z-0 size-130 animate-blob-drift rounded-full bg-(--blob-cyan) blur-[130px]" />
+      <div className="pointer-events-none fixed -bottom-35 -left-20 z-0 size-120 animate-blob-drift-alt rounded-full bg-(--blob-blue) blur-[130px]" />
+      {/* lantai grid perspektif + partikel berkedalaman */}
+      <DepthScene />
 
       <div className="relative z-1 grid min-h-screen place-items-center p-6">
         {/* zoom .8 mengikuti keputusan universe-2 — kartu 760px muat nyaman
             di layar 1080–1200px tanpa scroll */}
-        <main className="relative h-[760px] w-full max-w-[1200px] [zoom:0.8] max-lg:h-auto max-lg:max-w-[520px]">
+        <main className="relative h-190 w-full max-w-300 zoom-[0.8] max-lg:h-auto max-lg:max-w-130">
           {/* ── panel kiri: foto + brand + hero (selalu dark di atas foto) ── */}
           <div
             data-theme="dark"
-            className="absolute top-0 left-0 h-full w-[600px] overflow-hidden rounded-panel border border-(--glass-1-border) text-(--text-primary) max-lg:hidden"
+            className="absolute top-0 left-0 h-full w-150 overflow-hidden rounded-panel border border-(--glass-1-border) text-(--text-primary) max-lg:hidden"
           >
             <Image
               src="/login-bg.avif"
@@ -94,10 +136,10 @@ export default function LoginPage() {
               }}
             />
 
-            <div className="relative z-10 flex h-full flex-col justify-between px-[60px] py-[50px]">
+            <div className="relative z-10 flex h-full flex-col justify-between px-15 py-12.5">
               {/* brand — kiri atas */}
               <div className="flex items-center gap-3">
-                <UniverseLogo priority className="size-[46px]" />
+                <UniverseLogo priority className="size-11.5" />
                 <div className="leading-tight">
                   <p className="text-[28px] font-bold tracking-(--tracking-brand)">
                     {appName}
@@ -118,18 +160,18 @@ export default function LoginPage() {
                     {t.loginHero2}
                   </h1>
                 </div>
-                <p className="max-w-[418px] text-sm leading-relaxed text-(--text-secondary)">
+                <p className="max-w-104.5 text-sm leading-relaxed text-(--text-secondary)">
                   {t.loginHeroDesc}
                 </p>
                 <div className="flex gap-3">
                   {features.map((f) => (
                     <div
                       key={f.label}
-                      className="flex w-[120px] items-center gap-3 rounded-xl bg-[rgba(255,255,255,.08)] px-3 py-2.5"
+                      className="flex w-30 items-center gap-3 rounded-xl bg-[rgba(255,255,255,.08)] px-3 py-2.5"
                     >
-                      <div className="grid size-[30px] flex-none place-items-center rounded-lg border border-(--badge-info-border) bg-(--badge-info-fill)">
+                      <div className="grid size-7.5 flex-none place-items-center rounded-lg border border-(--badge-info-border) bg-(--badge-info-fill)">
                         <f.icon
-                          className="size-5 text-(--color-primary-bright)"
+                          className="size-5 text-primary-bright"
                           strokeWidth={1.5}
                         />
                       </div>
@@ -144,11 +186,11 @@ export default function LoginPage() {
           </div>
 
           {/* ── panel kanan: glass + form — overlap 21px di atas panel kiri ── */}
-          <div className="absolute top-0 left-[579px] z-10 h-full w-[620px] rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
+          <div className="absolute top-0 left-144.75 z-10 h-full w-155 rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
             <div className="flex h-full flex-col items-center justify-between px-20 py-10 max-lg:gap-8 max-lg:px-8">
               {/* logo + heading */}
               <div className="flex flex-col items-center gap-5 text-center">
-                <LogoBadge className="size-24" logoClassName="size-11" />
+                <LogoBadge3D className="size-24" logoClassName="size-11" />
                 <div className="flex flex-col items-center gap-1">
                   <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
                     {t.loginWelcome}{" "}
@@ -163,16 +205,16 @@ export default function LoginPage() {
               </div>
 
               {/* form */}
-              <div className="w-full max-w-[458px]">
+              <div className="w-full max-w-114.5">
                 <div
                   role="alert"
                   className={cn(
-                    "mb-5 items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-(--color-danger-text)",
+                    "mb-5 items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-danger-text",
                     err ? "flex" : "hidden"
                   )}
                 >
                   <CircleAlert className="mt-0.5 size-4 flex-none" />
-                  <span>{t.loginErr}</span>
+                  <span>{errMsg ?? t.loginErr}</span>
                 </div>
                 <form
                   onSubmit={onSubmit}
@@ -214,12 +256,12 @@ export default function LoginPage() {
                         onClick={() => setShowPw((v) => !v)}
                         aria-pressed={showPw}
                         aria-label={t.pwToggle}
-                        className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-(--color-primary)"
+                        className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-primary"
                       >
                         {showPw ? (
-                          <EyeOff className="size-[17px]" />
+                          <EyeOff className="size-4.25" />
                         ) : (
-                          <Eye className="size-[17px]" />
+                          <Eye className="size-4.25" />
                         )}
                       </button>
                     </div>
@@ -242,10 +284,10 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="mt-3 inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-(--color-on-cta) shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary) disabled:translate-y-0 disabled:cursor-progress"
+                    className="mt-3 inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:translate-y-0 disabled:cursor-progress"
                   >
                     {busy ? (
-                      <Spinner className="size-4 border-[rgba(1,4,22,.3)] border-t-(--color-on-cta)" />
+                      <Spinner className="size-4 border-[rgba(1,4,22,.3)] border-t-on-cta" />
                     ) : null}
                     {busy ? t.loginChecking : t.loginBtn}
                   </button>

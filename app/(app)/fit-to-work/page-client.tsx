@@ -9,12 +9,14 @@ import {
   ftwHistoryFor,
   ftwStripAt,
   type FtwRecord,
+  type FtwStatus,
 } from "@/lib/data/ftw";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { ExportButtons } from "@/components/ui/export-buttons";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -40,26 +42,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type StKey = "fit" | "kurang" | "belum";
+type StKey = FtwStatus;
 
 type Row = {
   op: FtwRecord;
   company: string;
   pos: string;
   st: StKey;
+  /* jam istirahat tambahan sebelum boleh bekerja (0/1/2) */
+  restHours: number;
   sleep: string;
   sendTime: string;
   date: string;
   d: number;
 };
 
-const stOf = (n: number): StKey =>
-  n === 1 ? "fit" : n === 0 ? "kurang" : "belum";
-
 const sleepClass = (st: StKey) =>
   cn(
     "font-mono",
-    st === "kurang" && "font-semibold text-(--color-danger-text)",
+    st === "pulang" && "font-semibold text-danger-text",
+    st === "spare" && "font-semibold text-(--badge-warning-text)",
     st === "belum" && "text-(--text-tertiary)",
     st === "fit" && "text-(--text-secondary)"
   );
@@ -102,7 +104,8 @@ export default function FitToWorkPage() {
   const stBadge = (key: StKey) => {
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
       fit: { v: "success", l: t.bFit },
-      kurang: { v: "warning", l: t.ftwStatKurang },
+      spare: { v: "warning", l: t.ftwStatSpare },
+      pulang: { v: "danger", l: t.ftwStatPulang },
       belum: { v: "neutral", l: t.ftwStatBelum },
     };
     return (
@@ -113,9 +116,11 @@ export default function FitToWorkPage() {
   };
 
   const emps = empAll();
+  /* status hari ini per operator — dasar angka kartu statistik */
+  const today = ftwData(lang);
   const needle = q.trim().toLowerCase();
   const rows: Row[] = [];
-  for (const op of ftwData(lang)) {
+  for (const op of today) {
     if (shift && op.shift !== shift) continue;
     if (
       needle &&
@@ -131,13 +136,14 @@ export default function FitToWorkPage() {
       if (d2 && entry.iso > d2) continue;
       // hari ini pakai data log asli operator, bukan deret riwayat sintetis
       const isToday = entry.d === 0;
-      const key = isToday ? op.st : stOf(entry.st);
+      const key = isToday ? op.st : entry.status;
       if (st && key !== st) continue;
       rows.push({
         op,
         company,
         pos,
         st: key,
+        restHours: isToday ? op.restHours : entry.restHours,
         sleep: isToday ? op.sleep : entry.sleep,
         sendTime: entry.sendTime,
         date: entry.date,
@@ -145,6 +151,68 @@ export default function FitToWorkPage() {
       });
     }
   }
+
+  /* Payload ekspor — SEMUA baris hasil filter (bukan cuma halaman aktif),
+     karena laporan yang cuma berisi 10 baris pertama menyesatkan. */
+  const buildExport = () => {
+    const stLabel: Record<StKey, string> = {
+      fit: t.bFit,
+      spare: t.ftwStatSpare,
+      pulang: t.ftwStatPulang,
+      belum: t.ftwStatBelum,
+    };
+    const tone: Record<StKey, "success" | "warning" | "danger" | "neutral"> = {
+      fit: "success",
+      spare: "warning",
+      pulang: "danger",
+      belum: "neutral",
+    };
+    const filters = [
+      st
+        ? `${t.thStatus}: ${stLabel[st as StKey]}`
+        : `${t.thStatus}: ${t.expAll}`,
+      shift
+        ? `${t.thShift}: ${shift === "malam" ? t.shiftNight : t.shiftDay}`
+        : `${t.thShift}: ${t.expAll}`,
+      d1 || d2 ? `${t.lblDate}: ${d1 || "…"} — ${d2 || "…"}` : null,
+      q.trim() ? `${t.searchOp}: “${q.trim()}”` : null,
+    ].filter(Boolean) as string[];
+
+    return {
+      fileBase: "fit-to-work-log-tidur",
+      title: t.expReportFtw,
+      /* cap waktu & jumlah baris ditambahkan oleh <ExportButtons> per format */
+      meta: [`${t.expFilter}: ${filters.join(" · ")}`],
+      sheetName: t.ftwLog,
+      columns: [
+        { header: t.thOperator, width: 26 },
+        { header: "NIK", width: 14 },
+        { header: t.thCompany, width: 26 },
+        { header: t.thDept, width: 16 },
+        { header: t.thPos, width: 22 },
+        { header: t.thShift, width: 10 },
+        { header: t.thSleep, width: 12, align: "right" as const },
+        { header: t.thStatus, width: 15 },
+        { header: t.ftwThRest, width: 11, align: "right" as const },
+        { header: t.lblDate, width: 14 },
+        { header: t.thSendTime, width: 14 },
+      ],
+      rows: rows.map((r) => [
+        r.op.name,
+        r.op.nik,
+        r.company,
+        r.op.dept,
+        r.pos,
+        r.op.shift === "malam" ? t.shiftNight : t.shiftDay,
+        r.sleep,
+        { text: stLabel[r.st], tone: tone[r.st] },
+        r.restHours > 0 ? `+${r.restHours} ${t.hourShort}` : "—",
+        r.date,
+        r.sendTime,
+      ]),
+      landscape: true,
+    };
+  };
 
   const perN = parseInt(per, 10);
   const total = rows.length;
@@ -171,9 +239,9 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-success-border)",
             color: "var(--badge-success-text)",
           }}
-          value="231"
+          value={String(today.filter((r) => r.st === "fit").length)}
           label={t.ftwStatFit}
-          detail={t.ftwDFit}
+          detail={t.ftwRuleFit}
         />
         <StatCard
           icon={<Clock />}
@@ -182,9 +250,9 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value="12"
-          label={t.ftwStatKurang}
-          detail={t.ftwDKurang}
+          value={String(today.filter((r) => r.st === "spare").length)}
+          label={t.ftwStatSpare}
+          detail={t.ftwRestNote}
         />
         <StatCard
           icon={<CircleAlert />}
@@ -193,9 +261,9 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value="4"
-          label={t.ftwStatBelum}
-          detail={t.ftwDBelum}
+          value={String(today.filter((r) => r.st === "pulang").length)}
+          label={t.ftwStatPulang}
+          detail={t.ftwPulangNote}
         />
       </div>
 
@@ -204,7 +272,7 @@ export default function FitToWorkPage() {
           <ToolbarTitle>{t.ftwLog}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchOp}
               aria-label={t.searchOp}
               value={q}
@@ -214,7 +282,7 @@ export default function FitToWorkPage() {
               }}
             />
             <Select
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               value={st}
               onChange={(e) => {
                 setSt(e.target.value);
@@ -224,11 +292,12 @@ export default function FitToWorkPage() {
             >
               <option value="">{t.allStatus}</option>
               <option value="belum">{t.ftwStatBelum}</option>
-              <option value="kurang">{t.ftwStatKurang}</option>
+              <option value="pulang">{t.ftwStatPulang}</option>
+              <option value="spare">{t.ftwStatSpare}</option>
               <option value="fit">{t.bFit}</option>
             </Select>
             <Select
-              wrapperClassName="w-[150px]"
+              wrapperClassName="w-37.5"
               value={shift}
               onChange={(e) => {
                 setShift(e.target.value);
@@ -263,12 +332,14 @@ export default function FitToWorkPage() {
                 aria-label={t.lblDateTo}
               />
             </div>
+            {/* ekspor mengikuti filter aktif: yang diunduh = yang terlihat */}
+            <ExportButtons build={buildExport} />
           </ToolbarGroup>
         </Toolbar>
 
         {shown.length ? (
           <div className="overflow-x-auto">
-            <Table className="min-w-[1280px]">
+            <Table className="min-w-7xl">
               <TableHeader>
                 <tr>
                   <TableHead>{t.thOperator}</TableHead>
@@ -279,6 +350,7 @@ export default function FitToWorkPage() {
                   <TableHead>{t.thShift}</TableHead>
                   <TableHead>{t.thSleep}</TableHead>
                   <TableHead>{t.thStatus}</TableHead>
+                  <TableHead>{t.ftwThRest}</TableHead>
                   <TableHead>{t.lblDate}</TableHead>
                   <TableHead>{t.thSendTime}</TableHead>
                   <TableHead>{t.thHist}</TableHead>
@@ -306,6 +378,16 @@ export default function FitToWorkPage() {
                         {r.sleep}
                       </TableCell>
                       <TableCell>{stBadge(r.st)}</TableCell>
+                      {/* istirahat tambahan sebelum boleh bekerja */}
+                      <TableCell className="whitespace-nowrap">
+                        {r.restHours > 0 ? (
+                          <span className="text-(--badge-warning-text)">
+                            +{r.restHours} {t.hourShort}
+                          </span>
+                        ) : (
+                          <span className="text-(--text-tertiary)">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="font-mono whitespace-nowrap">
                         {r.date}
                       </TableCell>
@@ -340,7 +422,7 @@ export default function FitToWorkPage() {
           </div>
         ) : (
           <StateBox
-            icon={<Search className="text-(--color-primary-bright)" />}
+            icon={<Search className="text-primary-bright" />}
             title={t.noResTitle}
             body={t.ftwEmptyB}
           />
@@ -364,6 +446,33 @@ export default function FitToWorkPage() {
           />
         </PanelFoot>
       </Panel>
+
+      {/* aturan kelayakan — ditulis eksplisit agar operator & admin melihat
+          ambang yang sama dengan yang dipakai mesin poin Prestasi */}
+      <div className="rounded-card border border-(--divider) bg-(--fill-subtle) p-4">
+        <b className="mb-1 block text-[13px] font-semibold">{t.ftwRuleT}</b>
+        <ul className="flex flex-col gap-1.5 text-xs text-(--text-secondary)">
+          {[
+            [t.ftwRuleFit, "success"],
+            [t.ftwRuleSpare1, "warning"],
+            [t.ftwRuleSpare2, "warning"],
+            [t.ftwRulePulang, "danger"],
+          ].map(([label, tone]) => (
+            <li key={label} className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className={cn(
+                  "size-1.5 flex-none rounded-full",
+                  tone === "success" && "bg-(--badge-success-text)",
+                  tone === "warning" && "bg-(--badge-warning-text)",
+                  tone === "danger" && "bg-danger-text"
+                )}
+              />
+              {label}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

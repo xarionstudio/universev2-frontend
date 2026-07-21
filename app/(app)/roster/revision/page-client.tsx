@@ -102,7 +102,7 @@ export default function RosterRevisionPage() {
           <ToolbarTitle>{t.rvListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -110,7 +110,7 @@ export default function RosterRevisionPage() {
             />
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               value={st}
               onChange={(e) => setSt(e.target.value)}
             >
@@ -126,13 +126,13 @@ export default function RosterRevisionPage() {
           <Table>
             <TableHeader>
               <tr>
-                <TableHead className="w-[170px]">{t.thSubmission}</TableHead>
+                <TableHead className="w-42.5">{t.thSubmission}</TableHead>
                 <TableHead>{t.thEmp}</TableHead>
-                <TableHead className="w-[150px] max-xl:hidden">
+                <TableHead className="w-37.5 max-xl:hidden">
                   {t.thWhen}
                 </TableHead>
-                <TableHead className="w-[180px]">{t.thStatus}</TableHead>
-                <TableHead className="w-[90px]">{t.thAct}</TableHead>
+                <TableHead className="w-45">{t.thStatus}</TableHead>
+                <TableHead className="w-22.5">{t.thAct}</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -148,7 +148,7 @@ export default function RosterRevisionPage() {
                         sub={`${g.rows.length} ${t.revCount}`}
                       />
                     </TableCell>
-                    <TableCell className="max-w-[340px]">
+                    <TableCell className="max-w-85">
                       {g.rows.map((r) => r.name).join(", ")}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-(--text-secondary) max-xl:hidden">

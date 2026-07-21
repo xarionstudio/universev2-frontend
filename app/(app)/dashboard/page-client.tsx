@@ -37,6 +37,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { WeatherCard } from "./_components/weather-card";
+
 type AttentionRow = {
   name: string;
   sub: string;
@@ -116,7 +118,10 @@ export default function DashboardPage() {
   const { userName, units } = useAppStore();
   const breakUnits = units.filter((u) => u.status === "breakdown");
   /* statistik dari sumber yang sama dengan modul & display TV */
-  const kurang = ftwData(lang).filter((r) => r.st === "kurang");
+  /* "Unfit" = benar-benar tidak boleh bekerja (dipulangkan, < 4 jam).
+     Spare tidak dihitung di sini karena masih boleh bekerja setelah
+     istirahat tambahan. */
+  const kurang = ftwData(lang).filter((r) => r.st === "pulang");
   const attToday = attDayRows(lang, false).filter((r) => r.st !== "off");
   const belumAbsen = attToday.filter((r) => r.st === "belum");
   const [q, setQ] = React.useState("");
@@ -184,6 +189,9 @@ export default function DashboardPage() {
           <b className="font-mono text-(--text-secondary)">{freshTime}</b>
         </Fresh>
       </PageTitle>
+
+      {/* Cuaca lokasi saat ini — tepat setelah salam, di atas strip KPI. */}
+      <WeatherCard />
 
       <div className="grid grid-cols-4 gap-4 max-xl:grid-cols-2">
         <StatCard
@@ -261,14 +269,14 @@ export default function DashboardPage() {
           <ToolbarTitle>{t.panelTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.searchPh}
               aria-label={t.searchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-[170px]"
+              wrapperClassName="w-42.5"
               aria-label={t.thStatus}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

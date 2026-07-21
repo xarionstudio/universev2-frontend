@@ -36,6 +36,7 @@ export type MenuVis = {
   employees: boolean;
   ftw: boolean;
   asset: boolean;
+  prestasi: boolean;
   master: boolean;
   users: boolean;
 };
@@ -143,6 +144,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     employees: true,
     ftw: true,
     asset: true,
+    prestasi: true,
     master: true,
     users: true,
   });

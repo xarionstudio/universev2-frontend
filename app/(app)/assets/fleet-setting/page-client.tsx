@@ -207,7 +207,7 @@ export default function FleetSettingPage() {
           <ToolbarTitle>{t.flListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-[240px]"
+              className="w-60"
               placeholder={t.flSearchPh}
               aria-label={t.flSearchPh}
               value={listQ}
@@ -240,7 +240,7 @@ export default function FleetSettingPage() {
                   {f.bus}
                 </TableCell>
                 <TableCell>
-                  <div className="flex max-w-[320px] flex-wrap gap-1">
+                  <div className="flex max-w-80 flex-wrap gap-1">
                     {f.units.map((u) => (
                       <Badge key={u} variant="info">
                         {u}
@@ -391,7 +391,7 @@ export default function FleetSettingPage() {
                         key={c}
                         onClick={() => toggleUnit(c)}
                         aria-label={`${t.empDel} ${c}`}
-                        className="flex cursor-pointer items-center gap-1 rounded-chip border border-(--badge-info-border) bg-(--badge-info-fill) px-2 py-1 font-mono text-xs font-semibold text-(--color-primary-bright) hover:border-(--badge-danger-border) hover:text-(--color-danger-text)"
+                        className="flex cursor-pointer items-center gap-1 rounded-chip border border-(--badge-info-border) bg-(--badge-info-fill) px-2 py-1 font-mono text-xs font-semibold text-primary-bright hover:border-(--badge-danger-border) hover:text-danger-text"
                       >
                         {c}
                         <X className="size-3" />

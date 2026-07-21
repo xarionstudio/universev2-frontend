@@ -284,7 +284,7 @@ export default function RosterRevisionNewPage() {
             <ToolbarTitle>{t.revListTitle}</ToolbarTitle>
             <ToolbarGroup>
               <SearchInput
-                className="w-[240px]"
+                className="w-60"
                 placeholder={t.searchEmp}
                 aria-label={t.searchEmp}
                 value={q}
@@ -297,7 +297,7 @@ export default function RosterRevisionNewPage() {
           </Toolbar>
           {entries.length === 0 ? (
             <StateBox
-              icon={<CalendarDays className="text-(--color-primary-bright)" />}
+              icon={<CalendarDays className="text-primary-bright" />}
               title={t.revEmptyT}
               body={t.revEmptyB}
             />
@@ -309,7 +309,7 @@ export default function RosterRevisionNewPage() {
                     <TableHead>{t.thEmp}</TableHead>
                     <TableHead>{t.lblDate}</TableHead>
                     <TableHead>{t.thChange}</TableHead>
-                    <TableHead className="w-[60px]">{t.thAct}</TableHead>
+                    <TableHead className="w-15">{t.thAct}</TableHead>
                   </tr>
                 </TableHeader>
                 <TableBody>

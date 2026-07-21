@@ -1,5 +1,7 @@
 /* Data karyawan (master) + kompetensi alat berat per operator — dari desain */
 
+import { ftwEvaluate, type FtwStatus } from "@/lib/data/ftw";
+
 export type Komp = { cls: string; simper: string; exp: string };
 
 export type Employee = {
@@ -24,6 +26,10 @@ export type Employee = {
   hp: string;
   emg: string;
   komp?: Komp[];
+  /* URL foto karyawan (mis. "/foto/503264133.jpg"). Belum ada aset foto di
+     repo ini, jadi nilainya kosong dan UI otomatis jatuh ke avatar inisial —
+     begitu foto asli tersedia, cukup isi field ini tanpa ubah komponen. */
+  foto?: string;
 };
 
 export const employees: Employee[] = [
@@ -529,19 +535,29 @@ export function withKomp(list: Employee[]): Employee[] {
 }
 
 /* status fit-to-work hari ini per operator (dipakai alokasi) */
-export const ftwTodayMap: Record<string, "fit" | "kurang" | "belum"> = {
-  "503264133": "fit",
-  "503264136": "fit",
-  "503264135": "kurang",
-  "503264139": "belum",
-  "503264142": "fit",
-  "503264150": "fit",
-  "503264146": "fit",
-  "503264147": "fit",
-  "503264148": "belum",
-  "503264149": "fit",
-  "503264151": "fit",
-  "503264152": "kurang",
-  "503264153": "fit",
-  "503264154": "fit",
+/* Menit tidur hari ini per operator. Statusnya TIDAK ditulis tangan —
+   diturunkan lewat ftwEvaluate() supaya tidak mungkin berbeda dengan aturan
+   di modul Fit To Work maupun perhitungan poin Prestasi. */
+export const ftwTodaySleepMin: Record<string, number | null> = {
+  "503264133": 440, // 7j20 → fit
+  "503264136": 425, // 7j05 → fit
+  "503264135": 220, // 3j40 → dipulangkan
+  "503264139": null, //      → belum kirim log
+  "503264142": 375, // 6j15 → fit
+  "503264150": 400, // 6j40 → fit
+  "503264146": 315, // 5j15 → spare (istirahat 1 jam)
+  "503264147": 390, // 6j30 → fit
+  "503264148": null, //      → belum kirim log
+  "503264149": 445, // 7j25 → fit
+  "503264151": 270, // 4j30 → spare (istirahat 2 jam)
+  "503264152": 210, // 3j30 → dipulangkan
+  "503264153": 460, // 7j40 → fit
+  "503264154": 355, // 5j55 → fit
 };
+
+export const ftwTodayMap: Record<string, FtwStatus> = Object.fromEntries(
+  Object.entries(ftwTodaySleepMin).map(([nik, min]) => [
+    nik,
+    ftwEvaluate(min).status,
+  ])
+);

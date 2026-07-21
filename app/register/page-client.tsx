@@ -40,7 +40,7 @@ const POSITIONS = [
 const DEPARTMENTS = ["Operation", "Plant", "SDI", "HRGA", "SHE"];
 
 const ctaClass =
-  "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-(--color-on-cta) shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-primary)";
+  "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 export default function RegisterPage() {
   const { t } = useI18n();
@@ -135,10 +135,10 @@ export default function RegisterPage() {
 
           {/* kartu status */}
           <div className="flex flex-1 items-center justify-center p-6">
-            <div className="flex w-[380px] flex-col items-center gap-6 rounded-panel px-12 py-14 text-center glass-card">
+            <div className="flex w-95 flex-col items-center gap-6 rounded-panel px-12 py-14 text-center glass-card">
               {state === "loading" ? (
                 <>
-                  <div className="size-24 animate-spin rounded-full border-[5px] border-[rgba(0,212,255,.2)] border-t-(--color-primary)" />
+                  <div className="size-24 animate-spin rounded-full border-[5px] border-[rgba(0,212,255,.2)] border-t-primary" />
                   <div className="flex flex-col gap-3">
                     <h2 className="text-[28px] font-bold">{t.regLoadingT}</h2>
                     <p className="text-sm leading-relaxed text-(--text-secondary)">
@@ -166,11 +166,8 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <div className="grid size-20 flex-none place-items-center rounded-full border-[3px] border-dashed border-(--color-danger)">
-                    <X
-                      className="size-9 text-(--color-danger-text)"
-                      strokeWidth={2.5}
-                    />
+                  <div className="grid size-20 flex-none place-items-center rounded-full border-[3px] border-dashed border-danger">
+                    <X className="size-9 text-danger-text" strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col gap-3">
                     <h2 className="text-[28px] font-bold">{t.regFailT}</h2>
@@ -198,11 +195,11 @@ export default function RegisterPage() {
       <div className="pointer-events-none fixed -bottom-35 -left-20 z-0 size-120 rounded-full bg-(--blob-blue) blur-[130px]" />
 
       <div className="relative z-1 grid min-h-screen place-items-center p-6">
-        <main className="relative h-[900px] w-full max-w-[1300px] [zoom:0.8] max-lg:h-auto max-lg:max-w-[560px]">
+        <main className="relative h-225 w-full max-w-325 zoom-[0.8] max-lg:h-auto max-lg:max-w-140">
           {/* ── panel kiri: foto + hero + fitur ── */}
           <div
             data-theme="dark"
-            className="absolute top-0 left-0 h-full w-[590px] overflow-hidden rounded-panel border border-(--glass-1-border) text-(--text-primary) max-lg:hidden"
+            className="absolute top-0 left-0 h-full w-147.5 overflow-hidden rounded-panel border border-(--glass-1-border) text-(--text-primary) max-lg:hidden"
           >
             <Image
               src="/register-bg.avif"
@@ -221,9 +218,9 @@ export default function RegisterPage() {
               }}
             />
 
-            <div className="relative z-10 flex h-full flex-col justify-between px-[60px] py-[50px]">
+            <div className="relative z-10 flex h-full flex-col justify-between px-15 py-12.5">
               <div className="flex items-center gap-3">
-                <UniverseLogo priority className="size-[46px]" />
+                <UniverseLogo priority className="size-11.5" />
                 <div className="leading-tight">
                   <p className="text-[28px] font-bold tracking-(--tracking-brand)">
                     {appName}
@@ -246,7 +243,7 @@ export default function RegisterPage() {
                     {t.regHero2}
                   </h1>
                 </div>
-                <p className="max-w-[400px] text-sm leading-relaxed text-(--text-secondary)">
+                <p className="max-w-100 text-sm leading-relaxed text-(--text-secondary)">
                   {t.regHeroDesc}
                 </p>
                 <div className="flex flex-col gap-4 pt-2">
@@ -254,7 +251,7 @@ export default function RegisterPage() {
                     <div key={f.label} className="flex items-center gap-4">
                       <div className="grid size-10 flex-none place-items-center rounded-xl border border-(--badge-info-border) bg-(--badge-info-fill)">
                         <f.icon
-                          className="size-5 text-(--color-primary-bright)"
+                          className="size-5 text-primary-bright"
                           strokeWidth={1.5}
                         />
                       </div>
@@ -269,9 +266,9 @@ export default function RegisterPage() {
           </div>
 
           {/* ── panel kanan: form — overlap 20px di atas panel kiri ── */}
-          <div className="absolute top-0 left-[570px] z-10 h-full w-[730px] rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
-            <div className="flex h-full flex-col items-center px-10 py-[50px] max-lg:px-8">
-              <LogoBadge className="size-[90px]" logoClassName="size-10" />
+          <div className="absolute top-0 left-142.5 z-10 h-full w-182.5 rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
+            <div className="flex h-full flex-col items-center px-10 py-12.5 max-lg:px-8">
+              <LogoBadge className="size-22.5" logoClassName="size-10" />
               <div className="mt-5 flex flex-col items-center gap-0.5 text-center">
                 <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
                   {t.regTitle}
@@ -282,12 +279,12 @@ export default function RegisterPage() {
               <form
                 onSubmit={onSubmit}
                 noValidate
-                className="mt-[30px] flex w-full flex-col gap-4"
+                className="mt-7.5 flex w-full flex-col gap-4"
               >
                 <div
                   role="alert"
                   className={cn(
-                    "items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-(--color-danger-text)",
+                    "items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-danger-text",
                     errs.length ? "flex" : "hidden"
                   )}
                 >
@@ -470,12 +467,12 @@ function PwField({
           onClick={onToggle}
           aria-pressed={show}
           aria-label={toggleLabel}
-          className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-(--color-primary)"
+          className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-primary"
         >
           {show ? (
-            <EyeOff className="size-[17px]" />
+            <EyeOff className="size-4.25" />
           ) : (
-            <Eye className="size-[17px]" />
+            <Eye className="size-4.25" />
           )}
         </button>
       </div>

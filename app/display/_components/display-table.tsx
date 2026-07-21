@@ -24,7 +24,7 @@ export function DisplayBadge({
       "text-(--badge-warning-text) bg-(--badge-warning-fill) border-(--badge-warning-border)",
     danger:
       "text-(--badge-danger-text) bg-(--badge-danger-fill) border-(--badge-danger-border)",
-    info: "text-(--color-primary-bright) bg-[rgba(0,212,255,.12)] border-[rgba(0,212,255,.4)]",
+    info: "text-primary-bright bg-[rgba(0,212,255,.12)] border-[rgba(0,212,255,.4)]",
     neutral:
       "text-(--badge-neutral-text) bg-(--badge-neutral-fill) border-(--badge-neutral-border)",
   };
