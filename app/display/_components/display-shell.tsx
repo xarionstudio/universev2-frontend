@@ -47,13 +47,37 @@ export function DisplayShell({
   const [dateLine, setDateLine] = React.useState("");
   const [online, setOnline] = React.useState(true);
 
-  /* letterbox scale-to-fit: kanvas tetap 1920×1080 */
+  /* Fit-to-screen: kanvas TINGGINYA tetap 1080, LEBARNYA mengikuti rasio layar.
+
+     Versi lama memakai kanvas kaku 1920x1080 lalu diskalakan seragam dan
+     dipusatkan — pas di panel 16:9, tapi menyisakan bilah hitam di rasio lain
+     (diukur: 10% terbuang di 16:10, 25% di ultrawide 21:9, 3,8% di jendela
+     1,85:1). Menariknya bilah itu tidak bisa dihilangkan dengan menskalakan
+     lebih besar: memaksa penuh berarti memilih antara MEREGANGKAN (lingkaran
+     jadi lonjong, huruf gepeng) atau MEMOTONG (kolom terakhir hilang di luar
+     layar) — dua-duanya lebih buruk daripada bilah hitam.
+
+     Jalan keluarnya bukan mengubah skala, melainkan mengubah BENTUK kanvas:
+     tinggi dikunci 1080 supaya seluruh ukuran huruf yang sudah disetel tetap
+     berlaku apa adanya, sedangkan lebar dihitung dari rasio layar. Layar lebih
+     lebar = kanvas lebih lebar, dan tata letaknya memang flex/grid sehingga
+     ruang tambahan itu terserap jadi kolom yang lebih lega, bukan jadi
+     bilah hitam.
+
+     MIN_W menjaga layar yang lebih sempit dari 4:3 (mis. jendela yang
+     diperkecil): di bawah itu kanvas berhenti menyempit dan perilakunya
+     kembali ke letterbox, karena memaksakannya akan meremukkan tata letak. */
   React.useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
+    const MIN_W = 1440;
     function rescale() {
-      const s = Math.min(innerWidth / 1920, innerHeight / 1080);
-      cv!.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px,${(innerHeight - 1080 * s) / 2}px) scale(${s})`;
+      const vw = innerWidth;
+      const vh = innerHeight;
+      const w = Math.max(MIN_W, Math.round((vw / vh) * 1080));
+      const s = Math.min(vw / w, vh / 1080);
+      cv!.style.width = `${w}px`;
+      cv!.style.transform = `translate(${(vw - w * s) / 2}px,${(vh - 1080 * s) / 2}px) scale(${s})`;
     }
     rescale();
     window.addEventListener("resize", rescale);
@@ -180,32 +204,36 @@ export function DisplayShell({
             </div>
           ) : null}
 
-          {/* stat kiosk (G2) */}
-          <div className="grid flex-none grid-cols-4 gap-5">
-            {stats.map((s) => (
-              <div
-                key={s.label}
-                className="flex items-center gap-5 rounded-card px-6 py-4 glass-card"
-              >
+          {/* Stat kiosk (G2) — dilewati sepenuhnya bila kosong. Layar monitor
+              memakai ruang ini untuk kuadran fleet dan menaruh angkanya di
+              tiap kuadran; merender wadah kosong tetap memakan satu gap-7. */}
+          {stats.length ? (
+            <div className="grid flex-none grid-cols-4 gap-5">
+              {stats.map((s) => (
                 <div
-                  className={cn(
-                    "grid size-13 flex-none place-items-center rounded-icon border [&_svg]:size-6.5",
-                    s.iconClass
-                  )}
+                  key={s.label}
+                  className="flex items-center gap-5 rounded-card px-6 py-4 glass-card"
                 >
-                  {s.icon}
-                </div>
-                <div>
-                  <div className="text-[52px] leading-none font-bold tabular-nums">
-                    {s.value}
+                  <div
+                    className={cn(
+                      "grid size-13 flex-none place-items-center rounded-icon border [&_svg]:size-6.5",
+                      s.iconClass
+                    )}
+                  >
+                    {s.icon}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-(--text-secondary)">
-                    {s.label}
+                  <div>
+                    <div className="text-[52px] leading-none font-bold tabular-nums">
+                      {s.value}
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-(--text-secondary)">
+                      {s.label}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
 
           {children}
         </div>

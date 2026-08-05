@@ -52,12 +52,12 @@ export default function RosterDetailPage() {
   const legendGroups = legendGroupsFor(lang);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
         title={`${t.rdDetailTitle} — ${meta.label} · ${meta.dept}`}
         sub={t.rdDetailSub}
       >
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => router.push("/roster/data")}>
             <ArrowLeft />
             {t.upBack}
@@ -77,7 +77,7 @@ export default function RosterDetailPage() {
           <ToolbarTitle>{meta.file}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}

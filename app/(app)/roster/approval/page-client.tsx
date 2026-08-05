@@ -118,7 +118,7 @@ export default function RosterApprovalPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.apTitle} sub={t.apSub} />
 
       <Panel>
@@ -126,7 +126,7 @@ export default function RosterApprovalPage() {
           <ToolbarTitle>{t.apQueue}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}

@@ -35,7 +35,7 @@ function Dialog({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-100 grid place-items-center bg-(--scrim) p-6 backdrop-blur-[6px]"
+      className="fixed inset-0 z-100 grid place-items-center overflow-y-auto bg-(--scrim) p-6 backdrop-blur-[6px] max-sm:p-3"
     >
       <div
         role="dialog"
@@ -43,8 +43,10 @@ function Dialog({
         aria-labelledby={labelledBy}
         className={cn(
           /* flex-col + max-h viewport: konten panjang scroll di area min-h-0,
-             tombol aksi tetap terlihat di layar pendek */
-          "flex max-h-[calc(100dvh-48px)] w-[min(460px,100%)] flex-col rounded-panel border border-(--glass-2-border) bg-(--overlay-fill) p-6 shadow-(--shadow-modal)",
+             tombol aksi tetap terlihat di layar pendek. max-h mengikuti
+             padding scrim-nya (48px desktop, 24px ponsel) agar kartunya tidak
+             pernah lebih tinggi dari ruang yang tersedia. */
+          "flex max-h-[calc(100dvh-48px)] w-[min(460px,100%)] flex-col rounded-panel border border-(--glass-2-border) bg-(--overlay-fill) p-6 shadow-(--shadow-modal) max-sm:max-h-[calc(100dvh-24px)] max-sm:rounded-card max-sm:p-4",
           className
         )}
       >
@@ -111,7 +113,10 @@ function DialogActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-actions"
-      className={cn("mt-6 flex flex-none justify-end gap-2", className)}
+      className={cn(
+        "mt-6 flex flex-none flex-wrap justify-end gap-2 max-sm:mt-4",
+        className
+      )}
       {...props}
     />
   );

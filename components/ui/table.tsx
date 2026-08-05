@@ -2,14 +2,35 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-/* Tabel data (dt) — thead gradient, baris ber-divider, hover halus */
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/* Tabel data (dt) — thead gradient, baris ber-divider, hover halus.
+
+   Tabel SELALU dibungkus wadah bergulir sendiri. Tanpa ini, tabel 6-8 kolom
+   (header-nya whitespace-nowrap) melebar melewati panel di layar sempit;
+   karena `body { overflow-x: hidden }` kelebihannya bukan digulirkan melainkan
+   TERPOTONG — kolom terakhir jadi tidak pernah bisa dibaca di ponsel. Wadahnya
+   di sini, bukan di 24 pemanggil, supaya tidak ada tabel yang terlewat.
+
+   overscroll-x-contain: gulir mentok di tabel tidak merambat jadi navigasi
+   "geser untuk kembali" di browser ponsel. */
+function Table({
+  className,
+  wrapperClassName,
+  ...props
+}: React.ComponentProps<"table"> & { wrapperClassName?: string }) {
   return (
-    <table
-      data-slot="table"
-      className={cn("w-full border-collapse text-sm", className)}
-      {...props}
-    />
+    <div
+      data-slot="table-wrap"
+      className={cn(
+        "w-full max-w-full overflow-x-auto overscroll-x-contain",
+        wrapperClassName
+      )}
+    >
+      <table
+        data-slot="table"
+        className={cn("w-full border-collapse text-sm", className)}
+        {...props}
+      />
+    </div>
   );
 }
 
@@ -85,8 +106,11 @@ function NameCell({
   sub?: React.ReactNode;
   className?: string;
 }) {
+  /* whitespace-nowrap: begitu tabel bisa digulir, memeras kolom nama sampai
+     "First Angel Paustine" pecah jadi tiga baris tidak menghemat apa pun —
+     itu hanya memindahkan sesaknya dari sumbu X ke sumbu Y. */
   return (
-    <span className={className}>
+    <span className={cn("block whitespace-nowrap", className)}>
       <b className="block font-semibold">{name}</b>
       {sub !== undefined && sub !== "" ? (
         <span className="font-mono text-xs text-(--text-tertiary)">{sub}</span>

@@ -489,6 +489,16 @@
   }
 }
 
+/* CATATAN PREFIKS WEBKIT — berlaku untuk seluruh backdrop-filter di berkas ini.
+   Prefiks -webkit- TIDAK ditulis tangan. Lightning CSS (minifier Tailwind v4)
+   menambahkannya otomatis: hasil build berisi
+     -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
+   untuk kesepuluh pemakaiannya. Menulisnya manual justru berbahaya — lihat
+   alasan lengkapnya di blok [data-wx="motion"] di bagian bawah berkas:
+   prefiks manual SETELAH properti standar membuat versi standarnya dibuang
+   saat minifikasi. Peringatan "not supported by Safari" dari Edge DevTools
+   membaca berkas SUMBER, bukan hasil build, jadi itu positif palsu dan
+   dibungkam terarah lewat .hintrc di root proyek. */
 @utility glass-panel {
   background: var(--glass-1-fill);
   border: 1px solid var(--glass-1-border);
@@ -503,6 +513,11 @@
   box-shadow: var(--shadow-card-glow);
 }
 
+/* scrollbar-width baru didukung Chrome 121+/Safari 18.2+, dan itu justru
+   sebabnya ::-webkit-scrollbar ada di bawahnya — mesin lama memakai jalur
+   kedua, mesin baru memakai properti standar. Peringatan kompatibilitas untuk
+   baris pertama mengabaikan fallback di baris ketiga; ikut dibungkam di
+   .hintrc. */
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -1138,6 +1153,33 @@
     opacity: 0.3;
   }
 }
+/* Pergantian fleet di layar monitor — kartu menutup lalu membuka.
+   Diputar pada sumbu Y dengan perspective dari wadah grid, jadi kartunya
+   terbaca seperti daun pintu yang ditutup lalu dibuka lagi berisi fleet
+   berikutnya. Delay per kolom di-set inline supaya jalannya menyapu dari kiri
+   ke kanan, bukan berkedip serempak.
+   HANYA transform & opacity yang beranimasi — keduanya dikomposit GPU,
+   sehingga 14 kartu sekaligus tetap mulus di stik TV yang lemah. */
+@keyframes kflip-out {
+  from {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotateY(-88deg) scale(0.94);
+    opacity: 0;
+  }
+}
+@keyframes kflip-in {
+  from {
+    transform: rotateY(88deg) scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
 /* running text display — teks berjalan dari kanan ke kiri */
 @keyframes kmarquee {
   from {
@@ -1159,5 +1201,13 @@
   }
   .display-marquee {
     animation-duration: 90s !important;
+  }
+  /* Pergantian fleet tetap terjadi — yang dihapus hanya putarannya. Kartu
+     langsung berganti isi; tanpa ini layar akan diam di satu fleet dan
+     informasi fleet lain tidak pernah tampil. */
+  .display-flip {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

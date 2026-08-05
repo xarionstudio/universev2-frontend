@@ -170,7 +170,12 @@ export function Sidebar() {
           "sticky top-6 z-30 flex h-[calc(100vh-48px)] flex-none flex-col self-start rounded-panel px-3 py-5 shadow-[var(--shadow-panel),inset_0_1px_40px_var(--inset-glow)] glass-panel transition-[width] duration-250",
           collapsed ? "w-18 px-2 py-4" : "w-70",
           // tablet: off-canvas
-          "max-xl:fixed max-xl:top-0 max-xl:bottom-0 max-xl:left-0 max-xl:z-120 max-xl:h-auto max-xl:w-[min(300px,84vw)] max-xl:rounded-l-none max-xl:bg-(--overlay-fill) max-xl:px-3 max-xl:py-5 max-xl:shadow-(--shadow-modal) max-xl:transition-transform",
+          /* h-dvh, bukan h-auto: dengan top-0 + bottom-0 panelnya tetap
+             berhenti setinggi isinya (617px di layar 800px), jadi laci
+             mengambang dengan tepi bawah membulat di tengah layar dan konten
+             halaman terlihat di bawahnya. dvh juga ikut menyesuaikan bilah
+             alamat browser ponsel yang muncul-hilang. */
+          "max-xl:fixed max-xl:top-0 max-xl:bottom-0 max-xl:left-0 max-xl:z-120 max-xl:h-dvh max-xl:w-[min(300px,84vw)] max-xl:rounded-l-none max-xl:bg-(--overlay-fill) max-xl:px-3 max-xl:py-5 max-xl:shadow-(--shadow-modal) max-xl:transition-transform",
           sideOpen ? "max-xl:translate-x-0" : "max-xl:translate-x-[-105%]"
         )}
       >

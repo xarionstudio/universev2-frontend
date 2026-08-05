@@ -296,7 +296,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.umUsersT} sub={t.umSub}>
         {canManage ? (
           <Button onClick={openAdd}>
@@ -313,14 +313,14 @@ export default function UsersPage() {
           <ToolbarTitle>{t.umUserListT}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.umSearchPh}
               aria-label={t.umSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-37.5"
+              wrapperClassName="w-37.5 max-sm:w-full"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}
@@ -330,7 +330,7 @@ export default function UsersPage() {
               <option value="off">{t.stNonaktif}</option>
             </Select>
             <Select
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               aria-label="Role"
               value={roleF}
               onChange={(e) => setRoleF(e.target.value)}

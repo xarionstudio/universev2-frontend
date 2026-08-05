@@ -129,9 +129,9 @@ export default function RosterUploadPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navR1} sub={t.upSub}>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => router.push("/roster/data")}>
             <ArrowLeft />
             {t.upBack}
@@ -187,7 +187,7 @@ export default function RosterUploadPage() {
       </Panel>
 
       {stage === "results" ? (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-sm:gap-4">
           <Panel>
             <Toolbar className="mb-4">
               <ToolbarTitle>
@@ -195,7 +195,7 @@ export default function RosterUploadPage() {
               </ToolbarTitle>
               <ToolbarGroup>
                 <SearchInput
-                  className="w-60"
+                  className="w-60 max-sm:w-full"
                   placeholder={t.searchEmp}
                   aria-label={t.searchEmp}
                   value={qPrev}
@@ -267,7 +267,7 @@ export default function RosterUploadPage() {
               </ToolbarTitle>
               <ToolbarGroup>
                 <SearchInput
-                  className="w-60"
+                  className="w-60 max-sm:w-full"
                   placeholder={t.searchEmp}
                   aria-label={t.searchEmp}
                   value={qErr}
@@ -333,7 +333,7 @@ export default function RosterUploadPage() {
                   perOptions={["10", "25", "50"]}
                   onPer={pgErr.setPer}
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
                     onClick={() =>

@@ -100,7 +100,7 @@ function AttendanceInner() {
   const pg = usePagination(rows);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
         title={t.navR4}
         sub={
@@ -121,7 +121,7 @@ function AttendanceInner() {
           <ToolbarTitle>{t.attLog}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -129,7 +129,7 @@ function AttendanceInner() {
             />
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
@@ -142,7 +142,7 @@ function AttendanceInner() {
             </Select>
             <Select
               aria-label={t.allDepts}
-              wrapperClassName="w-45"
+              wrapperClassName="w-45 max-sm:w-full"
               value={dept}
               onChange={(e) => setDept(e.target.value)}
             >
@@ -152,7 +152,7 @@ function AttendanceInner() {
               <option>HRGA</option>
               <option>Plant</option>
             </Select>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
               <label
                 htmlFor="att-from"
                 className="text-xs text-(--text-tertiary)"
@@ -162,15 +162,17 @@ function AttendanceInner() {
               <Input
                 id="att-from"
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
               />
-              <span className="text-(--text-tertiary)">–</span>
+              <span className="text-(--text-tertiary) max-sm:text-center">
+                –
+              </span>
               <Input
                 id="att-to"
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 aria-label={t.lblDateTo}
                 value={to}
                 onChange={(e) => setTo(e.target.value)}

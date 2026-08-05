@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import PageClient from "./page-client";
 
 export const metadata: Metadata = {
-  title: "Unit No-Operator",
+  title: "Pengelolaan Display Monitor",
   description:
-    "Alokasi unit ke operator per shift — status fit-to-work ditarik langsung dari log tidur.",
+    "TV multi-fleet — atur fleet yang tayang, urutan giliran, dan durasi per giliran.",
 };
 
 export default function Page() {

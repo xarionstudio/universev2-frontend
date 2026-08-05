@@ -31,7 +31,7 @@
 import type { Employee } from "@/lib/data/employees";
 import type { FaAlloc } from "@/lib/data/fleet-alloc";
 import { ftwEvaluate, type FtwStatus } from "@/lib/data/ftw";
-import { typeOfEgi, unitsDb } from "@/lib/data/units-db";
+import { eqClassDefs, typeOfEgi, unitsDb } from "@/lib/data/units-db";
 
 /* ---------- Rumus poin ---------- */
 
@@ -249,6 +249,30 @@ const UNITS_BY_CLASS: Map<string, string[]> = (() => {
 const CLASS_OF_UNIT: Map<string, string> = new Map(
   unitsDb.map((u) => [u.code, typeOfEgi(u.egi)])
 );
+
+/* ---------- Eq. class ----------
+
+   Eq. class DIBACA APA ADANYA dari master unit (kolom `cls`), bukan diturunkan
+   dari Type EGI: satu Type EGI bisa memuat unit dengan eq class berbeda, dan
+   yang dipakai orang lapangan adalah kode kelas di master unit. Deskripsinya
+   diambil dari `eqClassDefs` supaya kode dan artinya selalu sama dengan
+   Master Data → Eq. Class, tanpa daftar kembar di modul ini. */
+const EQCLASS_OF_UNIT: Map<string, string> = new Map(
+  unitsDb.map((u) => [u.code, u.cls])
+);
+
+const EQCLASS_DESC: Map<string, string> = new Map(eqClassDefs);
+
+export function eqClassOfUnit(unitCode: string | null): string | null {
+  if (!unitCode) return null;
+  return EQCLASS_OF_UNIT.get(unitCode) || null;
+}
+
+/* Deskripsi kelas. Kode yang belum terdaftar di master dikembalikan apa adanya
+   supaya barisnya tetap muncul dan datanya yang pincang justru kelihatan. */
+export function eqClassLabel(cls: string): string {
+  return EQCLASS_DESC.get(cls) ?? cls;
+}
 
 /* Pilih unit untuk seorang operator pada satu tanggal — deterministik, dan
    melewati unit yang sudah dipakai orang lain di hari yang sama. */
@@ -618,6 +642,133 @@ export function buildLeaderboard({
     r.rank = i + 1;
   });
   return rows;
+}
+
+/* ---------- Papan peringkat per Eq. Class ---------- */
+
+export type PrestasiClassRow = {
+  /* peringkat DI DALAM kelas ini, bukan peringkat keseluruhan */
+  rank: number;
+  nik: string;
+  name: string;
+  dept: string;
+  pos: string;
+  foto?: string;
+  /* poin dari hari-hari di kelas ini saja — lihat catatan buildClassBoards */
+  points: number;
+  qualifiedDays: number;
+  penaltyDays: number;
+  coverDays: number;
+  /* kode unit kelas ini yang pernah dipegang, urut A→Z */
+  units: string[];
+};
+
+export type PrestasiClassBoard = {
+  /* kode eq. class, mis. "HD" */
+  cls: string;
+  /* deskripsi kode, mis. "Heavy Dump Truck (60–100 t)" */
+  desc: string;
+  points: number;
+  qualifiedDays: number;
+  penaltyDays: number;
+  rows: PrestasiClassRow[];
+};
+
+/* Membagi klasemen menjadi beberapa papan — satu per Eq. Class — dari hari-hari
+   yang SUDAH dihitung `buildLeaderboard`. Tidak ada simulasi ulang, jadi
+   angkanya mustahil berbeda dengan klasemen lengkap.
+
+   Kelas sebuah hari diambil dari unit yang dipegang hari itu:
+     · Hari tanpa unit (roster bukan D/N, atau tidak ada unit yang bisa
+       ditetapkan) tidak masuk papan mana pun — tidak ada kelas alat yang bisa
+       dipertanggungjawabkan.
+     · Hari "digantikan" tetap masuk kelas unit yang DITINGGALKAN: potongan itu
+       memang milik kelas tersebut, karena di situlah unit nyaris menganggur.
+     · Satu operator bisa muncul di beberapa papan bila dalam periode itu ia
+       memegang unit dari kelas berbeda — memang begitu keadaannya di lapangan.
+
+   Poin papan kelas = jumlah poin harian kelas itu SAJA. Bonus konsistensi
+   (`PTS_STREAK_STEP`) tidak dibagi ke kelas mana pun karena rentetannya lintas
+   unit, sehingga jumlah poin seluruh papan bisa lebih kecil dari poin klasemen
+   lengkap. Ini disengaja: memecah bonus itu berarti mengarang angka. */
+export function buildClassBoards(board: PrestasiEntry[]): PrestasiClassBoard[] {
+  /* cls → nik → baris */
+  const byCls = new Map<string, Map<string, PrestasiClassRow>>();
+
+  for (const e of board) {
+    for (const d of e.days) {
+      const cls = eqClassOfUnit(d.unitCode);
+      if (!cls) continue;
+
+      let rowMap = byCls.get(cls);
+      if (!rowMap) {
+        rowMap = new Map();
+        byCls.set(cls, rowMap);
+      }
+
+      let row = rowMap.get(e.nik);
+      if (!row) {
+        row = {
+          rank: 0,
+          nik: e.nik,
+          name: e.name,
+          dept: e.dept,
+          pos: e.pos,
+          foto: e.foto,
+          points: 0,
+          qualifiedDays: 0,
+          penaltyDays: 0,
+          coverDays: 0,
+          units: [],
+        };
+        rowMap.set(e.nik, row);
+      }
+
+      row.points += d.points;
+      if (d.outcome === "qualified" || d.outcome === "replacement") {
+        row.qualifiedDays++;
+        if (d.outcome === "replacement") row.coverDays++;
+      } else if (
+        d.outcome === "replacedAbsent" ||
+        d.outcome === "replacedSleep"
+      ) {
+        row.penaltyDays++;
+      }
+      if (d.unitCode && !row.units.includes(d.unitCode)) {
+        row.units.push(d.unitCode);
+      }
+    }
+  }
+
+  const boards: PrestasiClassBoard[] = [];
+  for (const [cls, rowMap] of byCls) {
+    const rows = [...rowMap.values()];
+    /* Tie-break disamakan dengan klasemen lengkap supaya kedua papan tidak
+       terasa memakai aturan berbeda */
+    rows.sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.qualifiedDays - a.qualifiedDays ||
+        a.name.localeCompare(b.name)
+    );
+    rows.forEach((r, i) => {
+      r.rank = i + 1;
+      r.units.sort();
+    });
+    boards.push({
+      cls,
+      desc: eqClassLabel(cls),
+      points: rows.reduce((s, r) => s + r.points, 0),
+      qualifiedDays: rows.reduce((s, r) => s + r.qualifiedDays, 0),
+      penaltyDays: rows.reduce((s, r) => s + r.penaltyDays, 0),
+      rows,
+    });
+  }
+
+  /* Urut kode A→Z — sama dengan Master Data → Eq. Class, jadi posisi sebuah
+     kelas tidak berpindah-pindah saat poinnya berubah. */
+  boards.sort((a, b) => a.cls.localeCompare(b.cls));
+  return boards;
 }
 
 /* "7 j 20 m" / "7 h 20 m" — mengikuti gaya ftw.ts */

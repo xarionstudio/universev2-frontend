@@ -89,7 +89,7 @@ export default function RosterRevisionPage() {
     : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navR2} sub={t.revListSub}>
         <Button onClick={() => router.push("/roster/revision/new")}>
           <Plus />
@@ -102,7 +102,7 @@ export default function RosterRevisionPage() {
           <ToolbarTitle>{t.rvListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -110,7 +110,7 @@ export default function RosterRevisionPage() {
             />
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               value={st}
               onChange={(e) => setSt(e.target.value)}
             >

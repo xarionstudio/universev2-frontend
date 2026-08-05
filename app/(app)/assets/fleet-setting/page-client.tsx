@@ -194,7 +194,7 @@ export default function FleetSettingPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navFleetSetting} sub={t.flSub}>
         <Button onClick={openAdd}>
           <Plus />
@@ -207,7 +207,7 @@ export default function FleetSettingPage() {
           <ToolbarTitle>{t.flListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.flSearchPh}
               aria-label={t.flSearchPh}
               value={listQ}

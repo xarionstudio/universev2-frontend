@@ -1,5 +1,6 @@
 import { employees, withKomp } from "./employees";
 import { initialFleets } from "./fleet";
+import { operatorAllocSeed, operatorSeed } from "./operators";
 import { typeOfEgi, unitsDb } from "./units-db";
 
 /* Alokasi operator→unit per TANGGAL + SHIFT — pengganti file setting-operator
@@ -18,16 +19,39 @@ export function isoAddDays(iso: string, days: number): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-/* Seed demo: greedy — telusuri formasi fleet aktif, isi unit yang beroperasi
-   dengan operator berkompetensi yang belum terpakai di shift itu.
-   Fleet yang punya display TV didahulukan (pool operator mock terbatas). */
-function seedShift(priorityFleetIds: string[]): Record<string, string> {
+/* Seed alokasi satu shift — DUA lapis, berurutan:
+
+     1. Penugasan sebenarnya dari docs/setting-operator.xlsx (operators.ts).
+        Ini yang mengisi hampir seluruh formasi, dan karena sumbernya sama
+        dengan yang membentuk fleet.ts, pasangan operator-unitnya konsisten.
+     2. Sisa unit yang tidak ada di file sumber diisi greedy seperti dulu:
+        operator berkompetensi cocok yang belum terpakai di shift itu.
+
+   Lapis kedua tetap ada supaya unit yang ditambahkan lewat Setting Fleet
+   setelah file sumber dibuat tidak langsung kosong di layar. */
+function seedShift(
+  shift: FaShift,
+  priorityFleetIds: string[]
+): Record<string, string> {
   const byCode = new Map(unitsDb.map((u) => [u.code, u]));
-  const ops = withKomp(employees).filter(
+  const ops = withKomp(employees.concat(operatorSeed)).filter(
     (e) => e.status === "aktif" && e.komp && e.komp.length
   );
   const used = new Set<string>();
   const out: Record<string, string> = {};
+
+  for (const [code, nik] of Object.entries(operatorAllocSeed[shift])) {
+    const u = byCode.get(code);
+    /* unit rusak/standby sengaja DILEWATI walau ada di file sumber: papan
+       alokasi dan layar TV membaca status unit dari Database Unit, dan
+       operator yang menempel di unit breakdown akan tampil sebagai kru yang
+       seolah tetap bekerja pada alat yang tidak jalan */
+    if (!u || !u.active || u.breakdown || u.standby) continue;
+    if (used.has(nik)) continue;
+    used.add(nik);
+    out[code] = nik;
+  }
+
   const rank = (f: { id: string }) => {
     const i = priorityFleetIds.indexOf(f.id);
     return i === -1 ? priorityFleetIds.length : i;
@@ -37,6 +61,7 @@ function seedShift(priorityFleetIds: string[]): Record<string, string> {
     .sort((a, b) => rank(a) - rank(b));
   for (const f of ordered) {
     for (const code of [f.digger, ...f.units]) {
+      if (out[code]) continue;
       const u = byCode.get(code);
       if (!u || !u.active || u.breakdown || u.standby) continue;
       const tegi = typeOfEgi(u.egi);
@@ -51,14 +76,17 @@ function seedShift(priorityFleetIds: string[]): Record<string, string> {
   return out;
 }
 
-/* Alokasi awal untuk tanggal-tanggal demo — kedua shift diisi mapping yang
-   sama (dummy; aslinya crew siang & malam berbeda orang) */
+/* Alokasi awal untuk tanggal-tanggal demo. Shift pagi & malam kini diseed
+   TERPISAH — file setting operator memang memuat kru yang berbeda untuk
+   SHIFT SIANG dan SHIFT MALAM, jadi menyalin satu mapping ke keduanya seperti
+   sebelumnya akan menampilkan orang yang sama bekerja 24 jam. */
 export function seedFaAlloc(
   dates: string[],
   priorityFleetIds: string[] = []
 ): FaAlloc {
-  const base = seedShift(priorityFleetIds);
+  const pagi = seedShift("pagi", priorityFleetIds);
+  const malam = seedShift("malam", priorityFleetIds);
   const alloc: FaAlloc = {};
-  for (const d of dates) alloc[d] = { pagi: { ...base }, malam: { ...base } };
+  for (const d of dates) alloc[d] = { pagi: { ...pagi }, malam: { ...malam } };
   return alloc;
 }

@@ -186,14 +186,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
         title={nik ? `${t.efTitleEdit} — ${record?.name}` : t.efTitleAdd}
         sub={t.efSubAdd}
       />
 
       <form onSubmit={submit} noValidate>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 max-sm:gap-4">
           <Panel>
             <SectionTitle>
               <Camera />
@@ -341,7 +341,10 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   {kompRows.map((k, i) => (
                     <div
                       key={i}
-                      className="grid grid-cols-[150px_1fr_170px_40px] items-center gap-3"
+                      /* 150+1fr+170+40 plus tiga gap butuh >420px; di ponsel
+                         barisnya jadi 2x2 (tipe EGI | SIMPER, masa berlaku |
+                         hapus) agar tetap terbaca sebagai satu kesatuan. */
+                      className="grid grid-cols-[150px_1fr_170px_40px] items-center gap-3 max-sm:grid-cols-2 max-sm:gap-2 max-sm:*:min-w-0"
                     >
                       <Select
                         value={k.cls}

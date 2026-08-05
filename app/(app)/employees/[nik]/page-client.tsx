@@ -22,7 +22,12 @@ import { Panel, SectionTitle } from "@/components/ui/panel";
 
 function Kv({ children }: { children: React.ReactNode }) {
   return (
-    <dl className="grid grid-cols-[180px_1fr] gap-x-4 gap-y-3 text-sm">
+    /* Kolom label 180px sudah lebih dari separuh layar 360px, jadi di ponsel
+       pasangan label–nilai ditumpuk. Jarak antar-pasangan diberikan lewat
+       margin pada <dt>, bukan gap: dalam satu kolom, gap yang sama membuat
+       label dan nilainya berjarak sama dengan jarak antar-baris sehingga
+       pengelompokannya hilang. */
+    <dl className="grid grid-cols-[180px_1fr] gap-x-4 gap-y-3 text-sm max-sm:grid-cols-1 max-sm:gap-y-0 max-sm:[&_dt]:mt-3 max-sm:[&_dt:first-child]:mt-0">
       {children}
     </dl>
   );
@@ -84,7 +89,7 @@ export default function EmployeeDetailPage({
   const st = statusMap[emp.status];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <Panel>
         <div className="flex flex-wrap items-center gap-6">
           <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">

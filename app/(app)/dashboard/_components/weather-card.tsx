@@ -5,6 +5,7 @@ import {
   Cloud,
   CloudFog,
   CloudRain,
+  CloudSun,
   Droplets,
   MapPin,
   Moon,
@@ -142,7 +143,14 @@ function ageLabel(t: Dict, ms: number): string {
 }
 
 /* Satu petak metrik. Sengaja TIDAK memakai glass-card: halaman sudah
-   membayar backdrop-filter untuk panel, StatCard, dan dua blob blur. */
+   membayar backdrop-filter untuk panel, StatCard, dan dua blob blur.
+
+   Label DI ATAS nilai, bukan sebaris. Versi sebelumnya menaruh keempat metrik
+   sebagai teks mengalir di kiri kartu selebar layar, menyisakan sepertiga
+   kanan kartu kosong melompong. Bentuk dua baris membuat tiap metrik jadi
+   kolom yang bisa dibagi rata sampai tepi kanan — ruangnya terpakai, dan
+   angkanya jadi berbaris rapi (tabular-nums) alih-alih berloncatan mengikuti
+   panjang labelnya. */
 function Metric({
   icon,
   label,
@@ -153,10 +161,12 @@ function Metric({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-(--text-tertiary) [&_svg]:size-3.5 [&_svg]:flex-none">
-      {icon}
-      <span className="truncate">{label}</span>
-      <b className="font-semibold text-(--text-secondary) tabular-nums">
+    <div className="min-w-0 border-l border-(--divider) px-4 first:border-l-0 max-sm:border-l-0 max-sm:px-0">
+      <div className="flex items-center gap-1.5 text-xs text-(--text-tertiary) [&_svg]:size-3.5 [&_svg]:flex-none">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <b className="mt-0.5 block text-sm font-semibold text-(--text-primary) tabular-nums">
         {value}
       </b>
     </div>
@@ -165,7 +175,16 @@ function Metric({
 
 export function WeatherCard({ className }: { className?: string }) {
   const { t } = useI18n();
-  const { data, locationLabel, locationSource, loading, nowMs } = useWeather();
+  const {
+    data,
+    locationLabel,
+    locationArea,
+    locationSource,
+    lat,
+    lon,
+    loading,
+    nowMs,
+  } = useWeather();
   const { enabled: fxOn, setEnabled: setFx } = useWeatherEffects();
 
   /* Belum pernah ada data yang berhasil: skeleton ringkas selama percobaan
@@ -197,10 +216,13 @@ export function WeatherCard({ className }: { className?: string }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         {/* Ikon judul TIDAK boleh berupa glyph kondisi: SectionTitle memaksa
             text-primary-bright, sehingga awan cyan di judul akan berdebat
-            dengan matahari di badan kartu. MapPin jujur — kartu ini memang
-            tentang lokasi site. */}
+            dengan matahari di badan kartu. CloudSun dipakai sebagai lambang
+            KATEGORI "cuaca" — tetap netral terhadap kondisi yang sedang
+            berlaku. MapPin dipindah ke baris lokasi, tempat ia benar-benar
+            menerangkan sesuatu; dua pin identik dalam satu kartu kecil hanya
+            mengulang hal yang sama dua kali. */}
         <SectionTitle className="mb-0">
-          <MapPin />
+          <CloudSun />
           {t.wxTitle}
         </SectionTitle>
         <div className="flex items-center gap-2">
@@ -238,7 +260,10 @@ export function WeatherCard({ className }: { className?: string }) {
         t={t}
         data={data}
         locationLabel={locationLabel}
+        locationArea={locationArea}
         locationSource={locationSource}
+        lat={lat}
+        lon={lon}
         stale={stale}
       />
     </Panel>
@@ -249,13 +274,19 @@ function WeatherBody({
   t,
   data,
   locationLabel,
+  locationArea,
   locationSource,
+  lat,
+  lon,
   stale,
 }: {
   t: Dict;
   data: Weather;
   locationLabel: string;
+  locationArea: string;
   locationSource: LocationSource;
+  lat: number | null;
+  lon: number | null;
   stale: boolean;
 }) {
   return (
@@ -268,15 +299,50 @@ function WeatherBody({
           {kindIcon(data.kind, data.isDay)}
         </div>
         <div className="min-w-0">
-          <div className="text-xl leading-tight font-semibold tabular-nums">
-            {n(data.tempC, t.wxUnitTemp)}
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl leading-tight font-semibold tabular-nums">
+              {n(data.tempC, t.wxUnitTemp)}
+            </span>
+            <span className="truncate text-xs text-(--text-secondary)">
+              {t[data.labelKey]}
+            </span>
           </div>
-          <div className="truncate text-xs text-(--text-secondary)">
-            {t[data.labelKey]} · {locationLabel || t.wxCurrentLocation}
+          {/* Lokasi jadi barisnya SENDIRI, bukan ekor di belakang kondisi.
+              Sebelumnya keduanya disambung ("Cerah · Kaubun") sehingga penanda
+              lokasi — satu-satunya bagian kartu yang bisa salah tanpa
+              ketahuan — justru yang paling tidak terlihat. Nama tempat
+              ditegaskan, kabupaten mengikut sebagai konteks. */}
+          <div className="mt-0.5 flex items-center gap-1.25 text-xs">
+            <MapPin className="size-3.25 flex-none text-(--text-tertiary)" />
+            <span className="truncate">
+              <b className="font-semibold text-(--text-secondary)">
+                {locationLabel || t.wxCurrentLocation}
+              </b>
+              {locationArea && locationArea !== locationLabel ? (
+                <span className="text-(--text-tertiary)">
+                  {" · "}
+                  {locationArea}
+                </span>
+              ) : null}
+            </span>
+            {/* Koordinat yang dipakai mengambil cuaca. Nama tempat hasil
+                geocoder bisa meleset satu tingkat administratif (desa ->
+                kecamatan) tanpa ada tanda apa pun di layar; koordinat bisa
+                langsung dicocokkan operator dengan peta, jadi kartu ini
+                berhenti meminta kepercayaan buta. */}
+            {lat !== null && lon !== null ? (
+              <span className="flex-none font-mono text-[10px] text-(--text-disabled)">
+                {lat.toFixed(4)}, {lon.toFixed(4)}
+              </span>
+            ) : null}
             {/* Kejujuran presisi: GPS = tepat (tanpa catatan); IP & fallback =
-                perkiraan tingkat kota. Digabung inline supaya tidak menambah
-                baris (dan tidak menggeser layout saat data pertama masuk). */}
-            {locationSource !== "gps" ? ` (${t.wxSiteApprox})` : ""}
+                perkiraan tingkat kota. Chip kecil, bukan tanda kurung yang
+                terbaca sebagai bagian dari nama tempat. */}
+            {locationSource !== "gps" ? (
+              <span className="flex-none rounded-chip border border-(--divider) px-1.5 text-[10px] text-(--text-tertiary)">
+                {t.wxSiteApprox}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -296,7 +362,11 @@ function WeatherBody({
       {/* Data basi: kondisi tetap ditampilkan sebagai ingatan, tapi angka
           detailnya berhenti diklaim. */}
       {!stale ? (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        /* ml-auto + flex-1 + grid-cols-4: blok metrik mengambil SELURUH sisa
+           lebar dan membaginya rata, jadi kartu terisi sampai tepi kanan alih-
+           alih berhenti di sepertiga kiri. Di ponsel kembali jadi dua kolom
+           yang mengalir. */
+        <div className="ml-auto grid flex-1 grid-cols-4 items-start max-sm:ml-0 max-sm:w-full max-sm:grid-cols-2 max-sm:gap-x-5 max-sm:gap-y-3">
           <Metric
             icon={<Thermometer />}
             label={t.wxFeels}

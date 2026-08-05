@@ -2,9 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Award, Flame, Moon, Search, Target, Trophy } from "lucide-react";
+import {
+  Award,
+  Flame,
+  Layers,
+  Moon,
+  Search,
+  Target,
+  Trophy,
+} from "lucide-react";
 
 import {
+  buildClassBoards,
   buildLeaderboard,
   fmtSleep,
   PERIOD_DAYS,
@@ -36,6 +45,7 @@ import {
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Segmented, SegmentedButton } from "@/components/ui/segmented";
+import { Select } from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
 import { StateBox } from "@/components/ui/state-box";
 import {
@@ -64,6 +74,8 @@ export default function PrestasiPage() {
   const { empAll, faAlloc } = useAppStore();
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
   const [q, setQ] = React.useState("");
+  /* Eq. class yang sedang disorot; "" = semua kelas ditampilkan */
+  const [cls, setCls] = React.useState("");
 
   /* Definisi "operator" disamakan dengan modul Fleet Allocation: karyawan
      aktif yang punya kompetensi unit. Kalau dibedakan, dua modul akan
@@ -89,6 +101,16 @@ export default function PrestasiPage() {
   });
   const pg = usePagination(rows);
 
+  /* Klasemen per Eq. Class dipecah dari papan yang sama — bukan perhitungan
+     baru, jadi tidak mungkin berbeda angka dengan klasemen lengkap. */
+  const classBoards = React.useMemo(() => buildClassBoards(board), [board]);
+  /* Kelas yang dipilih bisa lenyap saat periode diganti. Daripada menampilkan
+     select yang menunjuk kelas tak ada, jatuhkan kembali ke "semua". */
+  const clsActive = classBoards.some((b) => b.cls === cls) ? cls : "";
+  const shownBoards = clsActive
+    ? classBoards.filter((b) => b.cls === clsActive)
+    : classBoards;
+
   const totalPoints = board.reduce((s, e) => s + e.points, 0);
   const totalQualified = board.reduce((s, e) => s + e.qualifiedDays, 0);
   const avgCompliance = board.length
@@ -97,7 +119,7 @@ export default function PrestasiPage() {
     : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navPrestasi} sub={t.prSub}>
         <Segmented aria-label={t.prRank}>
           {(
@@ -119,7 +141,7 @@ export default function PrestasiPage() {
       </PageTitle>
 
       {/* ringkasan periode */}
-      <div className="grid grid-cols-4 gap-4 max-xl:grid-cols-2">
+      <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
         <StatCard
           icon={<Trophy />}
           iconStyle={{
@@ -182,7 +204,7 @@ export default function PrestasiPage() {
           <ToolbarTitle>{t.prBoardT}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.prSearchPh}
               aria-label={t.prSearchPh}
               value={q}
@@ -315,6 +337,173 @@ export default function PrestasiPage() {
             perOptions={["10", "25", "50"]}
             onPer={pg.setPer}
           />
+        </PanelFoot>
+      </Panel>
+
+      {/* klasemen dipecah per Eq. Class — kode + deskripsinya dari master unit */}
+      <Panel>
+        <Toolbar className="mb-3">
+          <ToolbarTitle>{t.prClassT}</ToolbarTitle>
+          <ToolbarGroup>
+            <Select
+              wrapperClassName="w-72 max-sm:w-full"
+              value={clsActive}
+              onChange={(e) => setCls(e.target.value)}
+              aria-label={t.prClassAll}
+            >
+              <option value="">{t.prClassAll}</option>
+              {classBoards.map((b) => (
+                <option key={b.cls} value={b.cls}>
+                  {b.cls} — {b.desc}
+                </option>
+              ))}
+            </Select>
+          </ToolbarGroup>
+        </Toolbar>
+        <p className="mb-5 text-xs leading-relaxed text-(--text-secondary)">
+          {t.prClassNote}
+        </p>
+
+        {shownBoards.length ? (
+          <div className="flex flex-col gap-7">
+            {shownBoards.map((b) => (
+              <div key={b.cls} className="flex flex-col gap-3">
+                {/* kepala kelas: kode, deskripsi, lalu ringkasan kelas */}
+                <div className="flex flex-wrap items-center gap-2.5 border-b border-(--divider) pb-2.5">
+                  <Badge variant="info" className="font-mono">
+                    {b.cls}
+                  </Badge>
+                  <b className="text-sm font-semibold">{b.desc}</b>
+                  <span className="ml-auto text-xs text-(--text-tertiary)">
+                    {b.rows.length} {t.prOperator} · {b.qualifiedDays}{" "}
+                    {t.prQualified} ·{" "}
+                    <b className="font-mono font-semibold text-primary-bright tabular-nums">
+                      {b.points}
+                    </b>{" "}
+                    {t.prPts}
+                  </span>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <TableHead className="w-14">#</TableHead>
+                      <TableHead>{t.prOperator}</TableHead>
+                      <TableHead className="max-xl:hidden">
+                        {t.prClassUnit}
+                      </TableHead>
+                      <TableHead>{t.prPoints}</TableHead>
+                      <TableHead className="max-lg:hidden">
+                        {t.prQualified}
+                      </TableHead>
+                      <TableHead className="max-lg:hidden">
+                        {t.prPenaltyDays}
+                      </TableHead>
+                      <TableHead className="max-2xl:hidden">
+                        {t.prCoverDays}
+                      </TableHead>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {b.rows.map((r) => (
+                      <TableRow key={r.nik}>
+                        <TableCell className="font-mono font-bold tabular-nums">
+                          {r.rank <= 3 ? (
+                            <span className="text-primary-bright">
+                              {r.rank}
+                            </span>
+                          ) : (
+                            <span className="text-(--text-tertiary)">
+                              {r.rank}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar
+                              src={r.foto}
+                              alt={r.name}
+                              className="size-8 flex-none text-[11px]"
+                            >
+                              {initialsOf(r.name)}
+                            </Avatar>
+                            <div className="flex min-w-0 flex-col">
+                              <Link
+                                href={`/prestasi/${r.nik}`}
+                                className="truncate font-semibold text-inherit hover:text-primary-bright"
+                              >
+                                {r.name}
+                              </Link>
+                              <span className="truncate text-xs text-(--text-tertiary)">
+                                {r.pos}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        {/* daftar unit bisa panjang untuk periode 90 hari, jadi
+                            dipotong 3 dan sisanya dihitung — bukan disembunyikan */}
+                        <TableCell className="max-xl:hidden">
+                          <span
+                            className="font-mono text-xs"
+                            title={r.units.join(", ")}
+                          >
+                            {r.units.slice(0, 3).join(", ")}
+                            {r.units.length > 3 ? (
+                              <span className="text-(--text-tertiary)">
+                                {" "}
+                                +{r.units.length - 3}
+                              </span>
+                            ) : null}
+                          </span>
+                        </TableCell>
+                        <TableCell
+                          className={
+                            r.points < 0
+                              ? "font-mono font-bold text-danger-text tabular-nums"
+                              : "font-mono font-bold text-primary-bright tabular-nums"
+                          }
+                        >
+                          {r.points}
+                        </TableCell>
+                        <TableCell className="font-mono tabular-nums max-lg:hidden">
+                          {r.qualifiedDays}
+                        </TableCell>
+                        <TableCell className="font-mono tabular-nums max-lg:hidden">
+                          {r.penaltyDays > 0 ? (
+                            <span className="text-danger-text">
+                              −{r.penaltyDays}
+                            </span>
+                          ) : (
+                            <span className="text-(--text-tertiary)">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono tabular-nums max-2xl:hidden">
+                          {r.coverDays > 0 ? (
+                            r.coverDays
+                          ) : (
+                            <span className="text-(--text-tertiary)">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <StateBox
+            icon={<Layers className="text-primary-bright" />}
+            title={t.noResTitle}
+            body={t.prClassEmpty}
+          />
+        )}
+
+        <PanelFoot>
+          <FootSum>
+            {t.attSumA} <b>{shownBoards.length}</b> {t.attSumB}{" "}
+            <b>{classBoards.length}</b> Eq. Class
+          </FootSum>
         </PanelFoot>
       </Panel>
 

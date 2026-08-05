@@ -182,7 +182,7 @@ export default function DashboardPage() {
   const heads = [t.thName, t.thDept, t.thIssue, t.thStatus, t.thAction];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={`${greet}, ${firstName} 👋`} sub={dateLine}>
         <Fresh>
           {t.dataAsOf}&nbsp;
@@ -193,7 +193,7 @@ export default function DashboardPage() {
       {/* Cuaca lokasi saat ini — tepat setelah salam, di atas strip KPI. */}
       <WeatherCard />
 
-      <div className="grid grid-cols-4 gap-4 max-xl:grid-cols-2">
+      <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
         <StatCard
           href="/fit-to-work"
           icon={<XCircle />}
@@ -269,14 +269,14 @@ export default function DashboardPage() {
           <ToolbarTitle>{t.panelTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchPh}
               aria-label={t.searchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               aria-label={t.thStatus}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

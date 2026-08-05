@@ -50,6 +50,7 @@ export function navItems(lang: Lang): NavItem[] {
       children: [
         { href: "/displays/attendance", labelKey: "navDispAtt" },
         { href: "/displays/fleet", labelKey: "navDispFleet" },
+        { href: "/displays/monitor", labelKey: "navDispMonitor" },
         { label: "Display Fit To Work", displayUrl: "/display/fitwork" },
         { label: "Monitoring Fingerprint", displayUrl: "/display/fingerprint" },
       ],

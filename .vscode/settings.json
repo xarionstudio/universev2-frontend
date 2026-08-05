@@ -12,5 +12,8 @@
   ],
   "typescript.tsdk": "node_modules/typescript/lib",
   "files.eol": "\n",
-  "tailwindCSS.classFunctions": ["cn", "cva"]
+  "tailwindCSS.classFunctions": ["cn", "cva"],
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore"
 }

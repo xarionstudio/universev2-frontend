@@ -222,12 +222,14 @@ export default function FleetAllocationPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navFleetAlloc} sub={`${shiftLabel} — ${t.faSubB}`}>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 max-sm:w-full">
           <Input
             type="date"
-            className="w-40 font-mono"
+            /* w-full, bukan flex-1: berbagi baris dengan pemilih shift
+               menyisakan ~130px dan tahunnya ikut terpotong ("08/04/") */
+            className="w-40 font-mono max-sm:w-full"
             value={faDate}
             onChange={(e) => {
               setFaDate(e.target.value);
@@ -275,7 +277,7 @@ export default function FleetAllocationPage() {
           </b>{" "}
           {t.faAllocUnits}
         </span>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:justify-start">
           <Select
             aria-label="Filter fleet"
             wrapperClassName="w-auto"
@@ -318,7 +320,7 @@ export default function FleetAllocationPage() {
             ))}
           </Segmented>
           <SearchInput
-            className="w-55"
+            className="w-55 max-sm:w-full"
             placeholder={t.searchUnit}
             aria-label={t.searchUnit}
             value={q}

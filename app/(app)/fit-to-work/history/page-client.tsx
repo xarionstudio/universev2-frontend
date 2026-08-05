@@ -79,7 +79,9 @@ function WindowPagination({
   const startN = Math.max(1, Math.min(page - 2, pageCount - size + 1));
   const pages = Array.from({ length: size }, (_, i) => startN + i);
   return (
-    <div className="flex items-center gap-5">
+    /* sama seperti <Pagination> bersama: membungkus di layar sempit, bukan
+       mendorong footer panel keluar layar */
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 max-sm:gap-x-3">
       <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
         {t.rppLabel}
         <Select
@@ -96,7 +98,7 @@ function WindowPagination({
           ))}
         </Select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-sm:gap-1.5">
         <PageButton
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
@@ -255,7 +257,7 @@ function FtwHistoryInner() {
   const end = Math.min(total, cur * perN);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
         title={t.ftwHistPage}
         sub={
@@ -273,7 +275,7 @@ function FtwHistoryInner() {
           <ToolbarTitle>{t.ftwHistTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -283,7 +285,7 @@ function FtwHistoryInner() {
               }}
             />
             <Select
-              wrapperClassName="w-62.5"
+              wrapperClassName="w-62.5 max-sm:w-full"
               value={fhOp}
               onChange={(e) => {
                 setFhOp(e.target.value);
@@ -299,7 +301,7 @@ function FtwHistoryInner() {
               ))}
             </Select>
             <Select
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               value={st}
               onChange={(e) => {
                 setSt(e.target.value);
@@ -314,7 +316,7 @@ function FtwHistoryInner() {
               <option value="fit">{t.bFit}</option>
             </Select>
             <Select
-              wrapperClassName="w-35"
+              wrapperClassName="w-35 max-sm:w-full"
               value={shift}
               onChange={(e) => {
                 setShift(e.target.value);
@@ -326,10 +328,10 @@ function FtwHistoryInner() {
               <option value="siang">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
               <Input
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 value={d1}
                 onChange={(e) => {
                   setD1(e.target.value);
@@ -337,10 +339,12 @@ function FtwHistoryInner() {
                 }}
                 aria-label={t.lblDate}
               />
-              <span className="text-(--text-tertiary)">—</span>
+              <span className="text-(--text-tertiary) max-sm:text-center">
+                —
+              </span>
               <Input
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 value={d2}
                 onChange={(e) => {
                   setD2(e.target.value);

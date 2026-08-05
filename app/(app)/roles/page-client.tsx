@@ -187,7 +187,7 @@ export default function RolesPage() {
   const delUsed = delTarget ? userCount(delTarget.id) : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.umRolesT} sub={t.umRoleSub}>
         {canManage ? (
           <Button onClick={openAdd}>
@@ -205,7 +205,7 @@ export default function RolesPage() {
             <ToolbarTitle>{t.umRoleListT}</ToolbarTitle>
             <ToolbarGroup>
               <SearchInput
-                className="w-60"
+                className="w-60 max-sm:w-full"
                 placeholder={t.umRoleSearchPh}
                 aria-label={t.umRoleSearchPh}
                 value={q}
@@ -298,7 +298,7 @@ export default function RolesPage() {
           <Toolbar>
             <ToolbarTitle>{t.umRbacT}</ToolbarTitle>
             <Select
-              wrapperClassName="w-45"
+              wrapperClassName="w-45 max-sm:w-full"
               aria-label={t.umRbacT}
               value={rbacSel}
               onChange={(e) => setRbacSel(e.target.value)}

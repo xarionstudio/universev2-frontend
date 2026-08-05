@@ -122,7 +122,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.profile} sub={t.pfSub} />
       <Panel className="max-w-190">
         {/* identitas akun — NIK & role cukup tampil di sini (read-only) */}

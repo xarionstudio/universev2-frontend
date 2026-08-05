@@ -24,8 +24,13 @@ export type LocationSource = "gps" | "ip" | "fallback";
 export type ResolvedLocation = {
   lat: number;
   lon: number;
-  /* nama kota/wilayah siap tampil; null → pemanggil pakai label generik */
+  /* nama tempat PALING SPESIFIK yang tersedia (desa/kelurahan bila ada);
+     null → pemanggil pakai label generik */
   label: string | null;
+  /* satu tingkat di atasnya (kabupaten/kota) sebagai konteks; boleh null.
+     Dipisah dari `label` supaya kartu bisa memberi bobot berbeda pada
+     keduanya, bukan menyambung jadi satu kalimat panjang. */
+  area: string | null;
   source: LocationSource;
 };
 
@@ -115,20 +120,117 @@ function tryGps(
   });
 }
 
-/* Reverse geocode untuk GPS: BigDataCloud client endpoint, tanpa key, CORS ok.
-   Best-effort — kalau gagal, label null dan pemanggil pakai teks generik. */
-async function reverseGeocode(
+/* ---- Reverse geocode: dua penyedia, yang paling presisi lebih dulu ----
+
+   Kenapa dua. BigDataCloud (dipakai sendirian di versi sebelumnya) tidak punya
+   data setingkat desa untuk Indonesia: di Kutai Timur, tingkat administratif
+   terdalam yang ia kenal berhenti di kabupaten, dan `city`/`locality`-nya
+   mengembalikan nama KECAMATAN. Itulah sebabnya kartu menulis "Kaubun"
+   sementara pengguna sebenarnya berada di desa Bumi Etam — sama-sama benar
+   secara wilayah, tapi bukan penanda lokasi yang dijanjikan.
+
+   Nominatim (OpenStreetMap) punya batas desa untuk Indonesia dan
+   mengembalikan `village: "Bumi Etam"` di koordinat yang sama. Ia dipakai
+   lebih dulu, BigDataCloud tetap disimpan sebagai jaring pengaman karena
+   Nominatim membatasi laju permintaan.
+
+   Soal batas laju: kebijakan Nominatim adalah maksimum 1 permintaan/detik dan
+   pemakaian yang wajar. Fungsi ini hanya terpanggil saat lokasi diselesaikan
+   — sekali per pemasangan shell dan saat operator menekan refresh — bukan per
+   siklus polling cuaca (15 menit). */
+
+type GeoName = { label: string | null; area: string | null };
+
+const EMPTY_NAME: GeoName = { label: null, area: null };
+
+/* Nominatim — punya tingkat desa/kelurahan.
+   zoom=14 meminta ketelitian setingkat desa/suburb; lebih dalam dari itu
+   jawabannya mulai berisi nama jalan, yang bukan penanda lokasi yang berguna
+   di area tambang. */
+async function reverseNominatim(
   lat: number,
   lon: number,
   signal: AbortSignal | undefined
-): Promise<string | null> {
+): Promise<GeoName | null> {
+  const url =
+    "https://nominatim.openstreetmap.org/reverse" +
+    `?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}` +
+    "&format=jsonv2&zoom=14&accept-language=id";
+  const j = await fetchJson(url, signal);
+  if (!j || typeof j !== "object") return null;
+  const a = (j as Record<string, unknown>).address;
+  if (!a || typeof a !== "object") return null;
+  const o = a as Record<string, unknown>;
+  const label =
+    str(o.village) ??
+    str(o.hamlet) ??
+    str(o.suburb) ??
+    str(o.town) ??
+    str(o.city) ??
+    str(o.municipality) ??
+    str(o.city_district);
+  const area = str(o.county) ?? str(o.state_district) ?? str(o.state);
+  return label ? { label, area } : null;
+}
+
+/* BigDataCloud — cadangan; tanpa key, CORS ok, tanpa batas laju ketat. */
+async function reverseBigDataCloud(
+  lat: number,
+  lon: number,
+  signal: AbortSignal | undefined
+): Promise<GeoName | null> {
   const url =
     "https://api.bigdatacloud.net/data/reverse-geocode-client" +
     `?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&localityLanguage=id`;
   const j = await fetchJson(url, signal);
   if (!j || typeof j !== "object") return null;
   const o = j as Record<string, unknown>;
-  return str(o.city) ?? str(o.locality) ?? str(o.principalSubdivision);
+  const label = str(o.locality) ?? str(o.city);
+  /* tingkat administratif terdalam yang dikenal (mis. "Kutai Timur") */
+  let area: string | null = null;
+  const adm = (o.localityInfo as Record<string, unknown> | undefined)
+    ?.administrative;
+  if (Array.isArray(adm)) {
+    let best = -1;
+    for (const row of adm) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const lvl = num(r.adminLevel);
+      const name = str(r.name);
+      if (lvl !== null && name && lvl > best && name !== label) {
+        best = lvl;
+        area = name;
+      }
+    }
+  }
+  return label ? { label, area: area ?? str(o.principalSubdivision) } : null;
+}
+
+async function reverseGeocode(
+  lat: number,
+  lon: number,
+  signal: AbortSignal | undefined
+): Promise<GeoName> {
+  /* Nominatim dicoba DUA kali sebelum menyerah ke penyedia kasar. Ia menolak
+     permintaan yang dianggap tidak teridentifikasi atau terlalu rapat
+     ("Access denied") — penolakan sesaat seperti itu tidak bisa dibedakan dari
+     "tidak ada data" oleh pemanggil, dan akibatnya kartu diam-diam turun ke
+     nama KECAMATAN padahal desanya sebenarnya tersedia. Satu percobaan ulang
+     berjarak menutup sebagian besar kasus itu tanpa melanggar batas laju. */
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (signal?.aborted) break;
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 1100));
+      if (signal?.aborted) break;
+    }
+    const got = await reverseNominatim(lat, lon, signal);
+    if (got) return got;
+  }
+  if (!signal?.aborted) {
+    const got = await reverseBigDataCloud(lat, lon, signal);
+    if (got) return got;
+  }
+  return EMPTY_NAME;
 }
 
 /* ---- 2. IP ---- */
@@ -142,7 +244,13 @@ async function fromIpapi(
   const lat = num(o.latitude);
   const lon = num(o.longitude);
   if (lat === null || lon === null) return null;
-  return { lat, lon, label: str(o.city) ?? str(o.region), source: "ip" };
+  return {
+    lat,
+    lon,
+    label: str(o.city) ?? str(o.region),
+    area: str(o.region),
+    source: "ip",
+  };
 }
 
 async function fromIpwho(
@@ -155,7 +263,13 @@ async function fromIpwho(
   const lat = num(o.latitude);
   const lon = num(o.longitude);
   if (lat === null || lon === null) return null;
-  return { lat, lon, label: str(o.city) ?? str(o.region), source: "ip" };
+  return {
+    lat,
+    lon,
+    label: str(o.city) ?? str(o.region),
+    area: str(o.region),
+    source: "ip",
+  };
 }
 
 /* ---- resolusi utama ---- */
@@ -168,15 +282,30 @@ export async function resolveLocation(opts: {
   /* 1. GPS — lokasi maps saat ini */
   const gps = await tryGps(signal);
   if (gps) {
-    const label = await reverseGeocode(gps.lat, gps.lon, signal);
-    return { lat: gps.lat, lon: gps.lon, label, source: "gps" };
+    const name = await reverseGeocode(gps.lat, gps.lon, signal);
+    return {
+      lat: gps.lat,
+      lon: gps.lon,
+      label: name.label,
+      area: name.area,
+      source: "gps",
+    };
   }
 
-  /* 2. IP — dua penyedia berurutan */
+  /* 2. IP — dua penyedia berurutan. Koordinat dari IP tingkat kota, tapi
+     namanya tetap dilewatkan reverse geocode: penyedia IP mengembalikan nama
+     kota besar terdekat, sementara reverse geocode di koordinat yang sama
+     memberi wilayah yang sebenarnya. */
   for (const provider of [fromIpapi, fromIpwho]) {
     if (signal?.aborted) break;
     const got = await provider(signal);
-    if (got) return got;
+    if (!got) continue;
+    const name = await reverseGeocode(got.lat, got.lon, signal);
+    return {
+      ...got,
+      label: name.label ?? got.label,
+      area: name.area ?? got.area,
+    };
   }
 
   /* 3. koordinat site (jaring terakhir) */
@@ -184,6 +313,7 @@ export async function resolveLocation(opts: {
     lat: fallback.lat,
     lon: fallback.lon,
     label: fallback.label,
+    area: null,
     source: "fallback",
   };
 }

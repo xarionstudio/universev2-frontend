@@ -223,7 +223,7 @@ export default function FitToWorkPage() {
   const end = Math.min(total, cur * perN);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navFtw} sub={t.ftwSub}>
         <Fresh>
           {t.dataAsOf}&nbsp;
@@ -231,7 +231,7 @@ export default function FitToWorkPage() {
         </Fresh>
       </PageTitle>
 
-      <div className="grid grid-cols-3 gap-4 max-xl:grid-cols-2">
+      <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
         <StatCard
           icon={<CheckCircle2 />}
           iconStyle={{
@@ -272,7 +272,7 @@ export default function FitToWorkPage() {
           <ToolbarTitle>{t.ftwLog}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchOp}
               aria-label={t.searchOp}
               value={q}
@@ -282,7 +282,7 @@ export default function FitToWorkPage() {
               }}
             />
             <Select
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               value={st}
               onChange={(e) => {
                 setSt(e.target.value);
@@ -297,7 +297,7 @@ export default function FitToWorkPage() {
               <option value="fit">{t.bFit}</option>
             </Select>
             <Select
-              wrapperClassName="w-37.5"
+              wrapperClassName="w-37.5 max-sm:w-full"
               value={shift}
               onChange={(e) => {
                 setShift(e.target.value);
@@ -309,10 +309,10 @@ export default function FitToWorkPage() {
               <option value="siang">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
               <Input
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 value={d1}
                 onChange={(e) => {
                   setD1(e.target.value);
@@ -320,10 +320,12 @@ export default function FitToWorkPage() {
                 }}
                 aria-label={t.lblDate}
               />
-              <span className="text-(--text-tertiary)">—</span>
+              <span className="text-(--text-tertiary) max-sm:text-center">
+                —
+              </span>
               <Input
                 type="date"
-                className="w-40 font-mono"
+                className="w-40 font-mono max-sm:w-full"
                 value={d2}
                 onChange={(e) => {
                   setD2(e.target.value);
@@ -385,7 +387,9 @@ export default function FitToWorkPage() {
                             +{r.restHours} {t.hourShort}
                           </span>
                         ) : (
-                          <span className="text-(--text-tertiary)">—</span>
+                          <span className="text-(--text-tertiary) max-sm:text-center">
+                            —
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="font-mono whitespace-nowrap">

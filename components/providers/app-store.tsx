@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import {
-  employees as empBase,
+  employees as empDesign,
   withKomp,
   type Employee,
 } from "@/lib/data/employees";
@@ -11,11 +11,13 @@ import { initialFleets, type Fleet } from "@/lib/data/fleet";
 import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
 import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
 import { initialNotifs, type Notif } from "@/lib/data/notifications";
+import { operatorSeed } from "@/lib/data/operators";
 import { apInitialRows, type ApRow } from "@/lib/data/roster";
 import {
   initialAudios,
   initialDspAtt,
   initialDspFleet,
+  initialDspMonitor,
   type Audio,
   type Display,
 } from "@/lib/data/settings-data";
@@ -27,6 +29,13 @@ import {
   type UmRole,
   type UmUser,
 } from "@/lib/data/users";
+
+/* Master karyawan = persona desain (bertangan, berdata lengkap: medis, mess,
+   kontak — dipakai halaman detail & form) + operator lapangan dari file
+   setting operator. Digabung di sini, BUKAN di employees.ts, karena
+   operators.ts sudah mengimpor tipe dari employees.ts; menggabungnya di sana
+   akan membuat impor melingkar. */
+const empBase: Employee[] = [...empDesign, ...operatorSeed];
 
 export { type FaAlloc } from "@/lib/data/fleet-alloc";
 
@@ -96,6 +105,8 @@ type AppStore = {
   setDspAtt: React.Dispatch<React.SetStateAction<Display[]>>;
   dspFleet: Display[];
   setDspFleet: React.Dispatch<React.SetStateAction<Display[]>>;
+  dspMonitor: Display[];
+  setDspMonitor: React.Dispatch<React.SetStateAction<Display[]>>;
   /* user management (akun login + role RBAC) */
   umUsers: UmUser[];
   setUmUsers: React.Dispatch<React.SetStateAction<UmUser[]>>;
@@ -127,9 +138,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
      fleet yang punya display TV diisi duluan */
   const [faAlloc, setFaAlloc] = React.useState<FaAlloc>(() => {
     const today = new Date().toISOString().slice(0, 10);
+    /* Fleet yang tayang di monitor ikut masuk daftar prioritas seed.
+       CATATAN: prioritas hanya menentukan URUTAN pengisian, bukan jumlahnya.
+       Master karyawan mock hanya berisi ~11 operator aktif berkompetensi,
+       sementara fleet yang tayang (3 display fleet + 12 giliran monitor)
+       butuh ratusan slot — jadi fleet di urutan belakang memang tampil
+       "Belum ada operator". Itu status yang sah (lihat halaman Unit
+       No-Operator), bukan kegagalan render; layar akan terisi sendiri begitu
+       master karyawan diisi data sebenarnya. */
     return seedFaAlloc(
       [isoAddDays(today, -1), today],
-      initialDspFleet.flatMap((d) => (d.fleetId ? [d.fleetId] : []))
+      [
+        ...initialDspFleet.flatMap((d) => (d.fleetId ? [d.fleetId] : [])),
+        ...initialDspMonitor.flatMap((d) => d.fleetIds ?? []),
+      ]
     );
   });
   const [fleets, setFleets] = React.useState<Fleet[]>(initialFleets);
@@ -150,6 +172,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   });
   const [dspAtt, setDspAtt] = React.useState<Display[]>(initialDspAtt);
   const [dspFleet, setDspFleet] = React.useState<Display[]>(initialDspFleet);
+  const [dspMonitor, setDspMonitor] =
+    React.useState<Display[]>(initialDspMonitor);
   const [umUsers, setUmUsers] = React.useState<UmUser[]>(initialUmUsers);
   const [umRoles, setUmRoles] = React.useState<UmRole[]>(initialUmRoles);
 
@@ -261,6 +285,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setDspAtt,
     dspFleet,
     setDspFleet,
+    dspMonitor,
+    setDspMonitor,
     umUsers,
     setUmUsers,
     umRoles,

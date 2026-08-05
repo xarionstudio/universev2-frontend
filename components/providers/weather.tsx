@@ -55,9 +55,20 @@ export type WeatherContextValue = {
      refresh gagal — cuaca 15 menit lalu lebih berguna daripada kartu
      kosong, dan tidak ada yang berkedip di layar operator. */
   data: Weather | null;
-  /* Nama lokasi siap tampil — kota hasil GPS/IP, atau nama site saat jatuh ke
-     fallback. String kosong sebelum lokasi terselesaikan. */
+  /* Nama lokasi siap tampil — tempat PALING SPESIFIK hasil GPS/IP (desa bila
+     tersedia), atau nama site saat jatuh ke fallback. String kosong sebelum
+     lokasi terselesaikan. */
   locationLabel: string;
+  /* Wilayah satu tingkat di atasnya (kabupaten/kota); string kosong bila tidak
+     diketahui. Dipisah supaya kartu bisa menampilkannya dengan bobot berbeda,
+     bukan menyambungnya jadi satu baris panjang. */
+  locationArea: string;
+  /* Koordinat yang BENAR-BENAR dipakai untuk mengambil cuaca. Ditampilkan di
+     kartu karena nama tempat hasil geocoder bisa meleset satu tingkat
+     administratif tanpa ketahuan, sementara koordinat bisa langsung dicocokkan
+     operator dengan peta. null sebelum lokasi terselesaikan. */
+  lat: number | null;
+  lon: number | null;
   /* Dari mana lokasi didapat:
        "gps"      = presisi (izin diberikan)
        "ip"       = perkiraan tingkat kota
@@ -132,6 +143,9 @@ const FALLBACK: WeatherContextValue = {
   scene: IDLE_SCENE,
   data: null,
   locationLabel: "",
+  locationArea: "",
+  lat: null,
+  lon: null,
   locationSource: "fallback",
   loading: false,
   error: null,
@@ -156,6 +170,7 @@ type LocState = {
   lat: number;
   lon: number;
   label: string;
+  area: string;
   source: LocationSource;
 };
 
@@ -198,6 +213,7 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
         lat: r.lat,
         lon: r.lon,
         label: r.label ?? fbLabel,
+        area: r.area ?? "",
         source: r.source,
       });
     });
@@ -354,6 +370,9 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
       scene,
       data: state.data,
       locationLabel: loc?.label ?? "",
+      locationArea: loc?.area ?? "",
+      lat: loc?.lat ?? null,
+      lon: loc?.lon ?? null,
       locationSource: loc?.source ?? "fallback",
       /* loading sampai lokasi terselesaikan DAN fetch pertama selesai */
       loading: loc === null || state.loading,

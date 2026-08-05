@@ -312,7 +312,7 @@ export default function MasterDataPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={catLabel} sub={t.mdSub}>
         <Button onClick={openAdd}>
           <Plus />
@@ -325,7 +325,7 @@ export default function MasterDataPage() {
           <ToolbarTitle>{catLabel}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.mdSearchPh}
               aria-label={t.mdSearchPh}
               value={q}
@@ -335,7 +335,7 @@ export default function MasterDataPage() {
               }}
             />
             <Select
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               value={stF}
               onChange={(e) => {
                 setStF(e.target.value);
@@ -365,7 +365,7 @@ export default function MasterDataPage() {
                     <button
                       type="button"
                       onClick={() => toggleSort(h.key)}
-                      className="inline-flex cursor-pointer items-center gap-1 [letter-spacing:inherit] text-inherit uppercase [font:inherit]"
+                      className="inline-flex cursor-pointer items-center gap-1 tracking-[inherit] text-inherit uppercase [font:inherit]"
                     >
                       {h.label}
                       <span className="font-mono">

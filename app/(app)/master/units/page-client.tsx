@@ -200,7 +200,7 @@ export default function UnitDbPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navUnitDb} sub={t.udbSub}>
         <Button onClick={openAdd}>
           <Plus />
@@ -213,7 +213,7 @@ export default function UnitDbPage() {
           <ToolbarTitle>{t.udbListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchUnit}
               aria-label={t.searchUnit}
               value={q}
@@ -223,7 +223,7 @@ export default function UnitDbPage() {
               }}
             />
             <Select
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               value={cat}
               onChange={(e) => {
                 setCat(e.target.value);
@@ -239,7 +239,7 @@ export default function UnitDbPage() {
               ))}
             </Select>
             <Select
-              wrapperClassName="w-45"
+              wrapperClassName="w-45 max-sm:w-full"
               value={prod}
               onChange={(e) => {
                 setProd(e.target.value);

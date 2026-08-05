@@ -112,7 +112,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-6 z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel max-xl:top-4">
+    <header className="sticky top-6 z-40 flex h-16 flex-none items-center gap-4 rounded-panel px-6 glass-panel max-xl:top-4 max-sm:top-3 max-sm:h-14 max-sm:gap-2 max-sm:rounded-card max-sm:px-3">
       <button
         onClick={() => setSideOpen(true)}
         aria-label="Buka menu navigasi"
@@ -120,22 +120,29 @@ export function Topbar() {
       >
         <Menu />
       </button>
+      {/* Breadcrumb menyusut bertahap, lalu hilang.
+          < md : induk grup + pemisah dilepas — nilainya paling kecil justru
+                 saat ruang paling sempit.
+          < sm : seluruh breadcrumb disembunyikan. Sisa ruang setelah enam
+                 kontrol di kanan tinggal ~50px, dan judul yang terpotong jadi
+                 "Da…" bukan konteks, hanya derau — sementara <h1> halaman
+                 tepat di bawahnya sudah menyebut nama halaman secara utuh. */}
       <nav
         aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-2 text-sm"
+        className="flex min-w-0 items-center gap-2 text-sm max-sm:hidden"
       >
         {group ? (
           <>
-            <span className="whitespace-nowrap text-(--text-tertiary)">
+            <span className="whitespace-nowrap text-(--text-tertiary) max-md:hidden">
               {t[group.labelKey]}
             </span>
-            <ChevronRight className="size-3.5 flex-none text-(--text-disabled)" />
+            <ChevronRight className="size-3.5 flex-none text-(--text-disabled) max-md:hidden" />
           </>
         ) : null}
-        <span className="font-semibold whitespace-nowrap">{cur}</span>
+        <span className="truncate font-semibold">{cur}</span>
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex flex-none items-center gap-2 max-sm:gap-1">
         {/* refresh data halaman aktif */}
         <button
           onClick={doRefresh}

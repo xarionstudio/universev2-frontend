@@ -10,6 +10,7 @@ import { ShellProvider } from "@/components/layout/shell-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WeatherLayer } from "@/components/layout/weather-layer";
+import { WeatherTheme } from "@/components/layout/weather-theme";
 import { usePermissions } from "@/components/providers/permissions";
 import { RefreshProvider } from "@/components/providers/refresh";
 import { useSession } from "@/components/providers/session";
@@ -55,14 +56,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             tidak pernah loncat Balikpapan → Mess 31. */}
         <WeatherProvider>
           <WeatherLayer />
+          {/* cuaca -> tema aplikasi (hanya bila tema di-set "Ikut cuaca") */}
+          <WeatherTheme />
           <div className="pointer-events-none fixed -top-30 -right-25 z-0 size-130 rounded-full bg-(--blob-cyan) blur-[130px]" />
           <div className="pointer-events-none fixed -bottom-35 -left-20 z-0 size-120 rounded-full bg-(--blob-blue) blur-[130px]" />
-          <div className="p-6 max-xl:p-4">
-            <div className="relative z-1 mx-auto flex min-h-[calc(100vh-48px)] max-w-460 items-stretch gap-6 max-xl:block max-xl:min-h-[calc(100vh-32px)]">
+          {/* Padding shell turun bertahap: 24px desktop → 16px tablet → 12px
+              ponsel. Pada 360px, 24px di dua sisi memakan 13% lebar layar dan
+              itu diambil langsung dari kolom tabel. */}
+          <div className="p-6 max-xl:p-4 max-sm:p-3">
+            <div className="relative z-1 mx-auto flex min-h-[calc(100vh-48px)] max-w-460 items-stretch gap-6 max-xl:block max-xl:min-h-[calc(100vh-32px)] max-sm:min-h-[calc(100vh-24px)]">
               <Sidebar />
-              <div className="flex min-w-0 flex-1 flex-col gap-6">
+              <div className="flex min-w-0 flex-1 flex-col gap-6 max-sm:gap-4">
                 <Topbar />
-                <div className="flex max-w-360 flex-1 flex-col gap-6">
+                {/* Tanpa max-w sendiri: dulu konten dipatok 1440px sementara
+                    topbar di atasnya ikut melebar sampai batas shell (1840px),
+                    jadi di layar ≥1856px tepi kanan keduanya tidak segaris. */}
+                <div className="flex min-w-0 flex-1 flex-col gap-6 max-sm:gap-4">
                   {denied === null ? children : <RbacDenied reason={denied} />}
                 </div>
               </div>

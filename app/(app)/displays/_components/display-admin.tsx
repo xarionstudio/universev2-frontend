@@ -47,6 +47,7 @@ import { useToast } from "@/components/ui/toast";
 const DISPLAY_URLS: Record<DisplayKind, string> = {
   att: "/display/attendance",
   fleet: "/display/fleet",
+  monitor: "/display/monitor",
   ftw: "/display/fitwork",
   finger: "/display/fingerprint",
 };
@@ -177,7 +178,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
         title={kind === "att" ? t.navDispAtt : t.navDispFleet}
         sub={kind === "att" ? t.dspSubAtt : t.dspSubFleet}
@@ -193,14 +194,14 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
           <ToolbarTitle>{t.dspListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.dspSearchPh}
               aria-label={t.dspSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}

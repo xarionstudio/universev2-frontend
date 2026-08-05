@@ -163,7 +163,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navEmployees} sub={t.empSub}>
         <Button onClick={() => router.push("/employees/new")}>
           <Plus />
@@ -176,7 +176,7 @@ export default function EmployeesPage() {
           <ToolbarTitle>{t.empListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchEmp}
               aria-label={t.searchEmp}
               value={q}
@@ -191,7 +191,7 @@ export default function EmployeesPage() {
               clearLabel={t.clearSearch}
             />
             <Select
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               aria-label={t.thStatus}
               value={fStatus}
               onChange={(e) => {

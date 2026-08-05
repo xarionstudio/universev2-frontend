@@ -153,7 +153,7 @@ export default function UnitStatusPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navUnitStatus} sub={t.usSub}>
         <Fresh>
           {t.dataAsOf}&nbsp;
@@ -166,7 +166,7 @@ export default function UnitStatusPage() {
           <ToolbarTitle>{t.usListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.searchUnit}
               aria-label={t.searchUnit}
               value={q}

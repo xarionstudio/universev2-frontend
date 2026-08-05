@@ -33,7 +33,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navSettings} sub={t.stSub}>
         <Segmented role="tablist" aria-label="Settings">
           {tabs.map((tab) => (

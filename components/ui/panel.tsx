@@ -2,12 +2,17 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-/* Panel kaca G1 — sidebar, TableCard, section */
+/* Panel kaca G1 — sidebar, TableCard, section.
+   Padding menyusut di ponsel: 24px di tiap sisi memakan 48px dari layar 360px
+   (13%), dan itu langsung terasa pada tabel serta kartu di dalamnya. */
 function Panel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="panel"
-      className={cn("rounded-panel p-6 glass-panel", className)}
+      className={cn(
+        "rounded-panel p-6 glass-panel max-sm:rounded-card max-sm:p-4",
+        className
+      )}
       {...props}
     />
   );
@@ -19,7 +24,7 @@ function Toolbar({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="toolbar"
       className={cn(
-        "mb-5 flex flex-wrap items-center justify-between gap-3",
+        "mb-5 flex flex-wrap items-center justify-between gap-3 max-sm:mb-4",
         className
       )}
       {...props}
@@ -31,7 +36,13 @@ function ToolbarTitle({ className, ...props }: React.ComponentProps<"h2">) {
   return (
     <h2
       data-slot="toolbar-title"
-      className={cn("mr-auto text-xl font-semibold", className)}
+      /* min-w-0 + break-words: judul toolbar kadang memuat kode/nama berkas
+         tanpa spasi (mis. periode roster) yang tidak bisa dipatahkan sendiri
+         dan mendorong panel keluar layar di lebar 320px. */
+      className={cn(
+        "mr-auto min-w-0 text-xl font-semibold wrap-break-word max-sm:text-lg",
+        className
+      )}
       {...props}
     />
   );
@@ -41,7 +52,14 @@ function ToolbarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="toolbar-group"
-      className={cn("flex flex-wrap items-center justify-end gap-2", className)}
+      className={cn(
+        "flex flex-wrap items-center justify-end gap-2",
+        /* Di ponsel grup memenuhi lebar panel dan rata kiri. Tanpa ini
+           `justify-end` menyisakan celah ganjil di kiri saat kontrol sudah
+           melebar penuh, dan grupnya sendiri tetap sesempit isinya. */
+        "max-sm:w-full max-sm:justify-start",
+        className
+      )}
       {...props}
     />
   );
@@ -108,10 +126,12 @@ function PageTitle({
       )}
       {...props}
     >
-      <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-bold max-sm:text-xl">{title}</h1>
         {sub ? (
-          <p className="mt-0.5 text-sm text-(--text-secondary)">{sub}</p>
+          <p className="mt-0.5 text-sm text-(--text-secondary) max-sm:text-[13px]">
+            {sub}
+          </p>
         ) : null}
       </div>
       {children}

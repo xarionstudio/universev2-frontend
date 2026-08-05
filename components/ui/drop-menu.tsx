@@ -55,7 +55,10 @@ function DropMenu({
       role={role}
       data-slot="drop-menu"
       className={cn(
-        "absolute top-[calc(100%+10px)] right-0 z-80 w-70 rounded-icon border border-(--glass-2-border) bg-(--overlay-fill) p-2 shadow-(--shadow-modal)",
+        /* max-w viewport: menu notifikasi (w-85 = 340px) lebih lebar dari
+           ruang yang tersisa di layar 360px, dan karena ia absolute ia
+           menjulur keluar tepi kiri alih-alih menyusut. */
+        "absolute top-[calc(100%+10px)] right-0 z-80 w-70 max-w-[calc(100vw-1.5rem)] rounded-icon border border-(--glass-2-border) bg-(--overlay-fill) p-2 shadow-(--shadow-modal)",
         className
       )}
       {...props}
@@ -109,7 +112,7 @@ function DropMenuHeading({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "px-3 py-2 text-xs font-semibold tracking-[.05em] text-(--text-tertiary) uppercase",
+        "px-3 py-2 text-xs font-semibold tracking-wider text-(--text-tertiary) uppercase",
         className
       )}
       {...props}

@@ -30,7 +30,7 @@ function StatCard({
         </span>
       ) : null}
       <div
-        className="mb-3 grid size-11 place-items-center rounded-icon border [&_svg]:size-5"
+        className="mb-3 grid size-11 place-items-center rounded-icon border max-sm:mb-2 max-sm:size-9 [&_svg]:size-5 max-sm:[&_svg]:size-4"
         style={{
           background: iconStyle.background,
           borderColor: iconStyle.borderColor,
@@ -39,10 +39,15 @@ function StatCard({
       >
         {icon}
       </div>
-      <div className="text-[32px] leading-tight font-bold tabular-nums">
+      {/* Angka 32px di kolom 2-up pada layar 360px menyisakan ~140px per
+          kartu; nilai 3 digit + label ikut terhimpit. Ukurannya turun
+          bersama padding kartunya, bukan sendirian. */}
+      <div className="text-[32px] leading-tight font-bold tabular-nums max-sm:text-[26px]">
         {value}
       </div>
-      <div className="mt-0.5 text-sm text-(--text-secondary)">{label}</div>
+      <div className="mt-0.5 text-sm text-(--text-secondary) max-sm:text-[13px]">
+        {label}
+      </div>
       {detail ? (
         <div className="mt-2 text-xs text-(--text-tertiary) [&_b]:font-semibold [&_b]:text-(--text-primary)">
           {detail}
@@ -52,7 +57,7 @@ function StatCard({
   );
 
   const baseClass = cn(
-    "relative block rounded-card p-5 glass-card transition-[border-color,box-shadow,transform] duration-150",
+    "relative block rounded-card p-5 glass-card transition-[border-color,box-shadow,transform] duration-150 max-sm:p-4",
     className
   );
 

@@ -68,7 +68,7 @@ export default function RosterDataPage() {
   const pg = usePagination(rows);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navRD} sub={t.rdSub}>
         <Button onClick={() => router.push("/roster/upload")}>
           <Upload />
@@ -81,7 +81,7 @@ export default function RosterDataPage() {
           <ToolbarTitle>{t.rdListTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.rdSearchPh}
               aria-label={t.rdSearchPh}
               value={q}
@@ -89,7 +89,7 @@ export default function RosterDataPage() {
             />
             <Select
               aria-label={t.allDepts}
-              wrapperClassName="w-45"
+              wrapperClassName="w-45 max-sm:w-full"
               value={dept}
               onChange={(e) => setDept(e.target.value)}
             >
@@ -102,7 +102,7 @@ export default function RosterDataPage() {
             </Select>
             <Select
               aria-label={t.allStatus}
-              wrapperClassName="w-42.5"
+              wrapperClassName="w-42.5 max-sm:w-full"
               value={st}
               onChange={(e) => setSt(e.target.value)}
             >
@@ -112,7 +112,7 @@ export default function RosterDataPage() {
             </Select>
             <Select
               aria-label={t.lblMonth}
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             >

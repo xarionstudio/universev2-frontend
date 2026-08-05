@@ -66,6 +66,7 @@ export function AudioTab() {
   const dispLabel: Record<DisplayKind, string> = {
     att: t.navDispAtt,
     fleet: t.navDispFleet,
+    monitor: t.navDispMonitor,
     ftw: "Display Fit To Work",
     finger: "Monitoring Fingerprint",
   };
@@ -154,14 +155,14 @@ export function AudioTab() {
           <ToolbarTitle>{t.stAudioTitle}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.stAudioSearchPh}
               aria-label={t.stAudioSearchPh}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
             <Select
-              wrapperClassName="w-40"
+              wrapperClassName="w-40 max-sm:w-full"
               aria-label={t.thStatus}
               value={statusF}
               onChange={(e) => setStatusF(e.target.value)}

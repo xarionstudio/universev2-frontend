@@ -65,7 +65,7 @@ export default function NotificationsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.notifTitle} sub={t.ntfSub}>
         <Button onClick={markAll} disabled={unread === 0}>
           <CheckCheck />
@@ -78,7 +78,7 @@ export default function NotificationsPage() {
           <ToolbarTitle>{t.ntfListT}</ToolbarTitle>
           <ToolbarGroup>
             <SearchInput
-              className="w-60"
+              className="w-60 max-sm:w-full"
               placeholder={t.ntfSearchPh}
               aria-label={t.ntfSearchPh}
               value={q}

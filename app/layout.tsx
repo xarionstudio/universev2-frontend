@@ -34,8 +34,11 @@ export const viewport: Viewport = {
   ],
 };
 
-// Resolver tema (System|Terang|Gelap) — dijalankan sebelum paint agar tidak flash
-const themeInit = `(function(){try{var p=localStorage.getItem('universe-theme')||'system';var l=window.matchMedia('(prefers-color-scheme: light)').matches;document.documentElement.setAttribute('data-theme',p==='system'?(l?'light':'dark'):p);}catch(e){}})()`;
+/* Resolver tema (System|Terang|Gelap) — dijalankan sebelum paint agar tidak
+   flash. "System" berarti otomatis: ikut cuaca. Cuaca belum bisa diketahui
+   sedini ini, jadi dipakai hasil terakhir yang disimpan ThemeProvider; kalau
+   belum pernah ada, jatuh ke preferensi OS. */
+const themeInit = `(function(){try{var p=localStorage.getItem('universe-theme')||'system';var l=window.matchMedia('(prefers-color-scheme: light)').matches;var s=l?'light':'dark';var t=(p==='light'||p==='dark')?p:(localStorage.getItem('universe-theme-wx')||s);document.documentElement.setAttribute('data-theme',t);}catch(e){}})()`;
 
 export default function RootLayout({
   children,

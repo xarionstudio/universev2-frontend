@@ -698,3 +698,26 @@ export const pitLocations: { name: string; mining: boolean }[] = [
   { name: "Bank Soil", mining: true },
   { name: "Parkiran Wash Bay", mining: false },
 ];
+
+/* ===== Label kode unit untuk layar =====
+   Kode di master ditulis rapat dan tidak konsisten: "EX7001", "UDBU001",
+   tetapi juga "UD-BU06". Di layar kiosk yang dibaca dari ±6 meter, deret
+   huruf-angka yang menempel sulit dipindai, dan dua ejaan bus yang berbeda
+   terbaca sebagai dua armada berbeda. Fungsi ini menormalkan keduanya jadi
+   satu bentuk: PREFIX-NOMOR.
+
+   Prefix "EX" sengaja dipanjangkan jadi "EXCA" — di layar fleet, leader
+   formasi adalah excavator, dan "EXCA-7001" langsung terbaca sebagai alat
+   gali, sementara "EX-7001" masih bisa tertukar dengan kode lain.
+
+   Nomor dipadkan ke minimal 3 digit supaya UDBU001 dan UD-BU06 berbaris rata
+   sebagai UDBU-001 dan UDBU-006; kode 4 digit (7001) dibiarkan apa adanya. */
+const CODE_PREFIX_LABEL: Record<string, string> = { EX: "EXCA" };
+
+export function unitLabel(code: string): string {
+  const flat = (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const m = /^([A-Z]+)(\d+)$/.exec(flat);
+  if (!m) return code;
+  const [, prefix, digits] = m;
+  return `${CODE_PREFIX_LABEL[prefix] ?? prefix}-${digits.padStart(3, "0")}`;
+}

@@ -10,7 +10,10 @@ function Segmented({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="segmented"
       className={cn(
-        "inline-flex gap-1 rounded-control border border-(--divider) bg-(--fill-input) p-1",
+        /* flex-wrap: grup 4 pilihan ("Semua / Belum / Sudah / Bermasalah")
+           lebih lebar dari layar 360px dan tanpa wrap ia mendorong seluruh
+           halaman, bukan turun ke baris berikutnya. */
+        "inline-flex max-w-full flex-wrap gap-1 rounded-control border border-(--divider) bg-(--fill-input) p-1",
         className
       )}
       {...props}

@@ -130,7 +130,7 @@ export default function PrestasiHistoryPage() {
 
   if (!me) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 max-sm:gap-4">
         <PageTitle title={t.prHistT} sub={t.prHistSub} />
         <StateBox
           icon={<Trophy className="text-primary-bright" />}
@@ -150,7 +150,7 @@ export default function PrestasiHistoryPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.prHistT} sub={t.prHistSub}>
         <Segmented aria-label={t.prRank}>
           {(
@@ -206,7 +206,7 @@ export default function PrestasiHistoryPage() {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-4 gap-4 max-xl:grid-cols-2">
+      <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
         <Mini label={t.prScheduled} value={me.scheduledDays} />
         <Mini label={t.prQualified} value={me.qualifiedDays} />
         <Mini label={t.prPenaltyDays} value={me.penaltyDays} tone="bad" />

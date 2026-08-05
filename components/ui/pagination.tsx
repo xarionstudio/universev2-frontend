@@ -98,7 +98,15 @@ function Pagination({
     }
   }
   return (
-    <div className={cn("flex items-center gap-5", className)}>
+    /* flex-wrap + gap kecil di layar sempit: deretan "baris per halaman" +
+       tombol angka lebih lebar dari 360px, jadi tanpa wrap ia mendorong
+       footer panel keluar layar. */
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-5 gap-y-3 max-sm:gap-x-3",
+        className
+      )}
+    >
       <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
         {t.rppLabel}
         <Select
@@ -115,7 +123,7 @@ function Pagination({
           ))}
         </Select>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-sm:gap-1.5">
         <PageButton
           onClick={() => onPage(page - 1)}
           disabled={page <= 1}
