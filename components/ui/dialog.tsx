@@ -56,18 +56,20 @@ function Dialog({
   );
 }
 
-/* Ikon dialog 44px — varian info (cyan) / warning / danger */
+/* Ikon dialog 44px — varian info (cyan) / success / warning / danger */
 function DialogIcon({
   variant = "info",
   className,
   children,
 }: {
-  variant?: "info" | "warning" | "danger";
+  variant?: "info" | "success" | "warning" | "danger";
   className?: string;
   children: React.ReactNode;
 }) {
   const styles = {
     info: "border-[rgba(0,212,255,.4)] bg-[rgba(0,212,255,.14)] [&_svg]:text-primary-bright",
+    success:
+      "border-(--badge-success-border) bg-(--badge-success-fill) [&_svg]:text-(--badge-success-text)",
     warning:
       "border-(--badge-warning-border) bg-(--badge-warning-fill) [&_svg]:text-(--badge-warning-text)",
     danger:

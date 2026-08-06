@@ -82,6 +82,7 @@ const ROUTE_MODULES: [prefix: string, module: UmModule][] = [
   ["/displays", "display"],
   ["/employees", "employees"],
   ["/roster", "roster"],
+  ["/fingerprint", "fingerprint"],
   ["/fit-to-work", "ftw"],
   ["/assets", "asset"],
   ["/prestasi", "prestasi"],

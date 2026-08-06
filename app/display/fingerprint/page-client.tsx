@@ -3,13 +3,32 @@
 import { useSearchParams } from "next/navigation";
 import { Fingerprint, LayoutGrid, Wifi, WifiOff } from "lucide-react";
 
-import { displayMachines, displayRuntext } from "@/lib/data/display-screens";
+import { displayRuntext, fpDisplayMachines } from "@/lib/data/display-screens";
+import { fpScanCount } from "@/lib/data/fingerprint";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
 
 import { DisplayShell } from "../_components/display-shell";
 
+/* Pemisah ribuan ditulis sendiri, bukan toLocaleString: layar ini dirender di
+   server lalu dihidrasi di browser, dan format lokal keduanya bisa berbeda. */
+function thousands(n: number) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export default function DisplayFingerprintPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const { fpMachines } = useAppStore();
+
+  /* Angka ringkasan DIHITUNG dari mesin terdaftar, tidak ditulis tangan —
+     mendaftarkan mesin baru di modul admin langsung mengubah keempat kartu. */
+  const machines = fpDisplayMachines(fpMachines);
+  const online = machines.filter((m) => m.online).length;
+  const scans = machines.reduce(
+    (sum, m) => sum + (m.online ? fpScanCount(m.meta) : 0),
+    0
+  );
+
   return (
     <DisplayShell
       title="Mesin Fingerprint"
@@ -19,33 +38,33 @@ export default function DisplayFingerprintPage() {
         {
           icon: <LayoutGrid className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
-          value: "12",
+          value: String(machines.length),
           label: "Total Mesin",
         },
         {
           icon: <Wifi className="text-(--badge-success-text)" />,
           iconClass:
             "bg-(--badge-success-fill) border-(--badge-success-border)",
-          value: "10",
+          value: String(online),
           label: "Online",
         },
         {
           icon: <WifiOff className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
-          value: "2",
+          value: String(machines.length - online),
           label: "Offline",
         },
         {
           icon: <Fingerprint className="text-primary-bright" />,
           iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
-          value: "1.208",
+          value: thousands(scans),
           label: "Scan Hari Ini",
         },
       ]}
     >
       {/* grid mesin — offline selalu di urutan teratas & menonjol */}
       <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-4 gap-6">
-        {displayMachines.map((m) => (
+        {machines.map((m) => (
           <div
             key={m.id}
             className={cn(

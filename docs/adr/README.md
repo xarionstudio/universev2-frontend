@@ -10,3 +10,5 @@
 | [0006](0006-equipment-json-sumber-terpusat.md) | equipment.json sebagai sumber data unit terpusat                  | Accepted                    |
 | [0007](0007-alokasi-per-tanggal-shift.md)      | Alokasi operator per tanggal+shift, display fleet memantulkannya  | Accepted                    |
 | [0008](0008-formasi-fleet-dari-xlsx.md)        | Formasi fleet digenerate dari setting-operator.xlsx               | Accepted                    |
+| [0009](0009-ping-mesin-fingerprint.md)         | Master mesin fingerprint + uji koneksi lewat route handler        | Accepted (diamandemen 0010) |
+| [0010](0010-tanpa-streaming-ke-browser.md)     | Tanpa streaming ke browser; umpan balik lewat permintaan pendek   | Accepted                    |

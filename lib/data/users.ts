@@ -7,6 +7,7 @@ export type UmModule =
   | "display"
   | "employees"
   | "roster"
+  | "fingerprint"
   | "ftw"
   | "asset"
   | "prestasi"
@@ -19,6 +20,7 @@ export const umModules: UmModule[] = [
   "display",
   "employees",
   "roster",
+  "fingerprint",
   "ftw",
   "asset",
   "prestasi",
@@ -105,6 +107,7 @@ export const initialUmRoles: UmRole[] = [
       display: "manage",
       employees: "manage",
       roster: "manage",
+      fingerprint: "manage",
       ftw: "manage",
       asset: "manage",
       prestasi: "manage",
@@ -123,6 +126,7 @@ export const initialUmRoles: UmRole[] = [
       display: "manage",
       employees: "manage",
       roster: "manage",
+      fingerprint: "manage",
       ftw: "manage",
       asset: "manage",
       prestasi: "view",
@@ -141,6 +145,10 @@ export const initialUmRoles: UmRole[] = [
       display: "none",
       employees: "view",
       roster: "view",
+      /* Viewer sebelumnya tidak bisa melihat registry ini sama sekali (dulu
+         di bawah modul display yang "none" untuknya). Dibiarkan none: promosi
+         menu jangan diam-diam membuka alamat IP mesin ke role read-only. */
+      fingerprint: "none",
       ftw: "view",
       asset: "view",
       prestasi: "view",

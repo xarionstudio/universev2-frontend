@@ -193,6 +193,11 @@ function MenuTab() {
       label: t.navRoster,
       sub: "Upload, revisi, approval, attendance",
     },
+    {
+      key: "fingerprint",
+      label: t.navFingerprint,
+      sub: "IP, port, uji koneksi",
+    },
     { key: "employees", label: t.navEmployees },
     { key: "ftw", label: t.navFtw },
     { key: "asset", label: t.navAsset },

@@ -1,5 +1,6 @@
 import { attDayRows } from "@/lib/data/attendance";
 import { employees } from "@/lib/data/employees";
+import { fpScanCount, type FpMachine } from "@/lib/data/fingerprint";
 import { ftwData, ftwHistoryFor, type FtwStatus } from "@/lib/data/ftw";
 import { unitsDb } from "@/lib/data/units-db";
 
@@ -170,7 +171,11 @@ export function fleetDisplayCards(
   return cards.sort((a, b) => rank(a) - rank(b));
 }
 
-/* ===== Fingerprint — kesehatan mesin (offline selalu teratas) ===== */
+/* ===== Fingerprint — kesehatan mesin (offline selalu teratas) =====
+   DITURUNKAN dari master mesin (fingerprint.ts) yang dikelola modul admin
+   Mesin Fingerprint — sumber yang sama dengan halaman admin. Layar
+   ini dulu memegang daftarnya sendiri, sehingga IP mesin tidak punya tempat
+   untuk didaftarkan dan dua daftar bisa berbeda tanpa ketahuan. */
 export type DisplayMachine = {
   id: string;
   loc: string;
@@ -178,27 +183,18 @@ export type DisplayMachine = {
   meta: string;
 };
 
-export const displayMachines: DisplayMachine[] = [
-  {
-    id: "FP-07",
-    loc: "Gate selatan",
-    online: false,
-    meta: "terakhir aktif 04:52",
-  },
-  {
-    id: "FP-11",
-    loc: "Mess 31",
-    online: false,
-    meta: "terakhir aktif kemarin 21:14",
-  },
-  { id: "FP-01", loc: "Kantor SDI", online: true, meta: "312 scan" },
-  { id: "FP-02", loc: "Gate utara", online: true, meta: "284 scan" },
-  { id: "FP-03", loc: "Gate selatan", online: true, meta: "201 scan" },
-  { id: "FP-04", loc: "Workshop Plant", online: true, meta: "145 scan" },
-  { id: "FP-05", loc: "Kantor HRGA", online: true, meta: "98 scan" },
-  { id: "FP-06", loc: "Pit utara", online: true, meta: "64 scan" },
-  { id: "FP-08", loc: "Pit selatan", online: true, meta: "52 scan" },
-  { id: "FP-09", loc: "Warehouse", online: true, meta: "31 scan" },
-  { id: "FP-10", loc: "Kantin", online: true, meta: "14 scan" },
-  { id: "FP-12", loc: "Klinik", online: true, meta: "7 scan" },
-];
+export function fpDisplayMachines(list: FpMachine[]): DisplayMachine[] {
+  return (
+    list
+      .filter((m) => m.active)
+      .map((m) => ({ id: m.id, loc: m.loc, online: m.online, meta: m.meta }))
+      /* offline dulu, lalu tersibuk, lalu kode — urutan boolean saja membuat
+       posisi kartu ikut berubah setiap daftar mesin disunting */
+      .sort(
+        (a, b) =>
+          Number(a.online) - Number(b.online) ||
+          fpScanCount(b.meta) - fpScanCount(a.meta) ||
+          a.id.localeCompare(b.id)
+      )
+  );
+}

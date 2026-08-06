@@ -7,6 +7,12 @@ import {
   withKomp,
   type Employee,
 } from "@/lib/data/employees";
+import {
+  FP_DEFAULT_PORT,
+  FP_META_NEW,
+  initialFpMachines,
+  type FpMachine,
+} from "@/lib/data/fingerprint";
 import { initialFleets, type Fleet } from "@/lib/data/fleet";
 import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
 import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
@@ -42,6 +48,7 @@ export { type FaAlloc } from "@/lib/data/fleet-alloc";
 export type MenuVis = {
   display: boolean;
   roster: boolean;
+  fingerprint: boolean;
   employees: boolean;
   ftw: boolean;
   asset: boolean;
@@ -107,6 +114,17 @@ type AppStore = {
   setDspFleet: React.Dispatch<React.SetStateAction<Display[]>>;
   dspMonitor: Display[];
   setDspMonitor: React.Dispatch<React.SetStateAction<Display[]>>;
+  /* mesin fingerprint — dipakai modul admin DAN layar Monitoring Fingerprint,
+     jadi keduanya tidak pernah menampilkan daftar mesin yang berbeda */
+  fpMachines: FpMachine[];
+  setFpMachines: React.Dispatch<React.SetStateAction<FpMachine[]>>;
+  fpAll: () => FpMachine[];
+  saveFpMachine: (
+    id: string | null,
+    data: Partial<FpMachine> & { id: string }
+  ) => void;
+  deleteFpMachine: (id: string) => void;
+  recordFpPing: (id: string, lastPing: FpMachine["lastPing"]) => void;
   /* user management (akun login + role RBAC) */
   umUsers: UmUser[];
   setUmUsers: React.Dispatch<React.SetStateAction<UmUser[]>>;
@@ -163,6 +181,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [menuVis, setMenuVis] = React.useState<MenuVis>({
     display: true,
     roster: true,
+    fingerprint: true,
     employees: true,
     ftw: true,
     asset: true,
@@ -174,6 +193,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [dspFleet, setDspFleet] = React.useState<Display[]>(initialDspFleet);
   const [dspMonitor, setDspMonitor] =
     React.useState<Display[]>(initialDspMonitor);
+  const [fpMachines, setFpMachines] =
+    React.useState<FpMachine[]>(initialFpMachines);
   const [umUsers, setUmUsers] = React.useState<UmUser[]>(initialUmUsers);
   const [umRoles, setUmRoles] = React.useState<UmRole[]>(initialUmRoles);
 
@@ -246,6 +267,58 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /* Daftar mesin fingerprint dalam urutan tetap. Tidak ada pemisahan
+     base/override seperti karyawan & unit: seed-nya tidak dibaca modul lain,
+     jadi seluruh daftar memang tinggal di state. */
+  const fpAll = React.useCallback(
+    () => [...fpMachines].sort((a, b) => a.id.localeCompare(b.id)),
+    [fpMachines]
+  );
+
+  /* id === null -> tambah; id !== null -> ubah baris itu (kode mesin boleh
+     ikut berganti, karena identitas baris adalah `id` LAMA yang dikirim). */
+  const saveFpMachine = React.useCallback(
+    (id: string | null, data: Partial<FpMachine> & { id: string }) => {
+      if (id) {
+        setFpMachines((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, ...data } : m))
+        );
+      } else {
+        setFpMachines((prev) => [
+          ...prev,
+          {
+            loc: "",
+            ip: "",
+            port: FP_DEFAULT_PORT,
+            active: true,
+            /* mesin baru dianggap offline sampai heartbeat pertama —
+               menandainya online tanpa bukti akan membohongi layar TV */
+            online: false,
+            meta: FP_META_NEW,
+            ...data,
+          },
+        ]);
+      }
+    },
+    []
+  );
+
+  const deleteFpMachine = React.useCallback((id: string) => {
+    setFpMachines((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  /* Hasil uji koneksi TIDAK menyentuh `online`: itu heartbeat mesin ke
+     aplikasi, sedangkan ini jangkauan server ke mesin. Lihat catatan di
+     lib/data/fingerprint.ts. */
+  const recordFpPing = React.useCallback(
+    (id: string, lastPing: FpMachine["lastPing"]) => {
+      setFpMachines((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, lastPing } : m))
+      );
+    },
+    []
+  );
+
   const value: AppStore = {
     userName,
     setUserName,
@@ -287,6 +360,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setDspFleet,
     dspMonitor,
     setDspMonitor,
+    fpMachines,
+    setFpMachines,
+    fpAll,
+    saveFpMachine,
+    deleteFpMachine,
+    recordFpPing,
     umUsers,
     setUmUsers,
     umRoles,

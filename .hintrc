@@ -4,7 +4,11 @@
     "compat-api/css": [
       "default",
       {
-        "ignore": ["backdrop-filter", "scrollbar-width"]
+        "ignore": [
+          "backdrop-filter",
+          "scrollbar-width",
+          "scrollbar-width: none"
+        ]
       }
     ]
   }

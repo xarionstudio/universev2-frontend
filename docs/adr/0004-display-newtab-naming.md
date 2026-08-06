@@ -26,6 +26,9 @@ yang memakai `target="_blank"`), dan penamaan di kode memakai istilah produk
    (komponen `DisplayShell`/`DisplayTable`/`DisplayBadge`, data `lib/data/display-screens.ts`);
    halaman admin pengelolaan pindah ke `app/(app)/displays/{attendance,fleet}` agar URL
    tidak bentrok: `/display/*` = layarnya, `/displays/*` = pengelolaannya.
+   Aturan ini berlaku untuk pengelolaan LAYAR saja; master perangkat yang
+   kebetulan punya layar tinggal di modulnya sendiri (lihat ADR 0009 —
+   `/fingerprint`), bukan di bawah `/displays/*`.
    Teks UI dari kamus desain (mis. "Buka layar kiosk") tidak diubah — itu wilayah desain.
 
 ## Konsekuensi

@@ -89,6 +89,7 @@ export function Topbar() {
   else if (pathname.startsWith("/fit-to-work")) cur = t.navFtw;
   else if (pathname.startsWith("/employees")) cur = t.navEmployees;
   else if (pathname.startsWith("/prestasi")) cur = t.navPrestasi;
+  else if (pathname.startsWith("/fingerprint")) cur = t.navFingerprint;
   else if (pathname.startsWith("/settings")) cur = t.navSettings;
   else if (pathname.startsWith("/profile")) cur = t.profile;
   else if (pathname.startsWith("/notifications")) cur = t.notifTitle;

@@ -1,6 +1,7 @@
 import {
   CalendarDays,
   Database,
+  Fingerprint,
   Heart,
   LayoutDashboard,
   Monitor,
@@ -73,6 +74,16 @@ export function navItems(lang: Lang): NavItem[] {
         { href: "/roster/approval", labelKey: "navR3" },
         { href: "/roster/attendance", labelKey: "navR4" },
       ],
+    },
+    /* Modul sendiri, bukan anak Display: yang dikelola di sini adalah master
+       perangkat (IP, port, uji koneksi), bukan layar TV. Layar kiosk
+       "Monitoring Fingerprint" tetap di grup Display. */
+    {
+      key: "fingerprint",
+      labelKey: "navFingerprint",
+      icon: Fingerprint,
+      href: "/fingerprint",
+      visKey: "fingerprint",
     },
     {
       key: "ftw",

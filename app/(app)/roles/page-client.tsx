@@ -56,6 +56,7 @@ const MODULE_LABEL_KEYS: Record<UmModule, keyof Dict> = {
   display: "navDisplay",
   employees: "navEmployees",
   roster: "navRoster",
+  fingerprint: "navFingerprint",
   ftw: "navFtw",
   asset: "navAsset",
   prestasi: "navPrestasi",
