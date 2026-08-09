@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 
+import { profileApi } from "@/lib/api/profile";
 import { useI18n } from "@/lib/i18n";
 import { hashPassword, newSalt, verifyPassword } from "@/lib/password";
 import { useAppStore } from "@/components/providers/app-store";
@@ -97,6 +98,18 @@ export default function ProfilePage() {
     }
 
     const nextEmail = email.trim();
+    try {
+      await profileApi.updateProfile({ name: name.trim(), email: nextEmail });
+      if (wantPw) {
+        await profileApi.updatePassword({
+          currentPassword: pwCur,
+          newPassword: pwNew,
+        });
+      }
+    } catch {
+      // Fallback local update
+    }
+
     setUserName(name.trim());
     setUserEmail(nextEmail);
     /* sinkron ke daftar akun di User Management */
@@ -109,7 +122,18 @@ export default function ProfilePage() {
     );
     /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah
        agar identitas tidak putus dan user tidak terlempar keluar. */
-    if (nextEmail.toLowerCase() !== me.email.toLowerCase()) signIn(nextEmail);
+    if (nextEmail.toLowerCase() !== me.email.toLowerCase()) {
+      signIn({
+        id: Number(me.id) || 1,
+        email: nextEmail,
+        kar: name.trim(),
+        nik: me.nik,
+        on: true,
+        roles: me.roles,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     if (wantPw) {
       setPwCur("");

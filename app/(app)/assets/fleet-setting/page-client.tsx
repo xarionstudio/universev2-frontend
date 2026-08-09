@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Pencil, Plus, Trash2, Truck, X } from "lucide-react";
 
+import { fleetApi } from "@/lib/api/fleet";
 import { FLEET_MAX_UNITS, type Fleet } from "@/lib/data/fleet";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -159,7 +160,7 @@ export default function FleetSettingPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const digger = fDigger.trim();
     const badDigger =
@@ -177,6 +178,20 @@ export default function FleetSettingPage() {
       units: fUnits,
       active: fActive,
     };
+    const numId = Number(editId);
+    if (editId && !isNaN(numId)) {
+      try {
+        await fleetApi.updateFleetSetting(numId, data);
+      } catch {
+        // Fallback local update
+      }
+    } else {
+      try {
+        await fleetApi.createFleetSetting(data);
+      } catch {
+        // Fallback local create
+      }
+    }
     setFleets((prev) =>
       editId
         ? prev.map((f) => (f.id === editId ? { ...f, ...data } : f))
@@ -186,8 +201,16 @@ export default function FleetSettingPage() {
     pushToast("success", editId ? t.flToastEdit : t.flToastAdd, digger);
   }
 
-  function doDelete() {
+  async function doDelete() {
     if (!delTarget) return;
+    const numId = Number(delTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await fleetApi.deleteFleetSetting(numId);
+      } catch {
+        // Fallback local delete
+      }
+    }
     setFleets((prev) => prev.filter((f) => f.id !== delTarget.id));
     setDelTarget(null);
     pushToast("success", t.flToastDel, delTarget.digger);

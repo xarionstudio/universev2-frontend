@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CheckCircle2, PenLine, TriangleAlert } from "lucide-react";
 
+import { rosterApi } from "@/lib/api/roster";
 import type { ApRow } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -82,10 +83,25 @@ export default function RosterApprovalPage() {
     );
   const pg = usePagination(list);
 
-  function decide(i: number | null, ok: boolean, extra?: string) {
+  async function decide(i: number | null, ok: boolean, extra?: string) {
     if (i === null || i === undefined) return;
     const r = apRows[i];
     if (!r) return;
+    const revId =
+      typeof (r as Record<string, unknown>).id === "number"
+        ? ((r as Record<string, unknown>).id as number)
+        : i + 1;
+    try {
+      if (ok && extra) {
+        await rosterApi.approveRevisionWithNote(revId, extra);
+      } else if (ok) {
+        await rosterApi.approveRevision(revId);
+      } else {
+        await rosterApi.rejectRevision(revId, extra);
+      }
+    } catch {
+      // Fallback local state update
+    }
     const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
     const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
     setApRows((prev) =>

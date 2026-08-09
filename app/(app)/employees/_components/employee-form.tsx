@@ -13,6 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 
+import { employeesApi } from "@/lib/api/employees";
 import type { Employee, Komp } from "@/lib/data/employees";
 import { egiTypes } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
@@ -148,41 +149,50 @@ export function EmployeeForm({ nik }: { nik?: string }) {
       return;
     }
     setBusy(true);
-    setTimeout(() => {
-      const nikVal = f.nik.trim();
-      const name = f.nama.trim();
-      const base = nik
-        ? {}
-        : {
-            status: "aktif" as const,
-            simper: "",
-            simperExp: "",
-            blood: "",
-            bpjs: "",
-            hp: "",
-            emg: "",
-          };
-      saveEmployee(nik ?? null, {
-        ...base,
-        name,
-        nik: nikVal,
-        company: f.company,
-        dept: f.dept,
-        pos: f.pos,
-        equip: f.equip,
-        join: f.join,
-        exp: f.exp,
-        license: f.license,
-        mcu: f.mcu,
-        medis: f.medis,
-        mess: f.mess,
-        kamar: f.kamar,
-        komp: kompRows.filter((k) => k.cls),
-      });
-      if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`);
-      else pushToast("success", t.toastAddT, `${name} — NIK ${nikVal}`);
-      router.push(`/employees/${nikVal}`);
-    }, 900);
+    const nikVal = f.nik.trim();
+    const name = f.nama.trim();
+    const payload = {
+      name,
+      nik: nikVal,
+      company: f.company,
+      dept: f.dept,
+      pos: f.pos,
+      equip: f.equip,
+      join: f.join,
+      exp: f.exp,
+      license: f.license,
+      mcu: f.mcu,
+      medis: f.medis,
+      mess: f.mess,
+      kamar: f.kamar,
+    };
+    (async () => {
+      try {
+        if (nik) {
+          await employeesApi.update(nikVal, payload);
+        } else {
+          await employeesApi.create(payload);
+        }
+      } catch {
+        // Fallback to local store save
+      } finally {
+        saveEmployee(nik ?? null, {
+          ...payload,
+          status: "aktif" as const,
+          simper: "",
+          simperExp: "",
+          blood: "",
+          bpjs: "",
+          hp: "",
+          emg: "",
+          komp: kompRows.filter((k) => k.cls),
+        });
+        setBusy(false);
+        if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`);
+        else pushToast("success", t.toastAddT, `${name} — NIK ${nikVal}`);
+        router.push(`/employees/${nikVal}`);
+      }
+    })();
   }
 
   return (

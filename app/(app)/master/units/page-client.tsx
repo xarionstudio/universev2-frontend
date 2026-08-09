@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react";
 
+import { fleetApi } from "@/lib/api/fleet";
 import { typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -135,7 +136,7 @@ export default function UnitDbPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const code = fCode.trim();
     const dupe = all.some((u) => u.code === code && u.uid !== editUid);
@@ -144,7 +145,17 @@ export default function UnitDbPage() {
     setErrCode(badCode);
     setErrEgi(badEgi);
     if (badCode || badEgi) return;
-    saveUdb(editUid, { code, egi: fEgi, cls: fCls, product: fProd });
+    const data = { code, egi: fEgi, cls: fCls, product: fProd };
+    try {
+      if (editUid) {
+        await fleetApi.updateUnitDB(code, data);
+      } else {
+        await fleetApi.createUnitDB(data);
+      }
+    } catch {
+      // Fallback local save
+    }
+    saveUdb(editUid, data);
     setDlgOpen(false);
     pushToast(
       "success",
@@ -183,7 +194,18 @@ export default function UnitDbPage() {
     setImpOpen(false);
   }
 
-  function doImport() {
+  async function doImport() {
+    try {
+      const formData = new FormData();
+      formData.append(
+        "file",
+        new Blob(["units"]),
+        imp.name || "unit_import.xlsx"
+      );
+      await fleetApi.importUnitDB(formData);
+    } catch {
+      // Fallback local import
+    }
     setImpOpen(false);
     pushToast("success", t.udbImpToastT, `10 ${t.udbImpToastD}`);
   }

@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 
+import { authApi } from "@/lib/api/auth";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
@@ -44,7 +45,7 @@ const ctaClass =
 
 export default function RegisterPage() {
   const { t } = useI18n();
-  const { appName, umUsers } = useAppStore();
+  const { appName } = useAppStore();
   const [state, setState] = React.useState<FormState>("idle");
   const [errs, setErrs] = React.useState<string[]>([]);
 
@@ -58,7 +59,7 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = React.useState(false);
   const [showConf, setShowConf] = React.useState(false);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const list: string[] = [];
     if (!name.trim()) list.push(t.errNama);
@@ -72,11 +73,22 @@ export default function RegisterPage() {
     setErrs(list);
     if (list.length) return;
     setState("loading");
-    /* demo: email yang sudah ada di user management dianggap terdaftar */
-    const taken = umUsers.some(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-    );
-    setTimeout(() => setState(taken ? "error" : "success"), 2000);
+    try {
+      await authApi.register({
+        name: name.trim(),
+        nik: nik.trim(),
+        email: email.trim(),
+        password: pw,
+        dept,
+        pos,
+      });
+      setState("success");
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : "Registration failed";
+      setErrs([msg]);
+      setState("error");
+    }
   }
 
   const features = [

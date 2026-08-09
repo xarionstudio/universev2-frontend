@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 
+import { rosterApi } from "@/lib/api/roster";
 import { legendGroupsFor, rosterMeta, upPreviewData } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -39,14 +40,40 @@ export default function RosterDetailPage() {
   const metas = rosterMeta(lang);
   const meta = metas.find((m) => m.key === key) ?? metas[0];
 
-  const preview = React.useMemo(() => upPreviewData(), []);
+  const [apiDetail, setApiDetail] = React.useState<Record<
+    string,
+    unknown
+  > | null>(null);
+
+  React.useEffect(() => {
+    if (key) {
+      const numKey = Number(key);
+      if (!isNaN(numKey)) {
+        rosterApi
+          .getRosterDetail(numKey)
+          .then((res) => {
+            if (res) setApiDetail(res);
+          })
+          .catch(() => {});
+      }
+    }
+  }, [key]);
+
+  const basePreview = React.useMemo(() => upPreviewData(), []);
+  const preview = apiDetail || basePreview;
   const [q, setQ] = React.useState("");
   const needle = q.trim().toLowerCase();
-  const rows = preview.rows.filter(
+  const rows = (
+    (preview as { rows?: Record<string, unknown>[] }).rows || []
+  ).filter(
     (r) =>
       !needle ||
-      r.name.toLowerCase().includes(needle) ||
-      r.nik.toLowerCase().includes(needle)
+      String(r.name || "")
+        .toLowerCase()
+        .includes(needle) ||
+      String(r.nik || "")
+        .toLowerCase()
+        .includes(needle)
   );
   const pg = usePagination(rows);
   const legendGroups = legendGroupsFor(lang);
@@ -101,7 +128,7 @@ export default function RosterDetailPage() {
               <tr>
                 <TableHead className="w-27.5">NIK</TableHead>
                 <TableHead className="w-47.5">{t.thNama}</TableHead>
-                {preview.days.map((d) => (
+                {((preview as { days?: string[] }).days || []).map((d) => (
                   <TableHead
                     key={d}
                     className="px-1.5 py-3 text-center font-mono"
@@ -112,23 +139,25 @@ export default function RosterDetailPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {pg.rows.map((r) => (
-                <TableRow key={r.nik}>
+              {(pg.rows as Record<string, unknown>[]).map((r) => (
+                <TableRow key={String(r.nik)}>
                   <TableCell className="font-mono whitespace-nowrap">
-                    {r.nik}
+                    {String(r.nik)}
                   </TableCell>
                   <TableCell className="font-semibold whitespace-nowrap">
-                    {r.name}
+                    {String(r.name)}
                   </TableCell>
-                  {r.codes.map((c, i) => (
-                    <TableCell
-                      key={i}
-                      className="px-1.5 py-3 text-center font-mono text-xs"
-                      style={{ color: c.color }}
-                    >
-                      {c.v}
-                    </TableCell>
-                  ))}
+                  {((r.codes as { color?: string; v?: string }[]) || []).map(
+                    (c, i) => (
+                      <TableCell
+                        key={i}
+                        className="px-1.5 py-3 text-center font-mono text-xs"
+                        style={{ color: c.color }}
+                      >
+                        {c.v}
+                      </TableCell>
+                    )
+                  )}
                 </TableRow>
               ))}
             </TableBody>

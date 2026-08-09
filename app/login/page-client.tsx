@@ -15,8 +15,8 @@ import {
   Truck,
 } from "lucide-react";
 
+import { authApi } from "@/lib/api/auth";
 import { useI18n } from "@/lib/i18n";
-import { verifyPassword } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { useSession } from "@/components/providers/session";
@@ -34,7 +34,7 @@ import { LogoBadge3D } from "@/components/ui/logo-3d";
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { appName, umUsers } = useAppStore();
+  const { appName } = useAppStore();
   const { signIn } = useSession();
   const emailRef = React.useRef<HTMLInputElement>(null);
   const pwRef = React.useRef<HTMLInputElement>(null);
@@ -43,11 +43,6 @@ export default function LoginPage() {
   const [err, setErr] = React.useState(false);
   const [errMsg, setErrMsg] = React.useState<string | null>(null);
 
-  /* Login kini benar-benar mencari akunnya di User Management supaya RBAC
-     punya subjek yang nyata — sebelumnya email apa pun diterima dan tidak
-     pernah dipakai lagi. Password diverifikasi hanya bila sudah pernah
-     diatur admin; akun yang baru diundang (belum punya password) tetap bisa
-     masuk, mengikuti alur undangan yang sudah tertulis di UI. */
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const email = emailRef.current?.value.trim() || "";
@@ -59,40 +54,20 @@ export default function LoginPage() {
       return;
     }
 
-    const account = umUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (!account) {
-      setErr(true);
-      setErrMsg(t.loginErrUnknown);
-      emailRef.current?.focus();
-      return;
-    }
-    if (!account.on) {
-      setErr(true);
-      setErrMsg(t.loginErrOff);
-      return;
-    }
-
     setErr(false);
     setErrMsg(null);
     setBusy(true);
 
-    if (account.pwHash && account.pwSalt) {
-      const ok = await verifyPassword(pw, account.pwSalt, account.pwHash);
-      if (!ok) {
-        setBusy(false);
-        setErr(true);
-        setErrMsg(t.loginErrPw);
-        pwRef.current?.focus();
-        return;
-      }
-    }
-
-    setTimeout(() => {
-      signIn(account.email);
+    try {
+      const res = await authApi.login({ email, password: pw });
+      signIn(res.user, res.perms);
       router.push("/dashboard");
-    }, 600);
+    } catch (error: unknown) {
+      setBusy(false);
+      setErr(true);
+      const message = error instanceof Error ? error.message : t.loginErr;
+      setErrMsg(message);
+    }
   }
 
   const features = [

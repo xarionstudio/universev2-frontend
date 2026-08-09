@@ -1,8 +1,10 @@
 "use client";
 
+import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { Fingerprint, LayoutGrid, Wifi, WifiOff } from "lucide-react";
 
+import { displayApi } from "@/lib/api/display";
 import { displayMachines, displayRuntext } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,42 @@ import { DisplayShell } from "../_components/display-shell";
 
 export default function DisplayFingerprintPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const [apiMachines, setApiMachines] = React.useState<
+    Record<string, unknown>[]
+  >([]);
+
+  React.useEffect(() => {
+    displayApi
+      .getDisplayMonitor()
+      .then((res) => {
+        if (res && Array.isArray(res))
+          setApiMachines(res as Record<string, unknown>[]);
+      })
+      .catch(() => {});
+  }, []);
+
+  const machines =
+    apiMachines.length > 0
+      ? apiMachines.map((m) => ({
+          id: String(m.id || m.code || ""),
+          loc: String(m.location || m.loc || "—"),
+          online: Boolean(m.online ?? true),
+          meta: m.online
+            ? `${Number(m.scansToday || 0)} scan`
+            : `Offline sejak ${String(m.offlineSince || "—")}`,
+        }))
+      : displayMachines;
+
+  const onlineN = machines.filter((m) => m.online).length;
+  const offlineN = machines.filter((m) => !m.online).length;
+  const totalScans =
+    apiMachines.length > 0
+      ? apiMachines.reduce(
+          (sum: number, m) => sum + Number(m.scansToday || 0),
+          0
+        )
+      : 1208;
+
   return (
     <DisplayShell
       title="Mesin Fingerprint"
@@ -19,33 +57,33 @@ export default function DisplayFingerprintPage() {
         {
           icon: <LayoutGrid className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
-          value: "12",
+          value: String(machines.length),
           label: "Total Mesin",
         },
         {
           icon: <Wifi className="text-(--badge-success-text)" />,
           iconClass:
             "bg-(--badge-success-fill) border-(--badge-success-border)",
-          value: "10",
+          value: String(onlineN),
           label: "Online",
         },
         {
           icon: <WifiOff className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
-          value: "2",
+          value: String(offlineN),
           label: "Offline",
         },
         {
           icon: <Fingerprint className="text-primary-bright" />,
           iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
-          value: "1.208",
+          value: String(totalScans.toLocaleString("id-ID")),
           label: "Scan Hari Ini",
         },
       ]}
     >
       {/* grid mesin — offline selalu di urutan teratas & menonjol */}
       <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-4 gap-6">
-        {displayMachines.map((m) => (
+        {machines.map((m) => (
           <div
             key={m.id}
             className={cn(

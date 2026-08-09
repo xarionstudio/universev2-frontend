@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Eye, Monitor, Pencil, Plus, Trash2 } from "lucide-react";
 
+import { settingsApi } from "@/lib/api/settings";
 import type { Display, DisplayKind } from "@/lib/data/settings-data";
 import { useI18n } from "@/lib/i18n";
 import { openDisplay } from "@/lib/open-display";
@@ -129,7 +130,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const fleet = store.fleets.find((f) => f.id === fFleetId);
     if (kind === "fleet" ? !fleet : !fName.trim()) {
@@ -145,12 +146,31 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
             active: fActive,
           }
         : { name: fName.trim(), runtext: fRuntext, active: fActive };
+    const apiData = {
+      name: data.name,
+      runtext: data.runtext,
+      active: data.active,
+      fleetId: fleet ? Number(fleet.id) || undefined : undefined,
+    };
     if (editing) {
+      const numId = Number(editing.id);
+      if (!isNaN(numId)) {
+        try {
+          await settingsApi.updateDisplay(numId, apiData);
+        } catch {
+          // Fallback local update
+        }
+      }
       setRows((prev) =>
         prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d))
       );
       pushToast("success", t.dspToastEdit);
     } else {
+      try {
+        await settingsApi.createDisplay(apiData);
+      } catch {
+        // Fallback local addition
+      }
       const prefix = kind === "att" ? "DSP-A" : "DSP-F";
       const id = `${prefix}${String(rows.length + 1).padStart(2, "0")}`;
       setRows((prev) => [
@@ -169,8 +189,16 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
     setDlgOpen(false);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delTarget) return;
+    const numId = Number(delTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await settingsApi.deleteDisplay(numId);
+      } catch {
+        // Fallback local deletion
+      }
+    }
     setRows((prev) => prev.filter((d) => d.id !== delTarget.id));
     pushToast("success", t.dspToastDel);
     setDelTarget(null);

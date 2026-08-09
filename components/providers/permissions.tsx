@@ -12,37 +12,58 @@ import {
 import { useAppStore } from "@/components/providers/app-store";
 import { useSession } from "@/components/providers/session";
 
-/* Menjembatani sesi (siapa) dengan app-store (daftar user & role) menjadi
-   permission efektif. Sengaja hook, bukan provider baru, agar tidak menambah
-   lapisan context — cukup menurunkan dari dua sumber yang sudah ada. */
-
 export type Permissions = {
-  /* Record UmUser milik akun yang login; null bila email tidak dikenal */
   user: UmUser | null;
   perms: Record<UmModule, UmPerm>;
-  /* Punya role terkunci (Superadmin) — akses penuh ke semua modul */
   isSuper: boolean;
-  /* false selama sesi belum terbaca; jangan ambil keputusan redirect dulu */
   ready: boolean;
   can: (module: UmModule, need?: Exclude<UmPerm, "none">) => boolean;
 };
 
 export function usePermissions(): Permissions {
-  const { email, hydrated } = useSession();
+  const {
+    user: sessionUser,
+    perms: sessionPerms,
+    email,
+    hydrated,
+  } = useSession();
   const { umUsers, umRoles } = useAppStore();
 
   return React.useMemo(() => {
-    const user =
+    // Priority: sessionUser from backend session, fallback to umUsers matching email
+    const storeUser =
       email == null
         ? null
         : (umUsers.find((u) => u.email.toLowerCase() === email.toLowerCase()) ??
           null);
 
-    const perms = hydrated ? effectivePerms(user, umRoles) : EMPTY_PERMS;
+    const user: UmUser | null = sessionUser
+      ? {
+          id: String(sessionUser.id),
+          nik: sessionUser.nik || "",
+          kar: sessionUser.kar,
+          email: sessionUser.email,
+          roles: sessionUser.roles || [],
+          on: sessionUser.on,
+          pwSalt: "",
+          pwHash: "",
+        }
+      : storeUser;
+
+    let perms: Record<UmModule, UmPerm> = EMPTY_PERMS;
+    if (hydrated) {
+      if (sessionPerms && Object.keys(sessionPerms).length > 0) {
+        perms = sessionPerms as Record<UmModule, UmPerm>;
+      } else {
+        perms = effectivePerms(user, umRoles);
+      }
+    }
+
     const isSuper =
       !!user &&
       user.on &&
-      umRoles.some((r) => user.roles.includes(r.id) && isSuperRole(r));
+      (user.roles.includes("1") ||
+        umRoles.some((r) => user.roles.includes(r.id) && isSuperRole(r)));
 
     return {
       user,
@@ -51,5 +72,5 @@ export function usePermissions(): Permissions {
       ready: hydrated,
       can: (module, need = "view") => rawCan(perms, module, need),
     };
-  }, [email, hydrated, umUsers, umRoles]);
+  }, [sessionUser, sessionPerms, email, hydrated, umUsers, umRoles]);
 }

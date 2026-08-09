@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Download, Search } from "lucide-react";
 
+import { attendanceApi } from "@/lib/api/attendance";
 import { attData, type AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
 import { useRegisterRefresh } from "@/components/providers/refresh";
@@ -84,15 +85,41 @@ function AttendanceInner() {
             ? t.bUnfit
             : t.bOff;
 
-  const rows = attData(lang).filter((r) => {
-    if (from && (r.date ?? "") < from) return false;
-    if (to && (r.date ?? "") > to) return false;
-    if (status && r.st !== status) return false;
-    if (dept && r.dept !== dept) return false;
-    const needle = q.trim().toLowerCase();
-    if (!needle) return true;
-    return r.name.toLowerCase().includes(needle) || r.nik.includes(needle);
-  });
+  const [apiAtt, setApiAtt] = React.useState<Record<string, unknown>[]>([]);
+
+  React.useEffect(() => {
+    if (from && to) {
+      attendanceApi
+        .getRange(from, to)
+        .then((res) => {
+          if (res && Array.isArray(res))
+            setApiAtt(res as Record<string, unknown>[]);
+        })
+        .catch(() => {});
+    }
+  }, [from, to]);
+
+  const baseRows = attData(lang);
+  const rows = baseRows
+    .map((r) => {
+      const matched = apiAtt.find((a) => a.nik === r.nik);
+      if (!matched) return r;
+      return {
+        ...r,
+        st: (matched.status as AttStatus) || r.st,
+        in: (matched.checkIn as string) || r.in,
+        out: (matched.checkOut as string) || r.out,
+      };
+    })
+    .filter((r) => {
+      if (from && (r.date ?? "") < from) return false;
+      if (to && (r.date ?? "") > to) return false;
+      if (status && r.st !== status) return false;
+      if (dept && r.dept !== dept) return false;
+      const needle = q.trim().toLowerCase();
+      if (!needle) return true;
+      return r.name.toLowerCase().includes(needle) || r.nik.includes(needle);
+    });
 
   const presentN = rows.filter(
     (r) => r.st === "hadir" || r.st === "terlambat"

@@ -9,6 +9,7 @@ import {
   Clock,
 } from "lucide-react";
 
+import { displayApi } from "@/lib/api/display";
 import { displayFtwRowsNow, displayRuntext } from "@/lib/data/display-screens";
 
 import { DisplayShell } from "../_components/display-shell";
@@ -16,8 +17,50 @@ import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayFitworkPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
+
+  React.useEffect(() => {
+    displayApi
+      .getDisplayFTW()
+      .then((res) => {
+        if (res && Array.isArray(res))
+          setApiRows(res as Record<string, unknown>[]);
+      })
+      .catch(() => {});
+  }, []);
+
   /* baris + statistik diturunkan dari log tidur — sinkron dengan admin */
-  const rows = React.useMemo(() => displayFtwRowsNow(), []);
+  const baseRows = React.useMemo(() => displayFtwRowsNow(), []);
+  const rows =
+    apiRows.length > 0
+      ? apiRows.map((r) => ({
+          nik: String(r.nik || ""),
+          name: String(r.name || r.nik || ""),
+          pos: String(r.pos || "Operator"),
+          dept: String(r.dept || "Operation"),
+          sleep: r.sleepHours ? `${r.sleepHours} jam` : "—",
+          rest: r.restHours ? `${r.restHours} jam` : "—",
+          label:
+            r.status === "fit"
+              ? "Fit"
+              : r.status === "spare"
+                ? "Kurang tidur"
+                : "Belum lapor",
+          variant: (r.status === "fit"
+            ? "success"
+            : r.status === "spare"
+              ? "warning"
+              : "neutral") as "success" | "warning" | "neutral",
+          tone: (r.status === "fit"
+            ? "success"
+            : r.status === "spare"
+              ? "warning"
+              : "neutral") as "success" | "warning" | "neutral",
+          note: String(
+            r.note || (r.restHours ? `Istirahat ${r.restHours} jam` : "—")
+          ),
+        }))
+      : baseRows;
   const n = (label: string) => rows.filter((r) => r.label === label).length;
   return (
     <DisplayShell

@@ -355,6 +355,7 @@ export const en: Dict = {
   umToastExp: "CSV export downloaded",
   umUserAdd: "Add user",
   umUserEditT: "Edit user",
+  umUserOffT: "Deactivate user",
   umUserSaveAdd: "Send invitation",
   umLinked: "Linked employee",
   umNoLink: "No link (external account)",

@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
 
+import { dashboardApi } from "@/lib/api/dashboard";
+import type { DashboardSummary } from "@/lib/api/types";
 import { attDayRows, type AttRow } from "@/lib/data/attendance";
 import { ftwData, type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
@@ -116,18 +118,29 @@ function attentionRows(
 export default function DashboardPage() {
   const { t, lang } = useI18n();
   const { userName, units } = useAppStore();
-  const breakUnits = units.filter((u) => u.status === "breakdown");
-  /* statistik dari sumber yang sama dengan modul & display TV */
-  /* "Unfit" = benar-benar tidak boleh bekerja (dipulangkan, < 4 jam).
-     Spare tidak dihitung di sini karena masih boleh bekerja setelah
-     istirahat tambahan. */
-  const kurang = ftwData(lang).filter((r) => r.st === "pulang");
-  const attToday = attDayRows(lang, false).filter((r) => r.st !== "off");
-  const belumAbsen = attToday.filter((r) => r.st === "belum");
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [freshTime, setFreshTime] = React.useState("");
+  const [apiSummary, setApiSummary] = React.useState<DashboardSummary | null>(
+    null
+  );
+
+  const breakUnits = units.filter((u) => u.status === "breakdown");
+  const kurang = apiSummary
+    ? []
+    : ftwData(lang).filter((r) => r.st === "pulang");
+  const attToday = apiSummary
+    ? []
+    : attDayRows(lang, false).filter((r) => r.st !== "off");
+  const belumAbsen = apiSummary ? [] : attToday.filter((r) => r.st === "belum");
+
+  const fetchSummary = React.useCallback(async () => {
+    try {
+      const sum = await dashboardApi.getSummary();
+      if (sum) setApiSummary(sum);
+    } catch {}
+  }, []);
 
   const updateFresh = React.useCallback(() => {
     const d = new Date();
@@ -138,19 +151,22 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     const id = setTimeout(updateFresh, 0);
+    queueMicrotask(() => {
+      fetchSummary();
+    });
     return () => clearTimeout(id);
-  }, [updateFresh]);
+  }, [updateFresh, fetchSummary]);
 
   /* refresh dari topbar: skeleton singkat + stempel waktu baru */
   useRegisterRefresh(
     () =>
       new Promise<void>((done) => {
         setLoading(true);
-        setTimeout(() => {
+        fetchSummary().finally(() => {
           setLoading(false);
           updateFresh();
           done();
-        }, 900);
+        });
       })
   );
 
@@ -202,7 +218,7 @@ export default function DashboardPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value={String(kurang.length)}
+          value={String(apiSummary ? apiSummary.ftw.pulang : kurang.length)}
           label={t.statUnfit}
           detail={
             <>
@@ -218,11 +234,17 @@ export default function DashboardPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value={String(belumAbsen.length)}
+          value={String(
+            apiSummary ? apiSummary.attendance.belum : belumAbsen.length
+          )}
           label={t.statAbsent}
           detail={
             <>
-              {t.dAbsent1} <b>{attToday.length}</b> {t.dAbsent2}
+              {t.dAbsent1}{" "}
+              <b>
+                {apiSummary ? apiSummary.attendance.total : attToday.length}
+              </b>{" "}
+              {t.dAbsent2}
             </>
           }
         />
@@ -234,7 +256,9 @@ export default function DashboardPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value={String(breakUnits.length)}
+          value={String(
+            apiSummary ? apiSummary.fleet.breakdown : breakUnits.length
+          )}
           label={t.statBreakdown}
           detail={
             <>
@@ -250,15 +274,16 @@ export default function DashboardPage() {
           href="/roster/approval"
           icon={<MessageSquareMore />}
           iconStyle={{
-            background: "rgba(0,212,255,.14)",
-            borderColor: "rgba(0,212,255,.4)",
-            color: "var(--color-primary-bright)",
+            background: "var(--badge-info-fill)",
+            borderColor: "var(--badge-info-border)",
+            color: "var(--badge-info-text)",
           }}
-          value="14"
+          value={String(apiSummary ? apiSummary.roster.pendingApproval : 1)}
           label={t.statApproval}
           detail={
             <>
-              <b>3</b> {t.dApproval2}
+              <b>{apiSummary ? apiSummary.roster.pendingApproval : 3}</b>{" "}
+              {t.dApproval2}
             </>
           }
         />

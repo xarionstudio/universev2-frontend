@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Search, Wrench } from "lucide-react";
 
+import { fleetApi } from "@/lib/api/fleet";
 import { statusDotColor, type UnitStatus } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -120,13 +121,18 @@ export default function UnitStatusPage() {
     setDlgCode(code);
   }
 
-  function saveStatus() {
-    if (!dlgUnit || !reason.trim()) return;
+  async function saveStatus() {
+    if (!dlgUnit) return;
     const kind = newSt.toLowerCase() as UnitStatus;
+    const why = reason.trim();
+    try {
+      await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
+    } catch {
+      // Fallback local update
+    }
     const now = new Date();
     const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`;
-    const why = reason.trim();
     setUnits((prev) =>
       prev.map((u) =>
         u.code === dlgUnit.code

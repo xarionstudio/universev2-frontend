@@ -4,6 +4,7 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock, Users } from "lucide-react";
 
+import { displayApi } from "@/lib/api/display";
 import { displayAttRowsNow, displayRuntext } from "@/lib/data/display-screens";
 
 import { DisplayShell } from "../_components/display-shell";
@@ -11,8 +12,45 @@ import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayAttendancePage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
+
+  React.useEffect(() => {
+    displayApi
+      .getDisplayAttendance()
+      .then((res) => {
+        if (res && Array.isArray(res))
+          setApiRows(res as Record<string, unknown>[]);
+      })
+      .catch(() => {});
+  }, []);
+
   /* baris + statistik diturunkan dari log absensi — sinkron dengan admin */
-  const rows = React.useMemo(() => displayAttRowsNow(), []);
+  const baseRows = React.useMemo(() => displayAttRowsNow(), []);
+  const rows =
+    apiRows.length > 0
+      ? apiRows.map((a) => ({
+          nik: String(a.nik || ""),
+          name: String(a.name || a.nik || ""),
+          pos: String(a.pos || "Operator"),
+          dept: String(a.dept || "Operation"),
+          label:
+            a.status === "hadir"
+              ? "Hadir"
+              : a.status === "terlambat"
+                ? "Terlambat"
+                : "Belum absen",
+          variant: (a.status === "hadir"
+            ? "success"
+            : a.status === "terlambat"
+              ? "warning"
+              : "neutral") as "success" | "warning" | "neutral",
+          tone: (a.status === "hadir"
+            ? "success"
+            : a.status === "terlambat"
+              ? "warning"
+              : "neutral") as "success" | "warning" | "neutral",
+        }))
+      : baseRows;
   const n = (label: string) => rows.filter((r) => r.label === label).length;
   return (
     <DisplayShell

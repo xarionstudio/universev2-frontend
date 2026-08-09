@@ -4,6 +4,7 @@ import * as React from "react";
 import { notFound, useParams } from "next/navigation";
 import { Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
 
+import { masterApi } from "@/lib/api/master";
 import {
   mdCatLabels,
   mdCats,
@@ -271,7 +272,7 @@ export default function MasterDataPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const name = fName.trim();
     if (!name) {
@@ -279,6 +280,20 @@ export default function MasterDataPage() {
       return;
     }
     const data = { name, a: fA, b: fB, active: fActive };
+    const numId = Number(editId);
+    if (editId && !isNaN(numId)) {
+      try {
+        await masterApi.update(cat, numId, data);
+      } catch {
+        // Fallback local update
+      }
+    } else {
+      try {
+        await masterApi.create(cat, data);
+      } catch {
+        // Fallback local create
+      }
+    }
     setMdData((prev) => ({
       ...prev,
       [cat]: editId
@@ -289,8 +304,16 @@ export default function MasterDataPage() {
     pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
   }
 
-  function doDelete() {
+  async function doDelete() {
     if (!delTarget) return;
+    const numId = Number(delTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await masterApi.delete(cat, numId);
+      } catch {
+        // Fallback local delete
+      }
+    }
     setMdData((prev) => ({
       ...prev,
       [cat]: prev[cat].filter((r) => r.id !== delTarget.id),

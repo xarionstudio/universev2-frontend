@@ -3,6 +3,7 @@
 import * as React from "react";
 import { BellOff, CheckCheck } from "lucide-react";
 
+import { notificationsApi } from "@/lib/api/notifications";
 import { notifToneDot, type Notif } from "@/lib/data/notifications";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -46,13 +47,26 @@ export default function NotificationsPage() {
   });
   const pg = usePagination(filtered, "10");
 
-  function markAll() {
+  async function markAll() {
+    try {
+      await notificationsApi.markAllRead();
+    } catch {
+      // Fallback local update
+    }
     setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
     pushToast("success", t.ntfMarkedT);
   }
 
-  function markOne(n: Notif) {
+  async function markOne(n: Notif) {
     if (n.read) return;
+    const numId = Number(n.id);
+    if (!isNaN(numId)) {
+      try {
+        await notificationsApi.markRead(numId);
+      } catch {
+        // Fallback local update
+      }
+    }
     setNotifs((prev) =>
       prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
     );

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Download, Lock, Pencil, Plus, Trash2, Upload } from "lucide-react";
 
+import { rolesApi } from "@/lib/api/roles";
 import {
   umModules,
   type UmModule,
@@ -136,7 +137,7 @@ export default function RolesPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!fName.trim()) {
       setNameErr(true);
@@ -144,22 +145,59 @@ export default function RolesPage() {
     }
     const data = { name: fName.trim(), desc: fDesc.trim(), perms: fPerms };
     if (editing) {
+      const numId = Number(editing.id);
+      if (!isNaN(numId)) {
+        try {
+          await rolesApi.update(numId, data);
+        } catch {
+          // Keep local state on fallback
+        }
+      }
       setUmRoles((prev) =>
         prev.map((r) => (r.id === editing.id ? { ...r, ...data } : r))
       );
       pushToast("success", t.umToastRoleEdit, data.name);
     } else {
-      setUmRoles((prev) => [
-        ...prev,
-        { id: `r${prev.length + 1}`, locked: false, ...data },
-      ]);
+      try {
+        const created = await rolesApi.create(data);
+        if (created) {
+          setUmRoles((prev) => [
+            ...prev,
+            {
+              id: String(created.id),
+              name: created.name,
+              desc: created.desc,
+              locked: created.locked,
+              perms: (created.perms || {}) as Record<UmModule, UmPerm>,
+            },
+          ]);
+        } else {
+          setUmRoles((prev) => [
+            ...prev,
+            { id: `r${prev.length + 1}`, locked: false, ...data },
+          ]);
+        }
+      } catch {
+        setUmRoles((prev) => [
+          ...prev,
+          { id: `r${prev.length + 1}`, locked: false, ...data },
+        ]);
+      }
       pushToast("success", t.umToastRoleAdd, data.name);
     }
     setDlgOpen(false);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delTarget) return;
+    const numId = Number(delTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await rolesApi.delete(numId);
+      } catch {
+        // Continue local cleanup
+      }
+    }
     setUmRoles((prev) => prev.filter((r) => r.id !== delTarget.id));
     pushToast("success", t.umToastRoleDel, delTarget.name);
     setDelTarget(null);

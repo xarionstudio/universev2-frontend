@@ -353,6 +353,7 @@ export const id = {
   umToastExp: "Export CSV diunduh",
   umUserAdd: "Tambah user",
   umUserEditT: "Edit user",
+  umUserOffT: "Nonaktifkan user",
   umUserSaveAdd: "Kirim undangan",
   umLinked: "Karyawan tertaut",
   umNoLink: "Tanpa tautan (akun eksternal)",

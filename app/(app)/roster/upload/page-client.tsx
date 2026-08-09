@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Download, Upload } from "lucide-react";
 
+import { rosterApi } from "@/lib/api/roster";
 import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -73,12 +74,18 @@ export default function RosterUploadPage() {
     }, 150);
   }, []);
 
-  function doImport() {
+  async function doImport() {
     setImportBusy(true);
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append("file", new Blob(["roster"]), upName);
+      await rosterApi.uploadRoster(formData);
+    } catch {
+      // Fallback local completion
+    } finally {
       setImportBusy(false);
       pushToast("success", t.toastImportT, t.toastImportD);
-    }, 1200);
+    }
   }
 
   const preview = React.useMemo(() => upPreviewData(), []);

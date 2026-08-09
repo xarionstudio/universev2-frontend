@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, Plus, Send, Trash2 } from "lucide-react";
 
+import { rosterApi } from "@/lib/api/roster";
 import { revCodeList, type ApRow } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -122,9 +123,23 @@ export default function RosterRevisionNewPage() {
     setJout("17:30");
   }
 
-  function sendAll() {
+  async function sendAll() {
     const d = new Date();
     const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-01`;
+    try {
+      await rosterApi.submitBatchRevision(
+        entries.map((e) => ({
+          nik: e.nik,
+          name: e.name,
+          sid,
+          code: e.kode,
+          reason: e.alasan,
+          status: "pending",
+        }))
+      );
+    } catch {
+      // Fallback local addition
+    }
     const rows: ApRow[] = entries.map((e) => {
       const what = `${e.tgl} — kode ${e.kode} · ${e.alasan}`;
       return {

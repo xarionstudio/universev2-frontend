@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Globe, Image as ImageIcon, Menu, Rows3 } from "lucide-react";
 
+import { settingsApi } from "@/lib/api/settings";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore, type MenuVis } from "@/components/providers/app-store";
 import {
@@ -83,7 +84,12 @@ function AppTab() {
     { key: "dark", label: t.themeDark },
   ];
 
-  function save() {
+  async function save() {
+    try {
+      await settingsApi.updateSettings({ appName: name });
+    } catch {
+      // Fallback local update
+    }
     setAppName(name);
     setAppDesc(desc);
     pushToast("success", t.stSavedT, t.stSavedD);

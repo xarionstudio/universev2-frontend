@@ -2,23 +2,12 @@
 
 import * as React from "react";
 
-/* Identitas sesi — email akun yang sedang login.
-   Sebelumnya email ini hanya ditulis ke localStorage oleh halaman login dan
-   dibaca sebagai boolean "sudah login atau belum"; siapa yang login tidak
-   pernah dipakai (profil memakai konstanta SESSION_UID = "u1"). Provider ini
-   menjadikannya satu sumber kebenaran sehingga RBAC punya subjek yang jelas.
+import { authApi } from "@/lib/api/auth";
+import type { AuthPerms, AuthUser } from "@/lib/api/types";
 
-   localStorage dibaca lewat useSyncExternalStore, bukan useEffect+setState:
-   itu memang primitif untuk sumber data di luar React, aman terhadap SSR,
-   dan sekaligus ikut memantau perubahan dari tab lain.
+const KEY = "universe-auth-user";
+const PERMS_KEY = "universe-auth-perms";
 
-   Tetap localStorage karena belum ada backend — lihat catatan di lib/rbac.ts
-   soal kenapa ini bukan penegakan keamanan. */
-
-const KEY = "universe-auth";
-
-/* Pelanggan lokal: perubahan dari tab ini tidak memicu event `storage`
-   (event itu hanya untuk tab lain), jadi disiarkan manual. */
 let listeners: Array<() => void> = [];
 
 function emit() {
@@ -27,62 +16,119 @@ function emit() {
 
 function subscribe(cb: () => void) {
   listeners.push(cb);
-  window.addEventListener("storage", cb);
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", cb);
+  }
   return () => {
     listeners = listeners.filter((l) => l !== cb);
-    window.removeEventListener("storage", cb);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", cb);
+    }
   };
 }
 
-function readEmail(): string | null {
+function readUser(): AuthUser | null {
   try {
-    return localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-/* Di server tidak ada sesi; nilai ini juga dipakai saat hydrate pertama */
-const serverEmail = () => null;
+function readPerms(): AuthPerms | null {
+  try {
+    const raw = localStorage.getItem(PERMS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+const serverNull = () => null;
 const serverFalse = () => false;
 const clientTrue = () => true;
 
 type SessionCtx = {
-  /* null = belum login (atau sesi belum terbaca — cek `hydrated` dulu) */
+  user: AuthUser | null;
+  perms: AuthPerms | null;
   email: string | null;
-  /* false selama render server/hydrate — jangan ambil keputusan redirect dulu */
   hydrated: boolean;
-  signIn: (email: string) => void;
-  signOut: () => void;
+  signIn: (user: AuthUser, perms?: AuthPerms) => void;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const Ctx = React.createContext<SessionCtx | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const email = React.useSyncExternalStore(subscribe, readEmail, serverEmail);
+  const user = React.useSyncExternalStore(subscribe, readUser, serverNull);
+  const perms = React.useSyncExternalStore(subscribe, readPerms, serverNull);
   const hydrated = React.useSyncExternalStore(
     subscribe,
     clientTrue,
     serverFalse
   );
 
-  const signIn = React.useCallback((next: string) => {
-    try {
-      localStorage.setItem(KEY, next);
-    } catch {}
-    emit();
-  }, []);
+  const signIn = React.useCallback(
+    (newUser: AuthUser, newPerms?: AuthPerms) => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(newUser));
+        if (newPerms) {
+          localStorage.setItem(PERMS_KEY, JSON.stringify(newPerms));
+        }
+      } catch {}
+      emit();
+    },
+    []
+  );
 
-  const signOut = React.useCallback(() => {
+  const signOut = React.useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {}
     try {
       localStorage.removeItem(KEY);
+      localStorage.removeItem(PERMS_KEY);
     } catch {}
     emit();
   }, []);
 
+  const refreshProfile = React.useCallback(async () => {
+    try {
+      const profile = await authApi.getProfile();
+      if (profile) {
+        localStorage.setItem(KEY, JSON.stringify(profile));
+        emit();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch current user profile", err);
+    }
+  }, []);
+
+  // Validate session against backend profile on mount
+  React.useEffect(() => {
+    if (hydrated && user) {
+      authApi.getProfile().catch(() => {
+        // If cookie is invalid or expired, clear session
+        localStorage.removeItem(KEY);
+        localStorage.removeItem(PERMS_KEY);
+        emit();
+      });
+    }
+  }, [hydrated, user]);
+
   const value = React.useMemo(
-    () => ({ email, hydrated, signIn, signOut }),
-    [email, hydrated, signIn, signOut]
+    () => ({
+      user,
+      perms,
+      email: user?.email ?? null,
+      hydrated,
+      signIn,
+      signOut,
+      refreshProfile,
+    }),
+    [user, perms, hydrated, signIn, signOut, refreshProfile]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Download, Eye, Search, Upload } from "lucide-react";
 
+import { rosterApi } from "@/lib/api/roster";
 import { rosterMeta } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +44,38 @@ export default function RosterDataPage() {
   const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
 
-  const all = rosterMeta(lang);
+  const [apiRosters, setApiRosters] = React.useState<Record<string, unknown>[]>(
+    []
+  );
+
+  React.useEffect(() => {
+    rosterApi
+      .getRosters()
+      .then((res) => {
+        if (res && Array.isArray(res))
+          setApiRosters(res as Record<string, unknown>[]);
+      })
+      .catch(() => {});
+  }, []);
+
+  const baseAll = rosterMeta(lang);
+  const all =
+    apiRosters.length > 0
+      ? apiRosters.map((r) => ({
+          key: String(r.key || r.id || ""),
+          label: String(r.label || r.month || "Roster"),
+          file: String(r.file || "roster.xlsx"),
+          dept: String(r.dept || "Operation"),
+          month: String(r.month || "2026-08"),
+          status: (r.status || "aktif") as "aktif" | "arsip",
+          upd: String(r.upd || "hari ini"),
+          by: String(r.by || "admin"),
+          date: String(r.date || "1–31 Agt 2026"),
+          dateISO: String(r.dateISO || "2026-08-01"),
+          emp: Number(r.emp ?? 150),
+          rows: Number(r.rows ?? 150),
+        }))
+      : baseAll;
   const depts = Array.from(new Set(all.map((r) => r.dept))).sort();
   const monthNames = React.useMemo(() => {
     const loc = lang === "en" ? "en-GB" : "id-ID";

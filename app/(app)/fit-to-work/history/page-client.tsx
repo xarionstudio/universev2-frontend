@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Search } from "lucide-react";
 
+import { ftwApi } from "@/lib/api/ftw";
 import {
   ftwData,
   ftwHistoryFor,
@@ -141,8 +142,34 @@ function FtwHistoryInner() {
   const [d2, setD2] = React.useState(todayIso);
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
+  const [apiHist, setApiHist] = React.useState<Record<string, unknown>[]>([]);
 
-  const ops = ftwData(lang);
+  React.useEffect(() => {
+    ftwApi
+      .getHistory({ nik: fhOp || undefined, from: d1, to: d2 })
+      .then((hist) => {
+        if (hist && Array.isArray(hist))
+          setApiHist(hist as Record<string, unknown>[]);
+      })
+      .catch(() => {});
+  }, [fhOp, d1, d2]);
+
+  const baseOps = ftwData(lang);
+  const ops: FtwRecord[] =
+    apiHist.length > 0
+      ? apiHist.map((h) => ({
+          nik: String(h.nik || ""),
+          name: String(h.name || h.nik || ""),
+          shift: (h.shift || "pagi") as FtwRecord["shift"],
+          st: (h.status || "belum") as StKey,
+          dept: String(h.dept || "Operation"),
+          sleep: h.sleepHours ? `${h.sleepHours} jam` : "—",
+          sleepMin: Number(h.sleepMin || 0),
+          restHours: Number(h.restHours || 0),
+          sendTime: String(h.sendTime || "—"),
+          hist: [],
+        }))
+      : baseOps;
   const selectedOp = ops.find((o) => o.nik === fhOp);
 
   const stBadge = (key: StKey) => {

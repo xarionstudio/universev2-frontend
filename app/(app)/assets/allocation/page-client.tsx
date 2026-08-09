@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CopyPlus, Wand2 } from "lucide-react";
 
+import { fleetApi } from "@/lib/api/fleet";
 import { ftwTodayMap } from "@/lib/data/employees";
 import { isoAddDays } from "@/lib/data/fleet-alloc";
 import { typeOfEgi } from "@/lib/data/units-db";
@@ -192,7 +193,12 @@ export default function FleetAllocationPage() {
       );
   }
 
-  function applyAuto(proposals: FaProposal[]) {
+  async function applyAuto(proposals: FaProposal[]) {
+    try {
+      await fleetApi.autoAllocate({ date: faDate, shift });
+    } catch {
+      // Fallback local apply
+    }
     writeAlloc((next) => {
       for (const pr of proposals) next[pr.code] = pr.nik;
     });

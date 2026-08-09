@@ -2,31 +2,27 @@
 
 import * as React from "react";
 
+import { employeesApi } from "@/lib/api/employees";
+import { fleetApi } from "@/lib/api/fleet";
+import { notificationsApi } from "@/lib/api/notifications";
+import { rolesApi } from "@/lib/api/roles";
+import { settingsApi } from "@/lib/api/settings";
+import { usersApi } from "@/lib/api/users";
 import {
   employees as empBase,
   withKomp,
   type Employee,
 } from "@/lib/data/employees";
-import { initialFleets, type Fleet } from "@/lib/data/fleet";
-import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
-import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
-import { initialNotifs, type Notif } from "@/lib/data/notifications";
-import { apInitialRows, type ApRow } from "@/lib/data/roster";
-import {
-  initialAudios,
-  initialDspAtt,
-  initialDspFleet,
-  type Audio,
-  type Display,
-} from "@/lib/data/settings-data";
-import { initialUnits, type Unit } from "@/lib/data/unit-status";
+import { type Fleet } from "@/lib/data/fleet";
+import { type FaAlloc } from "@/lib/data/fleet-alloc";
+import { type MdCat, type MdEntry } from "@/lib/data/master-data";
+import { type Notif } from "@/lib/data/notifications";
+import { type ApRow } from "@/lib/data/roster";
+import { type Audio, type Display } from "@/lib/data/settings-data";
+import { type Unit } from "@/lib/data/unit-status";
 import { unitsDb as udbBase, type UnitDb } from "@/lib/data/units-db";
-import {
-  initialUmRoles,
-  initialUmUsers,
-  type UmRole,
-  type UmUser,
-} from "@/lib/data/users";
+import { type UmRole, type UmUser } from "@/lib/data/users";
+import { useSession } from "@/components/providers/session";
 
 export { type FaAlloc } from "@/lib/data/fleet-alloc";
 
@@ -106,9 +102,10 @@ type AppStore = {
 const AppStoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
+  const { user: sessionUser, hydrated } = useSession();
   const [userName, setUserName] = React.useState("First Angel Paustine");
   const [userEmail, setUserEmail] = React.useState("angel@unggul.co.id");
-  const [notifs, setNotifs] = React.useState<Notif[]>(initialNotifs);
+  const [notifs, setNotifs] = React.useState<Notif[]>([]);
   const [empOverrides, setEmpOverrides] = React.useState<
     Record<string, Partial<Employee>>
   >({});
@@ -116,28 +113,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [empDeleted, setEmpDeleted] = React.useState<Record<string, boolean>>(
     {}
   );
-  const [apRows, setApRows] = React.useState<ApRow[]>(apInitialRows);
-  const [units, setUnits] = React.useState<Unit[]>(initialUnits);
+  const [apRows, setApRows] = React.useState<ApRow[]>([]);
+  const [units, setUnits] = React.useState<Unit[]>([]);
   const [udbAdded, setUdbAdded] = React.useState<UnitDb[]>([]);
   const [udbOverrides, setUdbOverrides] = React.useState<
     Record<string, Partial<UnitDb>>
   >({});
-  const [mdData, setMdData] = React.useState<Record<MdCat, MdEntry[]>>(mdInit);
-  /* alokasi diseed untuk kemarin & hari ini — demo "salin dari kemarin" + TV;
-     fleet yang punya display TV diisi duluan */
-  const [faAlloc, setFaAlloc] = React.useState<FaAlloc>(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return seedFaAlloc(
-      [isoAddDays(today, -1), today],
-      initialDspFleet.flatMap((d) => (d.fleetId ? [d.fleetId] : []))
-    );
-  });
-  const [fleets, setFleets] = React.useState<Fleet[]>(initialFleets);
+  const [mdData, setMdData] = React.useState<Record<MdCat, MdEntry[]>>(
+    {} as Record<MdCat, MdEntry[]>
+  );
+  const [faAlloc, setFaAlloc] = React.useState<FaAlloc>({});
+  const [fleets, setFleets] = React.useState<Fleet[]>([]);
   const [appName, setAppName] = React.useState("UNIVERSE");
   const [appDesc, setAppDesc] = React.useState(
     "Unggul Network for Integrated Vehicle Resource Smart Ecosystem"
   );
-  const [audios, setAudios] = React.useState<Audio[]>(initialAudios);
+  const [audios, setAudios] = React.useState<Audio[]>([]);
   const [menuVis, setMenuVis] = React.useState<MenuVis>({
     display: true,
     roster: true,
@@ -148,32 +139,182 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     master: true,
     users: true,
   });
-  const [dspAtt, setDspAtt] = React.useState<Display[]>(initialDspAtt);
-  const [dspFleet, setDspFleet] = React.useState<Display[]>(initialDspFleet);
-  const [umUsers, setUmUsers] = React.useState<UmUser[]>(initialUmUsers);
-  const [umRoles, setUmRoles] = React.useState<UmRole[]>(initialUmRoles);
+  const [dspAtt, setDspAtt] = React.useState<Display[]>([]);
+  const [dspFleet, setDspFleet] = React.useState<Display[]>([]);
+  const [umUsers, setUmUsers] = React.useState<UmUser[]>([]);
+  const [umRoles, setUmRoles] = React.useState<UmRole[]>([]);
+
+  // Sync state with backend when user is authenticated
+  React.useEffect(() => {
+    if (!hydrated || !sessionUser) return;
+
+    queueMicrotask(() => {
+      if (sessionUser.kar) setUserName(sessionUser.kar);
+      if (sessionUser.email) setUserEmail(sessionUser.email);
+    });
+
+    // Fetch Notifications
+    notificationsApi
+      .getNotifications()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setNotifs(
+            data.map((n) => ({
+              id: String(n.id),
+              tone: n.tone,
+              textId: n.textId,
+              textEn: n.textEn,
+              timeId: n.timeId,
+              timeEn: n.timeEn,
+              read: n.read,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Users
+    usersApi
+      .getUsers()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setUmUsers(
+            data.map((u) => ({
+              id: String(u.id),
+              nik: u.nik || "",
+              kar: u.kar,
+              email: u.email,
+              dept: "",
+              pos: "",
+              roles: u.roles || [],
+              on: u.on,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Roles
+    rolesApi
+      .getRoles()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setUmRoles(
+            data.map((r) => ({
+              id: String(r.id),
+              name: r.name,
+              desc: r.desc,
+              locked: r.locked,
+              perms: (r.perms || {}) as Record<
+                import("@/lib/data/users").UmModule,
+                import("@/lib/data/users").UmPerm
+              >,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch App Settings
+    settingsApi
+      .getSettings()
+      .then((st) => {
+        if (st) {
+          if (st.appName) setAppName(st.appName);
+          if (st.menuVis) setMenuVis((prev) => ({ ...prev, ...st.menuVis }));
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Employees
+    employeesApi
+      .getEmployees()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setEmpAdded(
+            data.map(
+              (e) =>
+                ({
+                  nik: e.nik,
+                  name: e.name,
+                  company: e.company || "PT Unggul Dinamika Utama",
+                  dept: e.dept || "Operation",
+                  pos: e.pos || "Operator Dump Truck",
+                  equip: e.equip || "HD 785-7",
+                  join: e.join || "2022-01-01",
+                  status: (e.status || "aktif") as Employee["status"],
+                  simper: e.simper || "",
+                  simperExp: e.simperExp || "",
+                  mcuExp: e.mcuExp || "",
+                  ind: e.ind || "",
+                  birth: e.birth || "",
+                  blood: e.blood || "",
+                  religion: e.religion || "",
+                  marital: e.marital || "",
+                  gender: e.gender || "L",
+                  phone: e.phone || "",
+                  email: e.email || "",
+                  address: e.address || "",
+                  emergencyName: e.emergencyName || "",
+                  emergencyRel: e.emergencyRel || "",
+                  emergencyPhone: e.emergencyPhone || "",
+                  exp: 1,
+                  license: [],
+                  mcu: "Fit",
+                  medis: [],
+                  komp: e.komp || [],
+                }) as unknown as Employee
+            )
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Unit Statuses
+    fleetApi
+      .getUnitStatuses()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setUnits(
+            data.map(
+              (u) =>
+                ({
+                  code: u.code,
+                  type: u.type || "",
+                  status: (u.status || "ready") as Unit["status"],
+                  loc: u.loc || "",
+                  upd: u.upd || "",
+                  hist: [],
+                }) as Unit
+            )
+          );
+        }
+      })
+      .catch(() => {});
+  }, [hydrated, sessionUser]);
 
   const empAll = React.useCallback(() => {
-    const base = empBase.map((r) => ({ ...r, ...(empOverrides[r.nik] || {}) }));
-    return withKomp(base.concat(empAdded).filter((r) => !empDeleted[r.nik]));
+    const list = empAdded.length > 0 ? empAdded : empBase;
+    const base = list.map((r) => ({ ...r, ...(empOverrides[r.nik] || {}) }));
+    return withKomp(base.filter((r) => !empDeleted[r.nik]));
   }, [empOverrides, empAdded, empDeleted]);
 
   const saveEmployee = React.useCallback(
     (nik: string | null, data: Partial<Employee> & { nik: string }) => {
-      if (nik && empBase.some((r) => r.nik === nik)) {
+      if (nik && empAdded.some((r) => r.nik === nik)) {
+        setEmpAdded((prev) =>
+          prev.map((r) => (r.nik === nik ? { ...r, ...data } : r))
+        );
+      } else if (nik) {
         setEmpOverrides((prev) => ({
           ...prev,
           [nik]: { ...prev[nik], ...data },
         }));
-      } else if (nik) {
-        setEmpAdded((prev) =>
-          prev.map((r) => (r.nik === nik ? { ...r, ...data } : r))
-        );
       } else {
         setEmpAdded((prev) => [...prev, data as Employee]);
       }
     },
-    []
+    [empAdded]
   );
 
   const deleteEmployee = React.useCallback((nik: string) => {
@@ -181,9 +322,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const udbAll = React.useCallback(() => {
-    return udbBase
-      .map((u) => ({ ...u, ...(udbOverrides[u.uid] || {}) }))
-      .concat(udbAdded);
+    const list = udbAdded.length > 0 ? udbAdded : udbBase;
+    return list.map((u) => ({ ...u, ...(udbOverrides[u.uid] || {}) }));
   }, [udbOverrides, udbAdded]);
 
   const saveUdb = React.useCallback(

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { CheckCircle2, CircleAlert, Clock, Search } from "lucide-react";
 
+import { ftwApi } from "@/lib/api/ftw";
 import {
   ftwData,
   ftwHistoryFor,
@@ -93,10 +94,18 @@ export default function FitToWorkPage() {
     );
   }, []);
 
+  const [apiLogs, setApiLogs] = React.useState<Record<string, unknown>[]>([]);
+
   React.useEffect(() => {
-    const id = setTimeout(updateFresh, 0);
-    return () => clearTimeout(id);
-  }, [updateFresh]);
+    ftwApi
+      .getTodayLogs(d1)
+      .then((logs) => {
+        if (logs && Array.isArray(logs)) {
+          setApiLogs(logs);
+        }
+      })
+      .catch(() => {});
+  }, [d1]);
 
   /* refresh dari topbar: perbarui stempel "data per" */
   useRegisterRefresh(updateFresh);
@@ -116,8 +125,22 @@ export default function FitToWorkPage() {
   };
 
   const emps = empAll();
-  /* status hari ini per operator — dasar angka kartu statistik */
-  const today = ftwData(lang);
+  /* status hari ini per operator — dari API backend */
+  const today: FtwRecord[] =
+    apiLogs.length > 0
+      ? apiLogs.map((l) => ({
+          nik: String(l.nik || ""),
+          name: String(l.name || l.nik || ""),
+          shift: (l.shift || "pagi") as FtwRecord["shift"],
+          st: (l.status || "belum") as StKey,
+          dept: String(l.dept || "Operation"),
+          sleep: l.sleepHours ? `${l.sleepHours} jam` : "—",
+          sleepMin: Number(l.sleepMin || 0),
+          restHours: Number(l.restHours || 0),
+          sendTime: String(l.sendTime || "—"),
+          hist: [],
+        }))
+      : ftwData(lang);
   const needle = q.trim().toLowerCase();
   const rows: Row[] = [];
   for (const op of today) {

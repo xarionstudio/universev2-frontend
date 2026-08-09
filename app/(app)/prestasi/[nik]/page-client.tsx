@@ -12,6 +12,7 @@ import {
   Trophy,
 } from "lucide-react";
 
+import { prestasiApi } from "@/lib/api/prestasi";
 import type { FtwStatus } from "@/lib/data/ftw";
 import {
   buildLeaderboard,
@@ -107,6 +108,10 @@ export default function PrestasiHistoryPage() {
   const nik = String(params?.nik ?? "");
   const { empAll, faAlloc } = useAppStore();
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
+  React.useEffect(() => {
+    if (!nik) return;
+    prestasiApi.getOperatorHistory(nik, PERIOD_DAYS[period]).catch(() => {});
+  }, [nik, period]);
 
   const board = React.useMemo(() => {
     const operators = empAll().filter(

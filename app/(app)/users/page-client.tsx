@@ -13,6 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 
+import { usersApi } from "@/lib/api/users";
 import type { UmUser } from "@/lib/data/users";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -170,7 +171,7 @@ export default function UsersPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const roles = Object.keys(fRoles).filter((r) => fRoles[r]);
     const email = fEmail.trim();
@@ -179,34 +180,78 @@ export default function UsersPage() {
       return;
     }
     const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
-    const data = { email, kar, nik, roles, on: fActive };
+    const data = { email, kar: kar || "", nik: nik || "", roles, on: fActive };
     if (editing) {
       const blocked = guard(editing, roles, fActive);
       if (blocked) {
         pushToast("error", t.umUserEditT, blocked);
         return;
       }
+      try {
+        const numId = Number(editing.id);
+        if (!isNaN(numId)) {
+          await usersApi.update(numId, data);
+        }
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to update user";
+        pushToast("error", t.umUserEditT, msg);
+      }
       setUmUsers((prev) =>
         prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
       );
       pushToast("success", t.umToastUserEdit, email);
     } else {
-      setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }]);
+      try {
+        const newUser = await usersApi.create({
+          email,
+          kar: kar || email.split("@")[0],
+          nik: nik || undefined,
+          roles,
+        });
+        if (newUser) {
+          setUmUsers((prev) => [
+            ...prev,
+            {
+              id: String(newUser.id),
+              email: newUser.email,
+              kar: newUser.kar,
+              nik: newUser.nik || "",
+              roles: newUser.roles || [],
+              on: newUser.on,
+            },
+          ]);
+        }
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to create user";
+        pushToast("error", t.umUserEditT, msg);
+        setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }]);
+      }
       pushToast("success", t.umToastInvite, `${email} — ${t.umToastInviteD}`);
     }
     setDlgOpen(false);
   }
 
-  function offDo() {
+  async function offDo() {
     if (!offTarget) return;
-    const blocked = guard(offTarget, offTarget.roles, false);
+    const nextOn = !offTarget.on;
+    const blocked = guard(offTarget, offTarget.roles, nextOn);
     if (blocked) {
-      pushToast("error", t.umOff, blocked);
+      pushToast("error", t.umUserOffT, blocked);
       setOffTarget(null);
       return;
     }
+    const numId = Number(offTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await usersApi.toggleStatus(numId, nextOn);
+      } catch {
+        // Fallback local update
+      }
+    }
     setUmUsers((prev) =>
-      prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
+      prev.map((u) => (u.id === offTarget.id ? { ...u, on: nextOn } : u))
     );
     pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
     setOffTarget(null);

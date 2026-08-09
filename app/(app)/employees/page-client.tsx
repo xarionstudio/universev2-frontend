@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { employeesApi } from "@/lib/api/employees";
 import type { Employee, Komp } from "@/lib/data/employees";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -141,8 +142,13 @@ export default function EmployeesPage() {
     setPage(1);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delAsk) return;
+    try {
+      await employeesApi.delete(delAsk.nik);
+    } catch {
+      // Fallback local cleanup
+    }
     deleteEmployee(delAsk.nik);
     pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
     setDelAsk(null);

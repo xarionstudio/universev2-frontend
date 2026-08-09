@@ -11,6 +11,7 @@ import {
   UserX,
 } from "lucide-react";
 
+import { displayApi } from "@/lib/api/display";
 import { displayRuntext, fleetDisplayCards } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
@@ -24,6 +25,10 @@ export default function DisplayFleetPage() {
   const deviceName = params.get("name") ?? undefined;
   const fleetId = params.get("fleet");
   const { fleets, faAlloc, empAll } = useAppStore();
+
+  React.useEffect(() => {
+    displayApi.getDisplayFleet().catch(() => {});
+  }, []);
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */
   const fleet =
