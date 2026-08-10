@@ -186,6 +186,7 @@ function AppTab() {
 /* --- Setting Menu --- */
 function MenuTab() {
   const { t } = useI18n();
+  const { pushToast } = useToast();
   const { menuVis, setMenuVis } = useAppStore();
 
   const rows: { key: keyof MenuVis; label: string; sub?: string }[] = [
@@ -230,9 +231,15 @@ function MenuTab() {
             </span>
             <Checkbox
               checked={menuVis[m.key]}
-              onChange={(e) =>
-                setMenuVis((prev) => ({ ...prev, [m.key]: e.target.checked }))
-              }
+              onChange={(e) => {
+                const next = { ...menuVis, [m.key]: e.target.checked };
+                setMenuVis(next);
+                // Persist menu visibility to backend
+                settingsApi
+                  .updateSettings({ menuVis: next })
+                  .then(() => pushToast("success", t.stSavedT, t.stSavedD))
+                  .catch(() => {});
+              }}
             />
           </ToggleRow>
         ))}

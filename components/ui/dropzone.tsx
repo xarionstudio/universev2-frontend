@@ -20,7 +20,7 @@ function Dropzone({
   title: React.ReactNode;
   hint?: React.ReactNode;
   onPick?: () => void;
-  onDropFile?: (name: string) => void;
+  onDropFile?: (name: string, file?: File) => void;
   dragging?: boolean;
   onDragChange?: (dragging: boolean) => void;
   className?: string;
@@ -50,8 +50,8 @@ function Dropzone({
       onDrop={(e) => {
         e.preventDefault();
         onDragChange?.(false);
-        const name = e.dataTransfer.files?.[0]?.name;
-        if (name) onDropFile?.(name);
+        const file = e.dataTransfer.files?.[0];
+        if (file) onDropFile?.(file.name, file);
       }}
       className={cn(
         "cursor-pointer rounded-card border-[1.5px] border-dashed border-(--border-input) bg-(--fill-input) p-6 text-center transition-[border-color,background-color] duration-150 hover:border-primary hover:bg-[rgba(0,212,255,.07)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",

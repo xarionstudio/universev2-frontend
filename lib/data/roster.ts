@@ -15,6 +15,7 @@ export type RosterMeta = {
   status: "aktif" | "arsip";
 };
 
+/** @deprecated Use backend API GET /api/rosters instead. */
 export function rosterMeta(lang: Lang): RosterMeta[] {
   const en = lang === "en";
   return [
@@ -102,6 +103,7 @@ export function rosterMeta(lang: Lang): RosterMeta[] {
 /* ===== Legend kode roster ===== */
 export type LegendGroup = { label: string; codes: { k: string; v: string }[] };
 
+/** @deprecated Use backend API GET /api/rosters/codes instead. */
 export function legendGroupsFor(lang: Lang): LegendGroup[] {
   const en = lang === "en";
   return [
@@ -176,6 +178,7 @@ export type UpError = {
   badge: string;
 };
 
+/** @deprecated Use validation output from backend POST /api/rosters/upload instead. */
 export function upErrorRows(lang: Lang): UpError[] {
   const en = lang === "en";
   return [
@@ -248,6 +251,7 @@ export type UpPreview = {
   rows: { nik: string; name: string; codes: { v: string; color: string }[] }[];
 };
 
+/** @deprecated Use validation output from backend POST /api/rosters/upload instead. */
 export function upPreviewData(): UpPreview {
   const EMP: [string, string, string[]][] = [
     [
@@ -294,6 +298,7 @@ export function upPreviewData(): UpPreview {
 }
 
 /* ===== Kode pilihan form revisi ===== */
+/** @deprecated Use backend API GET /api/rosters/codes instead. */
 export function revCodeList(lang: Lang): string[] {
   const en = lang === "en";
   return [
@@ -325,6 +330,7 @@ export type ApRow = {
   byEn?: string;
 };
 
+/** @deprecated Use backend API GET /api/rosters/revisions instead. */
 export function apInitialRows(): ApRow[] {
   return [
     {

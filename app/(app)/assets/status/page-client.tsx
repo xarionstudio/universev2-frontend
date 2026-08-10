@@ -84,6 +84,31 @@ export default function UnitStatusPage() {
   const [dlgCode, setDlgCode] = React.useState<string | null>(null);
   const [newSt, setNewSt] = React.useState("Ready");
   const [reason, setReason] = React.useState("");
+  const [apiHist, setApiHist] = React.useState<
+    [string, string, string, string][]
+  >([]);
+
+  /* Fetch unit history dari API saat drawer dibuka. state dikunci ke
+     drawerCode agar history unit lain yang pernah dibuka tidak tertampil,
+     dan tidak perlu reset sinkron di dalam effect. */
+  React.useEffect(() => {
+    let cancelled = false;
+    if (drawerCode) {
+      fleetApi
+        .getUnitHistory(drawerCode)
+        .then((hist) => {
+          if (!cancelled && hist && Array.isArray(hist)) {
+            setApiHist(hist as [string, string, string, string][]);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setApiHist([]);
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [drawerCode]);
 
   /* refresh dari topbar: perbarui stempel "data per" */
   useRegisterRefresh(() => setFreshTime(stampNow()));
@@ -111,6 +136,11 @@ export default function UnitStatusPage() {
   const drawerUnit = drawerCode
     ? units.find((u) => u.code === drawerCode)
     : undefined;
+  /* Tampilkan history dari API bila tersedia, fallback ke hist lokal */
+  const drawerHist =
+    apiHist.length > 0
+      ? apiHist
+      : ((drawerUnit?.hist as [string, string, string, string][]) ?? []);
   const dlgUnit = dlgCode ? units.find((u) => u.code === dlgCode) : undefined;
 
   function openDialog(code: string) {
@@ -316,10 +346,12 @@ export default function UnitStatusPage() {
               {t.histTitle}
             </h4>
             <Timeline>
-              {drawerUnit.hist.map(([when, what, why, kind], i) => (
+              {drawerHist.map(([when, what, why, kind], i) => (
                 <TimelineItem
                   key={`${when}-${i}`}
-                  dotColor={statusDotColor[kind]}
+                  dotColor={
+                    statusDotColor[kind as UnitStatus] ?? "var(--text-tertiary)"
+                  }
                   when={when}
                   what={what}
                   why={why}

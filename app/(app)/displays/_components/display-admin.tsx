@@ -150,7 +150,9 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       name: data.name,
       runtext: data.runtext,
       active: data.active,
-      fleetId: fleet ? Number(fleet.id) || undefined : undefined,
+      fleetId: fleet
+        ? Number(fleet.id.replace("fl-", "")) || undefined
+        : undefined,
     };
     if (editing) {
       const numId = Number(editing.id);

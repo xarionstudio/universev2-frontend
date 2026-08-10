@@ -34,6 +34,13 @@ export const displayApi = {
     });
   },
 
+  /** Fetch display fingerprint device status */
+  async getDisplayFingerprint(): Promise<unknown> {
+    return apiFetch<unknown>("/display/fingerprint", {
+      method: "GET",
+    });
+  },
+
   /** Send display kiosk heartbeat */
   async sendHeartbeat(code: string): Promise<{ status: string }> {
     return apiFetch<{ status: string }>(`/displays/${code}/heartbeat`, {

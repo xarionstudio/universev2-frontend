@@ -99,18 +99,41 @@ export default function RosterApprovalPage() {
       } else {
         await rosterApi.rejectRevision(revId, extra);
       }
+      // Refetch revisions from API after decision
+      const fresh = await rosterApi.getRevisions();
+      if (fresh && Array.isArray(fresh)) {
+        setApRows(
+          fresh.map((rev) => ({
+            sid: String(rev.sid || ""),
+            name: String(rev.name || rev.nik || ""),
+            nik: String(rev.nik || ""),
+            whatId: String(rev.whatId || ""),
+            whatEn: String(rev.whatEn || rev.whatId || ""),
+            whenId: String(rev.whenId || ""),
+            whenEn: String(rev.whenEn || rev.whenId || ""),
+            status: (rev.status || "pending") as ApRow["status"],
+            byId: rev.byId ? String(rev.byId) : undefined,
+            byEn: rev.byEn ? String(rev.byEn) : undefined,
+          }))
+        );
+      }
     } catch {
       // Fallback local state update
+      const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
+      const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
+      setApRows((prev) =>
+        prev.map((row, j) =>
+          j === i
+            ? {
+                ...row,
+                status: ok ? "approved" : "rejected",
+                byId: by,
+                byEn: by,
+              }
+            : row
+        )
+      );
     }
-    const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
-    const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
-    setApRows((prev) =>
-      prev.map((row, j) =>
-        j === i
-          ? { ...row, status: ok ? "approved" : "rejected", byId: by, byEn: by }
-          : row
-      )
-    );
     const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
     if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
     else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);

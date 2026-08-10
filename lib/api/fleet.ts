@@ -2,7 +2,7 @@
  * lib/api/fleet.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
-import { apiFetch } from "./client";
+import { apiFetch, apiUploadWithProgress } from "./client";
 import type {
   FleetAllocResponse,
   FleetSetting,
@@ -62,6 +62,18 @@ export const fleetApi = {
   }): Promise<FleetAllocResponse> {
     return apiFetch<FleetAllocResponse>("/fleet/allocations/auto", {
       method: "POST",
+      body: payload,
+    });
+  },
+
+  /** Save manual allocation (assign/release) for a date+shift */
+  async saveAllocation(payload: {
+    date: string;
+    shift: string;
+    units: Record<string, string>;
+  }): Promise<{ date: string; shift: string }> {
+    return apiFetch<{ date: string; shift: string }>("/fleet/allocations", {
+      method: "PUT",
       body: payload,
     });
   },
@@ -140,5 +152,17 @@ export const fleetApi = {
       method: "POST",
       body: formData,
     });
+  },
+
+  /** Import unit DB file with XHR upload progress */
+  async importUnitDBWithProgress(
+    formData: FormData,
+    onProgress: (pct: number) => void
+  ): Promise<{ imported: number }> {
+    return apiUploadWithProgress<{ imported: number }>(
+      "/units/db/import",
+      formData,
+      onProgress
+    );
   },
 };

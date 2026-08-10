@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, Plus, Send, Trash2 } from "lucide-react";
 
 import { rosterApi } from "@/lib/api/roster";
-import { revCodeList, type ApRow } from "@/lib/data/roster";
+import { type ApRow } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -59,13 +59,34 @@ function yesterdayISO() {
 }
 
 export default function RosterRevisionNewPage() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { pushToast } = useToast();
   const { empAll, setApRows } = useAppStore();
   const router = useRouter();
 
   const employees = empAll().filter((e) => e.status === "aktif");
-  const codes = revCodeList(lang);
+  const [codes, setCodes] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    rosterApi
+      .getRevisionCodes()
+      .then((res) => {
+        if (res && Array.isArray(res)) {
+          setCodes(
+            res.map((c) => `${String(c.id || "")} — ${String(c.label || "")}`)
+          );
+        }
+      })
+      .catch(() => {
+        // Fallback to a minimal list if API unavailable
+        setCodes([
+          "D — Day Shift",
+          "N — Night Shift",
+          "OFF — Off / Libur",
+          "S — Sakit",
+        ]);
+      });
+  }, []);
 
   const [emp, setEmp] = React.useState("");
   const [tgl, setTgl] = React.useState(yesterdayISO);
@@ -125,7 +146,8 @@ export default function RosterRevisionNewPage() {
 
   async function sendAll() {
     const d = new Date();
-    const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-01`;
+    const ts = Date.now().toString(36).toUpperCase().slice(-4);
+    const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-${ts}`;
     try {
       await rosterApi.submitBatchRevision(
         entries.map((e) => ({

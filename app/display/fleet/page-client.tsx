@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { displayApi } from "@/lib/api/display";
-import { displayRuntext, fleetDisplayCards } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { initialsOf } from "@/components/ui/avatar";
@@ -20,14 +19,35 @@ import { initialsOf } from "@/components/ui/avatar";
 import { DisplayShell } from "../_components/display-shell";
 import { DisplayBadge } from "../_components/display-table";
 
+type FleetCard = {
+  code: string;
+  opName: string | null;
+  opNik: string | null;
+  tone: "success" | "danger" | "neutral" | "warning" | "info";
+  label: string;
+};
+
 export default function DisplayFleetPage() {
   const params = useSearchParams();
   const deviceName = params.get("name") ?? undefined;
   const fleetId = params.get("fleet");
-  const { fleets, faAlloc, empAll } = useAppStore();
+  const { fleets, empAll, mdData } = useAppStore();
+  const [apiFleets, setApiFleets] = React.useState<Record<string, unknown>[]>(
+    []
+  );
+  const runtext =
+    mdData.runtext.find((r) => r.active && r.a === "Display Fleet")?.name ??
+    mdData.runtext.find((r) => r.active)?.name ??
+    "Wajib P2H sebelum mengoperasikan unit.";
 
   React.useEffect(() => {
-    displayApi.getDisplayFleet().catch(() => {});
+    displayApi
+      .getDisplayFleet()
+      .then((res) => {
+        if (res && Array.isArray(res))
+          setApiFleets(res as Record<string, unknown>[]);
+      })
+      .catch(() => {});
   }, []);
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */
@@ -38,23 +58,41 @@ export default function DisplayFleetPage() {
 
   /* operator dari alokasi harian: tanggal hari ini + shift menurut jam
      (06:00–17:59 = pagi); bisa dipaksa lewat ?shift= untuk pengujian */
-  const [now] = React.useState(() => new Date());
-  const shiftParam = params.get("shift");
-  const shift =
-    shiftParam === "pagi" || shiftParam === "malam"
-      ? shiftParam
-      : now.getHours() >= 6 && now.getHours() < 18
-        ? "pagi"
-        : "malam";
   const nameByNik = React.useMemo(
     () => new Map(empAll().map((e) => [e.nik, e.name])),
     [empAll]
   );
-  const cards = React.useMemo(() => {
+
+  /* Kartu dari API backend bila tersedia — fallback ke formasi lokal */
+  const cards: FleetCard[] = React.useMemo(() => {
+    if (apiFleets.length > 0) {
+      const target = fleetId
+        ? apiFleets.find((f) => String(f.id) === fleetId)
+        : apiFleets[0];
+      if (target && Array.isArray(target.units)) {
+        return (target.units as Record<string, unknown>[]).map((u) => ({
+          code: String(u.code || ""),
+          opName: u.opName ? String(u.opName) : null,
+          opNik: u.opNik ? String(u.opNik) : null,
+          tone: (u.tone || "success") as FleetCard["tone"],
+          label: String(u.label || "Ready"),
+        }));
+      }
+    }
     if (!fleet) return [];
-    const alloc = faAlloc[now.toISOString().slice(0, 10)]?.[shift] ?? {};
-    return fleetDisplayCards(fleet, alloc, (nik) => nameByNik.get(nik));
-  }, [fleet, faAlloc, now, shift, nameByNik]);
+    const alloc = {} as Record<string, string>;
+    return fleet.units.map((code) => {
+      const nik = alloc[code];
+      const opName = nik ? nameByNik.get(nik) : undefined;
+      return {
+        code,
+        opName: opName || null,
+        opNik: opName ? nik : null,
+        tone: "success",
+        label: "Ready",
+      };
+    });
+  }, [apiFleets, fleetId, fleet, nameByNik]);
   const count = (tone: string) => cards.filter((c) => c.tone === tone).length;
 
   return (
@@ -75,7 +113,7 @@ export default function DisplayFleetPage() {
       deviceName={
         deviceName !== `Fleet ${fleet?.digger}` ? deviceName : undefined
       }
-      runtext={displayRuntext.fleet}
+      runtext={runtext}
       stats={[
         {
           icon: <Truck className="text-primary-bright" />,

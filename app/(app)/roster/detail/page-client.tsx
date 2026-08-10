@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 
 import { rosterApi } from "@/lib/api/roster";
-import { legendGroupsFor, rosterMeta, upPreviewData } from "@/lib/data/roster";
+import { legendGroupsFor, rosterMeta } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,8 +59,7 @@ export default function RosterDetailPage() {
     }
   }, [key]);
 
-  const basePreview = React.useMemo(() => upPreviewData(), []);
-  const preview = apiDetail || basePreview;
+  const preview = apiDetail;
   const [q, setQ] = React.useState("");
   const needle = q.trim().toLowerCase();
   const rows = (

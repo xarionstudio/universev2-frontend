@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { Award, Flame, Moon, Search, Target, Trophy } from "lucide-react";
 
+import { prestasiApi } from "@/lib/api/prestasi";
+import type { PrestasiRecord } from "@/lib/api/types";
 import {
-  buildLeaderboard,
   fmtSleep,
   PERIOD_DAYS,
   PTS_BASE,
@@ -19,7 +20,6 @@ import {
 } from "@/lib/data/prestasi";
 import { useI18n } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n/id";
-import { useAppStore } from "@/components/providers/app-store";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Pagination, usePagination } from "@/components/ui/pagination";
@@ -61,19 +61,64 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 export default function PrestasiPage() {
   const { t, lang } = useI18n();
-  const { empAll, faAlloc } = useAppStore();
+
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
   const [q, setQ] = React.useState("");
 
   /* Definisi "operator" disamakan dengan modul Fleet Allocation: karyawan
      aktif yang punya kompetensi unit. Kalau dibedakan, dua modul akan
      menampilkan daftar orang yang berbeda untuk hal yang sama. */
+  const [apiBoard, setApiBoard] = React.useState<PrestasiRecord[] | null>(null);
+
+  /* Ambil leaderboard dari backend API — fallback ke simulasi lokal bila
+     backend tidak tersedia atau belum ada data. */
+  React.useEffect(() => {
+    let cancelled = false;
+    const days = PERIOD_DAYS[period];
+    prestasiApi
+      .getLeaderboard({ days })
+      .then((records) => {
+        if (!cancelled && records && records.length > 0) {
+          setApiBoard(records);
+        } else if (!cancelled) {
+          setApiBoard(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setApiBoard(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
   const board = React.useMemo(() => {
-    const operators = empAll().filter(
-      (e) => e.status === "aktif" && e.komp && e.komp.length
-    );
-    return buildLeaderboard({ operators, alloc: faAlloc, period });
-  }, [empAll, faAlloc, period]);
+    if (apiBoard && apiBoard.length > 0) {
+      /* Adaptasi data API ke bentuk yang dipakai tabel (PrestasiEntry-like) */
+      return apiBoard.map((r) => ({
+        rank: r.rank,
+        nik: r.nik,
+        name: r.name,
+        dept: r.dept,
+        pos: r.pos,
+        foto: r.foto,
+        points: r.points,
+        qualifiedDays: r.qualifiedDays,
+        scheduledDays: r.scheduledDays,
+        penaltyDays: r.penaltyDays,
+        coverDays: r.coverDays,
+        bestStreak: r.bestStreak,
+        currentStreak: r.currentStreak,
+        attRate: r.attRate,
+        sleepRate: r.sleepRate,
+        avgSleepMin: r.avgSleepMin,
+        badges: (r.badges || []) as PrestasiBadgeKey[],
+        days: (r.days ||
+          []) as unknown as import("@/lib/data/prestasi").PrestasiDay[],
+      }));
+    }
+    return [];
+  }, [apiBoard]);
 
   const top3 = board.slice(0, 3);
 

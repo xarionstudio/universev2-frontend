@@ -9,6 +9,7 @@ import {
 /* Master data dinamis (EGI, product, class, area, tempudo, bus, lokasi ex, mess, running text) */
 export type MdEntry = {
   id: string;
+  code: string;
   name: string;
   a: string;
   b: string;
@@ -54,6 +55,7 @@ export const mdCatLabels: Record<MdCat, { id: string; en: string }> = {
 function mk(cat: string, arr: (string | boolean | undefined)[][]): MdEntry[] {
   return arr.map((a, i) => ({
     id: `${cat}-${i}`,
+    code: (a[0] as string) || `${cat}-${i}`,
     name: a[0] as string,
     a: (a[1] as string) || "",
     b: (a[2] as string) || "",

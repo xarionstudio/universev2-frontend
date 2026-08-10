@@ -173,6 +173,11 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         } else {
           await employeesApi.create(payload);
         }
+        // Save competencies via dedicated API
+        const validKomp = kompRows.filter((k) => k.cls && k.simper);
+        if (validKomp.length > 0) {
+          await employeesApi.updateCompetencies(nikVal, validKomp);
+        }
       } catch {
         // Fallback to local store save
       } finally {

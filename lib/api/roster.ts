@@ -2,18 +2,39 @@
  * lib/api/roster.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
-import { apiFetch } from "./client";
+import { apiFetch, apiUploadWithProgress } from "./client";
 import type {
   AttendanceRow,
   RosterExportRow,
   RosterMeta,
   RosterRevision,
+  RosterValidation,
+  ShiftCodeGroup,
 } from "./types";
+
+export type RevisionCode = {
+  id: string;
+  label: string;
+};
 
 export const rosterApi = {
   /** Fetch list of roster files */
   async getRosters(): Promise<RosterMeta[]> {
     return apiFetch<RosterMeta[]>("/rosters", {
+      method: "GET",
+    });
+  },
+
+  /** Fetch revision codes */
+  async getRevisionCodes(): Promise<RevisionCode[]> {
+    return apiFetch<RevisionCode[]>("/rosters/revisions/codes", {
+      method: "GET",
+    });
+  },
+
+  /** Fetch grouped shift codes for legend */
+  async getShiftCodes(): Promise<ShiftCodeGroup[]> {
+    return apiFetch<ShiftCodeGroup[]>("/rosters/codes", {
       method: "GET",
     });
   },
@@ -37,6 +58,17 @@ export const rosterApi = {
       method: "POST",
       body: formData,
     });
+  },
+
+  /** Upload roster Excel/CSV file with XHR progress tracking & validation result */
+  async uploadRosterWithProgress(
+    formData: FormData,
+    onProgress: (pct: number) => void
+  ): Promise<{ meta: RosterMeta; validation: RosterValidation }> {
+    return apiUploadWithProgress<{
+      meta: RosterMeta;
+      validation: RosterValidation;
+    }>("/rosters/upload", formData, onProgress);
   },
 
   /** Fetch pending/history roster revisions */

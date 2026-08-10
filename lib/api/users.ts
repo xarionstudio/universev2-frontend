@@ -28,7 +28,10 @@ export const usersApi = {
   },
 
   /** Update user details */
-  async update(id: number, data: Partial<ApiUser>): Promise<ApiUser> {
+  async update(
+    id: number,
+    data: Partial<ApiUser> & { name?: string; password?: string }
+  ): Promise<ApiUser> {
     return apiFetch<ApiUser>(`/users/${id}`, {
       method: "PUT",
       body: data,

@@ -24,21 +24,21 @@ export const masterApi = {
     });
   },
 
-  /** Update master entry */
+  /** Update master entry by code */
   async update(
     category: MdCat,
-    id: number,
+    code: string,
     data: Record<string, unknown>
   ): Promise<MasterEntry> {
-    return apiFetch<MasterEntry>(`/master/${category}/${id}`, {
+    return apiFetch<MasterEntry>(`/master/${category}/${code}`, {
       method: "PUT",
       body: data,
     });
   },
 
-  /** Delete master entry */
-  async delete(category: MdCat, id: number): Promise<{ message: string }> {
-    return apiFetch<{ message: string }>(`/master/${category}/${id}`, {
+  /** Delete master entry by code */
+  async delete(category: MdCat, code: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>(`/master/${category}/${code}`, {
       method: "DELETE",
     });
   },

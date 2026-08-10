@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Download, Upload } from "lucide-react";
 
 import { rosterApi } from "@/lib/api/roster";
-import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster";
+import type { RosterValidation, ShiftCodeGroup } from "@/lib/api/types";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
@@ -34,6 +34,15 @@ import { useToast } from "@/components/ui/toast";
 
 type Stage = "idle" | "progress" | "validating" | "results";
 
+function colorOfCode(c: string) {
+  if (["OFF", "CR", "AL", "LWP", "LWOP", "PH", "PHD"].includes(c))
+    return "var(--text-tertiary)";
+  if (["S", "A", "ISM", "OBC", "KRT", "TERM", "RSG", "EOC"].includes(c))
+    return "var(--color-danger-text)";
+  if (c === "N") return "var(--color-primary-bright)";
+  return "var(--text-secondary)";
+}
+
 export default function RosterUploadPage() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
@@ -41,93 +50,121 @@ export default function RosterUploadPage() {
 
   const [stage, setStage] = React.useState<Stage>("idle");
   const [pct, setPct] = React.useState(0);
-  const [upName, setUpName] = React.useState("roster_juli_2026.xlsx");
+  const [upName, setUpName] = React.useState("");
   const [dragging, setDragging] = React.useState(false);
   const [importBusy, setImportBusy] = React.useState(false);
+  const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
+
+  const [validation, setValidation] = React.useState<RosterValidation | null>(
+    null
+  );
+  const [legendGroups, setLegendGroups] = React.useState<ShiftCodeGroup[]>([]);
 
   const fileRef = React.useRef<HTMLInputElement>(null);
-  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   React.useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    rosterApi
+      .getShiftCodes()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setLegendGroups(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const startUpload = React.useCallback((name?: string) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setUpName(name || "roster_juli_2026.xlsx");
-    setStage("progress");
-    setPct(0);
-    timerRef.current = setInterval(() => {
-      setPct((prev) => {
-        const p = prev + 12 + Math.random() * 10;
-        if (p >= 100) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = null;
-          setStage("validating");
-          setTimeout(() => setStage("results"), 700);
-          return 100;
-        }
-        return p;
-      });
-    }, 150);
-  }, []);
+  const startUpload = React.useCallback(
+    async (fileOrName?: File | string) => {
+      if (!fileOrName) return;
+      let file: File | null = null;
+      if (typeof fileOrName !== "string") {
+        file = fileOrName;
+      }
+      if (!file) return;
+
+      setUploadedFile(file);
+      setUpName(file.name);
+      setStage("progress");
+      setPct(0);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const result = await rosterApi.uploadRosterWithProgress(
+          formData,
+          (percent) => {
+            setPct(percent);
+          }
+        );
+        setStage("validating");
+        setValidation(result.validation);
+        setTimeout(() => setStage("results"), 400);
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Upload gagal";
+        pushToast("error", "Upload Gagal", errorMessage);
+        setStage("idle");
+      }
+    },
+    [pushToast]
+  );
 
   async function doImport() {
+    if (!uploadedFile) return;
     setImportBusy(true);
     try {
-      const formData = new FormData();
-      formData.append("file", new Blob(["roster"]), upName);
-      await rosterApi.uploadRoster(formData);
-    } catch {
-      // Fallback local completion
+      pushToast("success", t.toastImportT, t.toastImportD);
+      router.push("/roster/data");
     } finally {
       setImportBusy(false);
-      pushToast("success", t.toastImportT, t.toastImportD);
     }
   }
 
-  const preview = React.useMemo(() => upPreviewData(), []);
   const [qPrev, setQPrev] = React.useState("");
   const needlePrev = qPrev.trim().toLowerCase();
-  const prevRows = preview.rows.filter(
-    (r) =>
-      !needlePrev ||
-      r.name.toLowerCase().includes(needlePrev) ||
-      r.nik.toLowerCase().includes(needlePrev)
-  );
+  const prevRows = React.useMemo(() => {
+    if (!validation) return [];
+    return validation.preview.filter(
+      (r) =>
+        !needlePrev ||
+        r.name.toLowerCase().includes(needlePrev) ||
+        r.nik.toLowerCase().includes(needlePrev)
+    );
+  }, [validation, needlePrev]);
   const pgPrev = usePagination(prevRows);
-  const errors = upErrorRows(lang);
+
   const [qErr, setQErr] = React.useState("");
   const needleErr = qErr.trim().toLowerCase();
-  const errRows = errors.filter(
-    (e) =>
-      !needleErr ||
-      e.nik.toLowerCase().includes(needleErr) ||
-      e.emp.toLowerCase().includes(needleErr) ||
-      e.issue.toLowerCase().includes(needleErr)
-  );
+  const errRows = React.useMemo(() => {
+    if (!validation) return [];
+    return validation.errors.filter(
+      (e) =>
+        !needleErr ||
+        e.nik.toLowerCase().includes(needleErr) ||
+        e.emp.toLowerCase().includes(needleErr) ||
+        (lang === "en" ? e.issueEn : e.issue).toLowerCase().includes(needleErr)
+    );
+  }, [validation, needleErr, lang]);
   const pgErr = usePagination(errRows);
-  const legendGroups = legendGroupsFor(lang);
 
   const vchips = [
     {
-      n: t.n2140,
+      n: validation ? String(validation.validCount) : "0",
       label: t.vValid,
       bg: "var(--badge-success-fill)",
       border: "var(--badge-success-border)",
       color: "var(--badge-success-text)",
     },
     {
-      n: "3",
+      n: validation ? String(validation.dupCount) : "0",
       label: t.vDup,
       bg: "var(--badge-warning-fill)",
       border: "var(--badge-warning-border)",
       color: "var(--badge-warning-text)",
     },
     {
-      n: "5",
+      n: validation ? String(validation.errCount) : "0",
       label: t.vErr,
       bg: "var(--badge-danger-fill)",
       border: "var(--badge-danger-border)",
@@ -164,16 +201,16 @@ export default function RosterUploadPage() {
           dragging={dragging}
           onDragChange={setDragging}
           onPick={() => fileRef.current?.click()}
-          onDropFile={(name) => startUpload(name)}
+          onDropFile={(file) => startUpload(file)}
         />
         <input
           ref={fileRef}
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
           onChange={(e) => {
-            const name = e.target.files?.[0]?.name;
-            if (name) startUpload(name);
+            const file = e.target.files?.[0];
+            if (file) startUpload(file);
             e.target.value = "";
           }}
         />
@@ -193,7 +230,7 @@ export default function RosterUploadPage() {
         ) : null}
       </Panel>
 
-      {stage === "results" ? (
+      {stage === "results" && validation ? (
         <div className="flex flex-col gap-6">
           <Panel>
             <Toolbar className="mb-4">
@@ -219,7 +256,7 @@ export default function RosterUploadPage() {
                   <tr>
                     <TableHead className="w-27.5">NIK</TableHead>
                     <TableHead className="w-47.5">{t.thNama}</TableHead>
-                    {preview.days.map((d) => (
+                    {validation.days.map((d) => (
                       <TableHead
                         key={d}
                         className="px-1.5 py-3 text-center font-mono"
@@ -238,15 +275,19 @@ export default function RosterUploadPage() {
                       <TableCell className="font-semibold whitespace-nowrap">
                         {r.name}
                       </TableCell>
-                      {r.codes.map((c, i) => (
-                        <TableCell
-                          key={i}
-                          className="px-1.5 py-3 text-center font-mono text-xs"
-                          style={{ color: c.color }}
-                        >
-                          {c.v}
-                        </TableCell>
-                      ))}
+                      {validation.days.map((_, dayIdx) => {
+                        const dayNum = dayIdx + 1;
+                        const code = r.codes[dayNum] || "—";
+                        return (
+                          <TableCell
+                            key={dayNum}
+                            className="px-1.5 py-3 text-center font-mono text-xs"
+                            style={{ color: colorOfCode(code) }}
+                          >
+                            {code}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -314,12 +355,12 @@ export default function RosterUploadPage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {pgErr.rows.map((e) => (
-                  <TableRow key={e.row}>
+                {pgErr.rows.map((e, idx) => (
+                  <TableRow key={`${e.row}-${e.nik}-${idx}`}>
                     <TableCell className="font-mono">{e.row}</TableCell>
                     <TableCell className="font-mono">{e.nik}</TableCell>
                     <TableCell>{e.emp}</TableCell>
-                    <TableCell>{e.issue}</TableCell>
+                    <TableCell>{lang === "en" ? e.issueEn : e.issue}</TableCell>
                     <TableCell>
                       <Badge variant={e.badgeVariant} dot>
                         {e.badge}
@@ -367,11 +408,11 @@ export default function RosterUploadPage() {
           <span className="text-xs text-(--text-tertiary)">{t.legendNote}</span>
         </Toolbar>
         {legendGroups.map((g, gi) => (
-          <div key={g.label}>
+          <div key={g.group}>
             <div
               className={`mb-2 text-xs font-semibold tracking-[.05em] text-(--text-tertiary) uppercase ${gi === 0 ? "" : "mt-4"}`}
             >
-              {g.label}
+              {lang === "en" ? g.groupEn : g.group}
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2">
               {g.codes.map((c) => (
@@ -382,7 +423,7 @@ export default function RosterUploadPage() {
                   <b className="min-w-9.5 flex-none rounded-md border border-[rgba(0,212,255,.3)] bg-[rgba(0,212,255,.12)] px-1 py-0.75 text-center font-mono text-[11px] font-bold text-primary-bright">
                     {c.k}
                   </b>
-                  {c.v}
+                  {lang === "en" ? c.vEn : c.v}
                 </div>
               ))}
             </div>

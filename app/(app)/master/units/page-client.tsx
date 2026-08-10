@@ -79,13 +79,8 @@ export default function UnitDbPage() {
     name: "",
   });
   const [dragging, setDragging] = React.useState(false);
-  const impTimer = React.useRef<ReturnType<typeof setInterval> | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      if (impTimer.current) clearInterval(impTimer.current);
-    };
-  }, []);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const impFileRef = React.useRef<File | null>(null);
 
   const all = udbAll();
   const classes = Array.from(new Set(all.map((u) => u.cls))).sort();
@@ -164,50 +159,43 @@ export default function UnitDbPage() {
     );
   }
 
-  function startImport(name: string) {
-    if (impTimer.current) clearInterval(impTimer.current);
-    setImp({ stage: "progress", pct: 0, name: name || "unit_import.xlsx" });
-    impTimer.current = setInterval(() => {
-      setImp((prev) => {
-        const pct = prev.pct + 15 + Math.random() * 12;
-        if (pct >= 100) {
-          if (impTimer.current) clearInterval(impTimer.current);
-          impTimer.current = null;
-          return { ...prev, pct: 100, stage: "done" };
-        }
-        return { ...prev, pct };
+  async function startImport(name: string, file?: File) {
+    if (!file) return;
+    impFileRef.current = file;
+    setImp({ stage: "progress", pct: 0, name: file.name });
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fleetApi.importUnitDBWithProgress(formData, (pct) => {
+        setImp({ stage: "progress", pct, name: file.name });
       });
-    }, 130);
+      setImp({ stage: "done", pct: 100, name: file.name });
+      pushToast(
+        "success",
+        t.udbImpToastT,
+        `${res.imported || 1} ${t.udbImpToastD}`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Import gagal";
+      pushToast("error", "Import Gagal", msg);
+      setImp({ stage: "idle", pct: 0, name: "" });
+    }
   }
 
   function openImport() {
-    if (impTimer.current) clearInterval(impTimer.current);
-    impTimer.current = null;
     setImp({ stage: "idle", pct: 0, name: "" });
     setDragging(false);
     setImpOpen(true);
   }
 
   function closeImport() {
-    if (impTimer.current) clearInterval(impTimer.current);
-    impTimer.current = null;
     setImpOpen(false);
   }
 
   async function doImport() {
-    try {
-      const formData = new FormData();
-      formData.append(
-        "file",
-        new Blob(["units"]),
-        imp.name || "unit_import.xlsx"
-      );
-      await fleetApi.importUnitDB(formData);
-    } catch {
-      // Fallback local import
-    }
     setImpOpen(false);
-    pushToast("success", t.udbImpToastT, `10 ${t.udbImpToastD}`);
   }
 
   const heads = [
@@ -501,8 +489,19 @@ export default function UnitDbPage() {
             aria-label={t.udbImpDzTitle}
             dragging={dragging}
             onDragChange={setDragging}
-            onPick={() => startImport("unit_import.xlsx")}
-            onDropFile={(name) => startImport(name)}
+            onPick={() => fileInputRef.current?.click()}
+            onDropFile={(name, file) => startImport(name, file)}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) startImport(file.name, file);
+              e.target.value = "";
+            }}
           />
           {imp.stage === "progress" ? (
             <div className="mt-4">

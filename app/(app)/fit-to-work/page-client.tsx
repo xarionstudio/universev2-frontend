@@ -95,6 +95,7 @@ export default function FitToWorkPage() {
   }, []);
 
   const [apiLogs, setApiLogs] = React.useState<Record<string, unknown>[]>([]);
+  const [apiHist, setApiHist] = React.useState<Record<string, unknown>[]>([]);
 
   React.useEffect(() => {
     ftwApi
@@ -106,6 +107,18 @@ export default function FitToWorkPage() {
       })
       .catch(() => {});
   }, [d1]);
+
+  /* Fetch riwayat FTW dari API (bukan sintetis) */
+  React.useEffect(() => {
+    ftwApi
+      .getHistory({ from: d1, to: d2 })
+      .then((hist) => {
+        if (hist && Array.isArray(hist)) {
+          setApiHist(hist as Record<string, unknown>[]);
+        }
+      })
+      .catch(() => {});
+  }, [d1, d2]);
 
   /* refresh dari topbar: perbarui stempel "data per" */
   useRegisterRefresh(updateFresh);
@@ -154,7 +167,24 @@ export default function FitToWorkPage() {
     const emp = emps.find((e) => e.nik === op.nik);
     const company = emp?.company ?? "PT Unggul Dinamika Utama";
     const pos = emp?.pos ?? "—";
-    for (const entry of ftwHistoryFor(op, lang, 90)) {
+    /* Riwayat dari API — fallback ke data sintetis hanya jika API kosong */
+    const histEntries =
+      apiHist.length > 0
+        ? apiHist
+            .filter((h) => String(h.nik || "") === op.nik)
+            .map((h) => ({
+              d: Number(h.d ?? 0),
+              iso: String(h.iso || ""),
+              date: String(h.date || ""),
+              st: Number(h.st ?? 0),
+              sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
+              sleep: String(h.sleep || "—"),
+              status: (h.status || "belum") as StKey,
+              restHours: Number(h.restHours || 0),
+              sendTime: String(h.sendTime || "—"),
+            }))
+        : ftwHistoryFor(op, lang, 90);
+    for (const entry of histEntries) {
       if (d1 && entry.iso < d1) continue;
       if (d2 && entry.iso > d2) continue;
       // hari ini pakai data log asli operator, bukan deret riwayat sintetis

@@ -121,3 +121,72 @@ export async function apiFetch<T>(
 
   return jsonResponse as T;
 }
+
+export function apiUploadWithProgress<T>(
+  endpoint: string,
+  formData: FormData,
+  onProgress: (pct: number) => void
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${API_BASE_URL}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+
+    xhr.open("POST", url);
+    xhr.withCredentials = true;
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        onProgress(pct);
+      }
+    };
+
+    xhr.onload = () => {
+      let jsonResponse: ApiResponse<T> | null = null;
+      try {
+        jsonResponse = JSON.parse(xhr.responseText);
+      } catch {}
+
+      if (xhr.status === 401 && !endpoint.includes("/auth/login")) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("universe-auth-user");
+            localStorage.removeItem("universe-auth-perms");
+          } catch {}
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+          }
+        }
+      }
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const msg =
+          jsonResponse?.message || `Request failed with status ${xhr.status}`;
+        return reject(new ApiError(msg, xhr.status, jsonResponse));
+      }
+
+      if (jsonResponse && typeof jsonResponse.success === "boolean") {
+        if (!jsonResponse.success) {
+          return reject(
+            new ApiError(
+              jsonResponse.message || "Operation failed",
+              xhr.status,
+              jsonResponse
+            )
+          );
+        }
+        return resolve(jsonResponse.data);
+      }
+
+      return resolve(jsonResponse as T);
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError("Network error during file upload", 0));
+    };
+
+    xhr.send(formData);
+  });
+}

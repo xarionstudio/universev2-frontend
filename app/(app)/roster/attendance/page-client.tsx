@@ -99,16 +99,30 @@ function AttendanceInner() {
     }
   }, [from, to]);
 
+  /* API sebagai sumber utama — hardcode hanya dipakai saat API kosong total */
   const baseRows = attData(lang);
-  const rows = baseRows
+  const rows = (
+    apiAtt.length > 0
+      ? apiAtt
+      : (baseRows as unknown as Record<string, unknown>[])
+  )
     .map((r) => {
-      const matched = apiAtt.find((a) => a.nik === r.nik);
-      if (!matched) return r;
+      const isApi = apiAtt.length > 0;
+      const raw = r as Record<string, unknown>;
       return {
-        ...r,
-        st: (matched.status as AttStatus) || r.st,
-        in: (matched.checkIn as string) || r.in,
-        out: (matched.checkOut as string) || r.out,
+        name: String(raw.name || raw.nik || ""),
+        nik: String(raw.nik || ""),
+        dept: String(raw.dept || "Operation"),
+        code: String(raw.code || raw.shift || "D"),
+        in: String(raw.in || raw.checkIn || ""),
+        inM: String(raw.inM || ""),
+        out: String(raw.out || raw.checkOut || ""),
+        outM: String(raw.outM || ""),
+        st: (isApi
+          ? String(raw.st || raw.status || "belum")
+          : raw.st) as AttStatus,
+        date: String(raw.date || ""),
+        dLabel: String(raw.dLabel || raw.date || ""),
       };
     })
     .filter((r) => {

@@ -32,6 +32,7 @@ export type Employee = {
   foto?: string;
 };
 
+/** @deprecated Use backend API GET /api/employees instead. */
 export const employees: Employee[] = [
   {
     name: "First Angel Paustine",
@@ -498,6 +499,7 @@ export const employees: Employee[] = [
 ];
 
 /* kompetensi per Type EGI (grup model, ikut spreadsheet) — bukan per eq. class */
+/** @deprecated Use backend API GET /api/employees/:nik/competencies instead. */
 export const kompMap: Record<string, Komp[]> = {
   "503264133": [
     { cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-03-14" },
@@ -538,6 +540,7 @@ export function withKomp(list: Employee[]): Employee[] {
 /* Menit tidur hari ini per operator. Statusnya TIDAK ditulis tangan —
    diturunkan lewat ftwEvaluate() supaya tidak mungkin berbeda dengan aturan
    di modul Fit To Work maupun perhitungan poin Prestasi. */
+/** @deprecated Use backend API GET /api/ftw/today instead. */
 export const ftwTodaySleepMin: Record<string, number | null> = {
   "503264133": 440, // 7j20 → fit
   "503264136": 425, // 7j05 → fit
@@ -555,6 +558,7 @@ export const ftwTodaySleepMin: Record<string, number | null> = {
   "503264154": 355, // 5j55 → fit
 };
 
+/** @deprecated Use backend API GET /api/ftw/today instead. */
 export const ftwTodayMap: Record<string, FtwStatus> = Object.fromEntries(
   Object.entries(ftwTodaySleepMin).map(([nik, min]) => [
     nik,

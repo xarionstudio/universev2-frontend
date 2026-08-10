@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Music, Pencil, Plus, Trash2, Volume2 } from "lucide-react";
 
+import { settingsApi } from "@/lib/api/settings";
 import type { Audio, DisplayKind } from "@/lib/data/settings-data";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -114,7 +115,7 @@ export function AudioTab() {
     setFDisplays((prev) => (on ? [...prev, k] : prev.filter((d) => d !== k)));
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!fTitle.trim()) {
       setTitleErr(true);
@@ -129,19 +130,55 @@ export function AudioTab() {
       active: fActive,
     };
     if (editing) {
+      const numId = Number(editing.id);
+      if (!isNaN(numId)) {
+        try {
+          await settingsApi.updateAudioSchedule(numId, data);
+        } catch {
+          // Fallback local update
+        }
+      }
       setAudios((prev) =>
         prev.map((a) => (a.id === editing.id ? { ...a, ...data } : a))
       );
       pushToast("success", t.auToastEdit);
     } else {
-      setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
+      try {
+        const created = await settingsApi.createAudioSchedule(data);
+        if (created) {
+          setAudios((prev) => [
+            ...prev,
+            {
+              id: String(created.id),
+              title: created.title,
+              when: created.when,
+              freq: (created.freq || "harian") as Audio["freq"],
+              file: created.file,
+              active: created.active !== false,
+              displays: (created.displays || []) as DisplayKind[],
+            },
+          ]);
+        } else {
+          setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
+        }
+      } catch {
+        setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
+      }
       pushToast("success", t.auToastAdd);
     }
     setDlgOpen(false);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delTarget) return;
+    const numId = Number(delTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await settingsApi.deleteAudioSchedule(numId);
+      } catch {
+        // Fallback local deletion
+      }
+    }
     setAudios((prev) => prev.filter((a) => a.id !== delTarget.id));
     pushToast("success", t.auToastDel);
     setDelTarget(null);

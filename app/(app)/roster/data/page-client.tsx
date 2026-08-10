@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Download, Eye, Search, Upload } from "lucide-react";
 
 import { rosterApi } from "@/lib/api/roster";
-import { rosterMeta } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
@@ -58,7 +57,6 @@ export default function RosterDataPage() {
       .catch(() => {});
   }, []);
 
-  const baseAll = rosterMeta(lang);
   const all =
     apiRosters.length > 0
       ? apiRosters.map((r) => ({
@@ -75,7 +73,7 @@ export default function RosterDataPage() {
           emp: Number(r.emp ?? 150),
           rows: Number(r.rows ?? 150),
         }))
-      : baseAll;
+      : [];
   const depts = Array.from(new Set(all.map((r) => r.dept))).sort();
   const monthNames = React.useMemo(() => {
     const loc = lang === "en" ? "en-GB" : "id-ID";

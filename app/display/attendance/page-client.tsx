@@ -5,14 +5,20 @@ import { useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Clock, Users } from "lucide-react";
 
 import { displayApi } from "@/lib/api/display";
-import { displayAttRowsNow, displayRuntext } from "@/lib/data/display-screens";
+import { useAppStore } from "@/components/providers/app-store";
 
 import { DisplayShell } from "../_components/display-shell";
 import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
 export default function DisplayAttendancePage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const { mdData } = useAppStore();
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
+  const runtext =
+    mdData.runtext.find((r) => r.active && r.a === "Display Attendance")
+      ?.name ??
+    mdData.runtext.find((r) => r.active)?.name ??
+    "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.";
 
   React.useEffect(() => {
     displayApi
@@ -24,39 +30,42 @@ export default function DisplayAttendancePage() {
       .catch(() => {});
   }, []);
 
-  /* baris + statistik diturunkan dari log absensi — sinkron dengan admin */
-  const baseRows = React.useMemo(() => displayAttRowsNow(), []);
-  const rows =
-    apiRows.length > 0
-      ? apiRows.map((a) => ({
+  /* baris + statistik diturunkan dari log absensi API — sinkron dengan admin */
+  const rows = React.useMemo(
+    () =>
+      apiRows.map((a) => {
+        const st = String(a.st || a.status || "belum");
+        return {
           nik: String(a.nik || ""),
           name: String(a.name || a.nik || ""),
           pos: String(a.pos || "Operator"),
           dept: String(a.dept || "Operation"),
           label:
-            a.status === "hadir"
+            st === "hadir"
               ? "Hadir"
-              : a.status === "terlambat"
+              : st === "terlambat"
                 ? "Terlambat"
                 : "Belum absen",
-          variant: (a.status === "hadir"
+          variant: (st === "hadir"
             ? "success"
-            : a.status === "terlambat"
+            : st === "terlambat"
               ? "warning"
               : "neutral") as "success" | "warning" | "neutral",
-          tone: (a.status === "hadir"
+          tone: (st === "hadir"
             ? "success"
-            : a.status === "terlambat"
+            : st === "terlambat"
               ? "warning"
-              : "neutral") as "success" | "warning" | "neutral",
-        }))
-      : baseRows;
+              : "neutral") as "success" | "warning" | "neutral" | "danger",
+        };
+      }),
+    [apiRows]
+  );
   const n = (label: string) => rows.filter((r) => r.label === label).length;
   return (
     <DisplayShell
       title="Attendance — Shift Pagi"
       deviceName={deviceName}
-      runtext={displayRuntext.att}
+      runtext={runtext}
       stats={[
         {
           icon: <Users className="text-primary-bright" />,

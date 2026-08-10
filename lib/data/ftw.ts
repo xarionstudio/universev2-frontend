@@ -157,6 +157,7 @@ const SEED: Array<{
   },
 ];
 
+/** @deprecated Use backend API GET /api/ftw/today instead. */
 export function ftwData(lang: Lang): FtwRecord[] {
   const en = lang === "en";
   return SEED.map((s) => {
@@ -171,6 +172,7 @@ export function ftwData(lang: Lang): FtwRecord[] {
 }
 
 /* status hari ke-d (0=hari ini) — 7 hari pertama dari hist, sisanya deterministik */
+/** @deprecated Dummy helper for static history strip. */
 export function ftwStAt(rec: FtwRecord, d: number): number {
   if (d < 7) return rec.hist[6 - d];
   return [1, 1, 0, 1, 1, 1, 1][(d + rec.nik.charCodeAt(8)) % 7];
@@ -191,6 +193,7 @@ export type FtwHistEntry = {
 };
 
 /* riwayat N hari per operator (default 90) + waktu kirim log */
+/** @deprecated Use backend API GET /api/ftw/history instead. */
 export function ftwHistoryFor(
   rec: FtwRecord,
   lang: Lang,
@@ -267,6 +270,7 @@ export function ftwHistoryFor(
 }
 
 /* strip 7 hari berakhir di hari ke-d */
+/** @deprecated Dummy helper for static history strip. */
 export function ftwStripAt(rec: FtwRecord, d: number): ("ok" | "bad" | "na")[] {
   const out: ("ok" | "bad" | "na")[] = [];
   for (let k = 6; k >= 0; k--) {

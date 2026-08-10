@@ -4,15 +4,13 @@ import * as React from "react";
 
 import { employeesApi } from "@/lib/api/employees";
 import { fleetApi } from "@/lib/api/fleet";
+import { masterApi } from "@/lib/api/master";
 import { notificationsApi } from "@/lib/api/notifications";
 import { rolesApi } from "@/lib/api/roles";
+import { rosterApi } from "@/lib/api/roster";
 import { settingsApi } from "@/lib/api/settings";
 import { usersApi } from "@/lib/api/users";
-import {
-  employees as empBase,
-  withKomp,
-  type Employee,
-} from "@/lib/data/employees";
+import { withKomp, type Employee } from "@/lib/data/employees";
 import { type Fleet } from "@/lib/data/fleet";
 import { type FaAlloc } from "@/lib/data/fleet-alloc";
 import { type MdCat, type MdEntry } from "@/lib/data/master-data";
@@ -173,6 +171,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {});
 
+    // Fetch Roster Revisions (approval queue)
+    rosterApi
+      .getRevisions()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setApRows(
+            data.map((r) => ({
+              sid: String(r.sid || ""),
+              name: String(r.name || r.nik || ""),
+              nik: String(r.nik || ""),
+              whatId: String(r.whatId || ""),
+              whatEn: String(r.whatEn || r.whatId || ""),
+              whenId: String(r.whenId || ""),
+              whenEn: String(r.whenEn || r.whenId || ""),
+              status: (r.status || "pending") as ApRow["status"],
+              byId: r.byId ? String(r.byId) : undefined,
+              byEn: r.byEn ? String(r.byEn) : undefined,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
     // Fetch Users
     usersApi
       .getUsers()
@@ -291,10 +312,159 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {});
+
+    // Fetch Unit DB (master unit list)
+    fleetApi
+      .getUnitDB()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setUdbAdded(
+            data.map((u) => ({
+              uid: String(u.id || u.code),
+              code: u.code,
+              cat: u.cat || "",
+              cls: u.cls || "",
+              egi: u.egi || "",
+              product: u.product || "",
+              active: u.active !== false,
+              standby: !!u.standby,
+              breakdown: !!u.breakdown,
+              loc: u.loc || "",
+              upd: u.upd || "",
+              by: u.by || "",
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Fleet Settings (formations)
+    fleetApi
+      .getFleetSettings()
+      .then((data) => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setFleets(
+            data.map((f) => ({
+              id: `fl-${f.id}`,
+              digger: f.digger,
+              loc: f.loc,
+              bus: f.bus,
+              units: f.units || [],
+              active: f.active !== false,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Fleet Allocations
+    fleetApi
+      .getAllocations()
+      .then((data) => {
+        if (data && typeof data === "object" && Object.keys(data).length > 0) {
+          setFaAlloc(data as FaAlloc);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Master Data categories
+    const mdCats = [
+      "egi",
+      "product",
+      "eqclass",
+      "area",
+      "tempudo",
+      "bus",
+      "lokasiex",
+      "mess",
+      "runtext",
+    ] as const;
+    Promise.all(
+      mdCats.map(async (cat) => {
+        try {
+          const entries = await masterApi.getByCategory(cat);
+          return [
+            cat,
+            entries.map((e, i) => ({
+              id: e.id != null ? String(e.id) : `${cat}-${i}`,
+              code: String(e.code || e.name || `${cat}-${i}`),
+              name: String(e.name || e.code || ""),
+              a: String(e.a || ""),
+              b: String(e.b || ""),
+              active: e.active !== false,
+            })),
+          ] as const;
+        } catch {
+          return [
+            cat,
+            [] as import("@/lib/data/master-data").MdEntry[],
+          ] as const;
+        }
+      })
+    ).then((results) => {
+      const merged = {} as Record<
+        import("@/lib/data/master-data").MdCat,
+        import("@/lib/data/master-data").MdEntry[]
+      >;
+      for (const [cat, entries] of results) {
+        merged[cat as import("@/lib/data/master-data").MdCat] = entries;
+      }
+      const hasData = Object.values(merged).some((arr) => arr.length > 0);
+      if (hasData) setMdData(merged);
+    });
+
+    // Fetch Displays (attendance + fleet)
+    settingsApi
+      .getDisplays()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          const att: Display[] = [];
+          const fleet: Display[] = [];
+          for (const d of data) {
+            const item: Display = {
+              id: String(d.id),
+              name: d.name,
+              loc: d.loc || "",
+              content: (d.content === "fleet" ? "fleet" : "att") as
+                "att" | "fleet",
+              fleetId: d.fleetId ? `fl-${d.fleetId}` : undefined,
+              runtext: d.runtext || "",
+              online: !!d.online,
+              hb: d.hb || "",
+              active: d.active !== false,
+            };
+            if (d.content === "fleet") fleet.push(item);
+            else att.push(item);
+          }
+          if (att.length) setDspAtt(att);
+          if (fleet.length) setDspFleet(fleet);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch Audio Schedules
+    settingsApi
+      .getAudioSchedules()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setAudios(
+            data.map((a) => ({
+              id: String(a.id),
+              title: a.title,
+              when: a.when,
+              freq: (a.freq || "harian") as Audio["freq"],
+              file: a.file,
+              active: a.active !== false,
+              displays: (a.displays || []) as Audio["displays"],
+            }))
+          );
+        }
+      })
+      .catch(() => {});
   }, [hydrated, sessionUser]);
 
   const empAll = React.useCallback(() => {
-    const list = empAdded.length > 0 ? empAdded : empBase;
+    const list = empAdded;
     const base = list.map((r) => ({ ...r, ...(empOverrides[r.nik] || {}) }));
     return withKomp(base.filter((r) => !empDeleted[r.nik]));
   }, [empOverrides, empAdded, empDeleted]);
@@ -322,7 +492,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const udbAll = React.useCallback(() => {
-    const list = udbAdded.length > 0 ? udbAdded : udbBase;
+    const list = udbAdded;
     return list.map((u) => ({ ...u, ...(udbOverrides[u.uid] || {}) }));
   }, [udbOverrides, udbAdded]);
 

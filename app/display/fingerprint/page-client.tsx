@@ -5,20 +5,25 @@ import { useSearchParams } from "next/navigation";
 import { Fingerprint, LayoutGrid, Wifi, WifiOff } from "lucide-react";
 
 import { displayApi } from "@/lib/api/display";
-import { displayMachines, displayRuntext } from "@/lib/data/display-screens";
+import { displayMachines } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
 
 import { DisplayShell } from "../_components/display-shell";
 
 export default function DisplayFingerprintPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
+  const { mdData } = useAppStore();
   const [apiMachines, setApiMachines] = React.useState<
     Record<string, unknown>[]
   >([]);
+  const runtext =
+    mdData.runtext.find((r) => r.active)?.name ??
+    "Wajib P2H sebelum mengoperasikan unit.";
 
   React.useEffect(() => {
     displayApi
-      .getDisplayMonitor()
+      .getDisplayFingerprint()
       .then((res) => {
         if (res && Array.isArray(res))
           setApiMachines(res as Record<string, unknown>[]);
@@ -52,7 +57,7 @@ export default function DisplayFingerprintPage() {
     <DisplayShell
       title="Mesin Fingerprint"
       deviceName={deviceName}
-      runtext={displayRuntext.finger}
+      runtext={runtext}
       stats={[
         {
           icon: <LayoutGrid className="text-primary-bright" />,

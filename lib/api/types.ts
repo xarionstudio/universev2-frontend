@@ -154,6 +154,37 @@ export type RosterMeta = {
   createdAt: string;
 };
 
+export type RosterPreviewRow = {
+  nik: string;
+  name: string;
+  codes: Record<number, string>;
+};
+
+export type RosterValidationError = {
+  row: string;
+  nik: string;
+  emp: string;
+  issue: string;
+  issueEn: string;
+  badgeVariant: "danger" | "warning";
+  badge: string;
+};
+
+export type RosterValidation = {
+  preview: RosterPreviewRow[];
+  days: string[];
+  errors: RosterValidationError[];
+  validCount: number;
+  dupCount: number;
+  errCount: number;
+};
+
+export type ShiftCodeGroup = {
+  group: string;
+  groupEn: string;
+  codes: { k: string; v: string; vEn: string }[];
+};
+
 export type RosterRevision = {
   id: number;
   sid: string;

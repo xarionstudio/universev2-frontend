@@ -281,6 +281,23 @@ export default function UsersPage() {
     }
     setPwErr(null);
     setPwBusy(true);
+    const numId = Number(pwTarget.id);
+    if (!isNaN(numId)) {
+      try {
+        await usersApi.update(numId, {
+          name: pwTarget.kar || "",
+          email: pwTarget.email || "",
+          nik: pwTarget.nik || undefined,
+          roles: pwTarget.roles || [],
+          password: pwNew,
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Gagal reset password";
+        pushToast("error", t.umPwToastT, msg);
+        setPwBusy(false);
+        return;
+      }
+    }
     const salt = newSalt();
     const hash = await hashPassword(pwNew, salt);
     setUmUsers((prev) =>

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { CopyPlus, Wand2 } from "lucide-react";
 
 import { fleetApi } from "@/lib/api/fleet";
-import { ftwTodayMap } from "@/lib/data/employees";
+import { ftwApi } from "@/lib/api/ftw";
 import { isoAddDays } from "@/lib/data/fleet-alloc";
+import type { FtwStatus } from "@/lib/data/ftw";
 import { typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -106,12 +107,31 @@ export default function FleetAllocationPage() {
     [udbAll, fleetRank]
   );
 
+  const [ftwLogs, setFtwLogs] = React.useState<Record<string, FtwStatus>>({});
+
+  React.useEffect(() => {
+    ftwApi
+      .getTodayLogs()
+      .then((logs) => {
+        if (logs && Array.isArray(logs)) {
+          const map: Record<string, FtwStatus> = {};
+          for (const l of logs) {
+            if (l.nik) {
+              map[String(l.nik)] = (l.st || "belum") as FtwStatus;
+            }
+          }
+          setFtwLogs(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const ops: FaOp[] = React.useMemo(
     () =>
       empAll()
         .filter((r) => r.status === "aktif" && r.komp && r.komp.length)
-        .map((r) => ({ ...r, ftw: ftwTodayMap[r.nik] || "belum" })),
-    [empAll]
+        .map((r) => ({ ...r, ftw: ftwLogs[r.nik] || "belum" })),
+    [empAll, ftwLogs]
   );
 
   /* alokasi tanggal + shift terpilih */
@@ -176,6 +196,11 @@ export default function FleetAllocationPage() {
     writeAlloc((next) => {
       next[unit.code] = op.nik;
     });
+    // Persist to backend
+    const nextAlloc = { ...alloc, [unit.code]: op.nik };
+    fleetApi
+      .saveAllocation({ date: faDate, shift, units: nextAlloc })
+      .catch(() => {});
     setAllocFor(null);
     pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD);
   }
@@ -185,6 +210,12 @@ export default function FleetAllocationPage() {
     writeAlloc((next) => {
       delete next[unit.code];
     });
+    // Persist to backend
+    const nextAlloc = { ...alloc };
+    delete nextAlloc[unit.code];
+    fleetApi
+      .saveAllocation({ date: faDate, shift, units: nextAlloc })
+      .catch(() => {});
     if (op)
       pushToast(
         "info",
@@ -196,12 +227,17 @@ export default function FleetAllocationPage() {
   async function applyAuto(proposals: FaProposal[]) {
     try {
       await fleetApi.autoAllocate({ date: faDate, shift });
+      // Refetch allocations from backend after auto-allocate
+      const fresh = await fleetApi.getAllocations([faDate]);
+      if (fresh && typeof fresh === "object") {
+        setFaAlloc((prev) => ({ ...prev, ...fresh }));
+      }
     } catch {
       // Fallback local apply
+      writeAlloc((next) => {
+        for (const pr of proposals) next[pr.code] = pr.nik;
+      });
     }
-    writeAlloc((next) => {
-      for (const pr of proposals) next[pr.code] = pr.nik;
-    });
     setAutoOpen(false);
     pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
   }

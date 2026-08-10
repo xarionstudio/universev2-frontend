@@ -5,9 +5,11 @@ import Link from "next/link";
 import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
 
 import { dashboardApi } from "@/lib/api/dashboard";
+import { ftwApi } from "@/lib/api/ftw";
+import { rosterApi } from "@/lib/api/roster";
 import type { DashboardSummary } from "@/lib/api/types";
-import { attDayRows, type AttRow } from "@/lib/data/attendance";
-import { ftwData, type FtwRecord } from "@/lib/data/ftw";
+import { type AttRow } from "@/lib/data/attendance";
+import { type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
@@ -96,23 +98,7 @@ function attentionRows(
     route: "/roster/attendance",
     action: en ? "View attendance" : "Lihat attendance",
   }));
-  return [
-    ...unitRows,
-    ...unfitRows,
-    ...belumRows,
-    {
-      name: "REV-0711-02",
-      sub: "3 entri",
-      dept: "SDI",
-      issue: en
-        ? "3 revision entries pending more than 24 hours"
-        : "3 entri revisi menunggu lebih dari 24 jam",
-      badge: "Pending",
-      badgeVariant: "info",
-      route: "/roster/approval",
-      action: en ? "Open Approval" : "Buka Approval",
-    },
-  ];
+  return [...unitRows, ...unfitRows, ...belumRows];
 }
 
 export default function DashboardPage() {
@@ -127,18 +113,44 @@ export default function DashboardPage() {
   );
 
   const breakUnits = units.filter((u) => u.status === "breakdown");
-  const kurang = apiSummary
-    ? []
-    : ftwData(lang).filter((r) => r.st === "pulang");
-  const attToday = apiSummary
-    ? []
-    : attDayRows(lang, false).filter((r) => r.st !== "off");
-  const belumAbsen = apiSummary ? [] : attToday.filter((r) => r.st === "belum");
+  const [kurang, setKurang] = React.useState<FtwRecord[]>([]);
+  const [attToday, setAttToday] = React.useState<AttRow[]>([]);
+  const [belumAbsen, setBelumAbsen] = React.useState<AttRow[]>([]);
 
   const fetchSummary = React.useCallback(async () => {
     try {
       const sum = await dashboardApi.getSummary();
       if (sum) setApiSummary(sum);
+    } catch {}
+    // Fetch FTW today's logs for attention rows
+    try {
+      const logs = await ftwApi.getTodayLogs();
+      if (logs && Array.isArray(logs)) {
+        setKurang(
+          logs
+            .filter((l) => l.st === "pulang" || l.st === "spare")
+            .map((l) => ({
+              nik: String(l.nik || ""),
+              name: String(l.name || l.nik || ""),
+              shift: (l.shift || "pagi") as FtwRecord["shift"],
+              st: (l.st || "belum") as FtwRecord["st"],
+              dept: String(l.dept || "Operation"),
+              sleep: l.sleep || "—",
+              sleepMin: Number(l.sleepMin || 0),
+              restHours: Number(l.restHours || 0),
+              sendTime: String(l.sendTime || "—"),
+              hist: [],
+            }))
+        );
+      }
+    } catch {}
+    // Fetch attendance for attention rows
+    try {
+      const att = await rosterApi.getAttendance();
+      if (att && Array.isArray(att)) {
+        setAttToday(att as AttRow[]);
+        setBelumAbsen((att as AttRow[]).filter((r) => !r.in || r.in === "—"));
+      }
     } catch {}
   }, []);
 
@@ -278,11 +290,11 @@ export default function DashboardPage() {
             borderColor: "var(--badge-info-border)",
             color: "var(--badge-info-text)",
           }}
-          value={String(apiSummary ? apiSummary.roster.pendingApproval : 1)}
+          value={String(apiSummary ? apiSummary.roster.pendingApproval : 0)}
           label={t.statApproval}
           detail={
             <>
-              <b>{apiSummary ? apiSummary.roster.pendingApproval : 3}</b>{" "}
+              <b>{apiSummary ? apiSummary.roster.pendingApproval : 0}</b>{" "}
               {t.dApproval2}
             </>
           }

@@ -280,10 +280,13 @@ export default function MasterDataPage() {
       return;
     }
     const data = { name, a: fA, b: fB, active: fActive };
-    const numId = Number(editId);
-    if (editId && !isNaN(numId)) {
+    const editingEntry = editId
+      ? mdData[cat].find((r) => r.id === editId)
+      : undefined;
+    const code = editingEntry?.code ?? name;
+    if (editId) {
       try {
-        await masterApi.update(cat, numId, data);
+        await masterApi.update(cat, code, data);
       } catch {
         // Fallback local update
       }
@@ -298,7 +301,7 @@ export default function MasterDataPage() {
       ...prev,
       [cat]: editId
         ? prev[cat].map((r) => (r.id === editId ? { ...r, ...data } : r))
-        : [...prev[cat], { id: `${cat}-${Date.now()}`, ...data }],
+        : [...prev[cat], { id: `${cat}-${Date.now()}`, code, ...data }],
     }));
     setDlgOpen(false);
     pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
@@ -306,13 +309,10 @@ export default function MasterDataPage() {
 
   async function doDelete() {
     if (!delTarget) return;
-    const numId = Number(delTarget.id);
-    if (!isNaN(numId)) {
-      try {
-        await masterApi.delete(cat, numId);
-      } catch {
-        // Fallback local delete
-      }
+    try {
+      await masterApi.delete(cat, delTarget.code);
+    } catch {
+      // Fallback local delete
     }
     setMdData((prev) => ({
       ...prev,

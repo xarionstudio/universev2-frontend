@@ -108,9 +108,25 @@ export default function PrestasiHistoryPage() {
   const nik = String(params?.nik ?? "");
   const { empAll, faAlloc } = useAppStore();
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
+  const [apiHistory, setApiHistory] = React.useState<
+    import("@/lib/api/types").PrestasiDay[] | null
+  >(null);
+
   React.useEffect(() => {
+    let cancelled = false;
     if (!nik) return;
-    prestasiApi.getOperatorHistory(nik, PERIOD_DAYS[period]).catch(() => {});
+    prestasiApi
+      .getOperatorHistory(nik, PERIOD_DAYS[period])
+      .then((res) => {
+        if (!cancelled && res && res.length > 0) setApiHistory(res);
+        else if (!cancelled) setApiHistory(null);
+      })
+      .catch(() => {
+        if (!cancelled) setApiHistory(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [nik, period]);
 
   const board = React.useMemo(() => {
@@ -122,8 +138,14 @@ export default function PrestasiHistoryPage() {
 
   const me = board.find((e) => e.nik === nik);
 
-  /* Terbaru di atas — jejak audit dibaca mundur dari hari ini */
-  const days = React.useMemo(() => (me ? [...me.days].reverse() : []), [me]);
+  /* Riwayat dari backend API bila tersedia — fallback ke simulasi lokal */
+  const days = React.useMemo(() => {
+    if (apiHistory && apiHistory.length > 0) {
+      return [...apiHistory].reverse() as unknown as PrestasiDay[];
+    }
+    return me ? [...me.days].reverse() : [];
+  }, [apiHistory, me]);
+
   const pg = usePagination(days);
 
   /* Ringkasan: poin didapat vs dipotong, dipisah supaya jelas.
