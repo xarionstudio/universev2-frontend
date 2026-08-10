@@ -350,10 +350,37 @@ export default function UsersPage() {
     pushToast("success", t.umToastExp, name);
   }
 
-  function importChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function importChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    pushToast("success", t.umToastImp, `${file.name} — 3 ${t.umToastImpD}`);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await usersApi.import(formData);
+      pushToast(
+        "success",
+        t.umToastImp,
+        `${file.name} — ${result.imported} ${t.umToastImpD}`
+      );
+      // Refetch users after import
+      const fresh = await usersApi.getUsers();
+      if (fresh && Array.isArray(fresh)) {
+        setUmUsers(
+          fresh.map((u) => ({
+            id: String(u.id),
+            nik: u.nik || "",
+            kar: u.kar,
+            email: u.email,
+            dept: "",
+            pos: "",
+            roles: u.roles || [],
+            on: u.on,
+          }))
+        );
+      }
+    } catch {
+      pushToast("error", t.umToastImp, `${file.name} — ${t.umToastImpD}`);
+    }
     e.target.value = "";
   }
 

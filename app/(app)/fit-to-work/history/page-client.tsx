@@ -6,8 +6,6 @@ import { ArrowLeft, Search } from "lucide-react";
 
 import { ftwApi } from "@/lib/api/ftw";
 import {
-  ftwData,
-  ftwHistoryFor,
   type FtwHistEntry,
   type FtwRecord,
   type FtwStatus,
@@ -154,22 +152,18 @@ function FtwHistoryInner() {
       .catch(() => {});
   }, [fhOp, d1, d2]);
 
-  const baseOps = ftwData(lang);
-  const ops: FtwRecord[] =
-    apiHist.length > 0
-      ? apiHist.map((h) => ({
-          nik: String(h.nik || ""),
-          name: String(h.name || h.nik || ""),
-          shift: (h.shift || "pagi") as FtwRecord["shift"],
-          st: (h.status || "belum") as StKey,
-          dept: String(h.dept || "Operation"),
-          sleep: h.sleepHours ? `${h.sleepHours} jam` : "—",
-          sleepMin: Number(h.sleepMin || 0),
-          restHours: Number(h.restHours || 0),
-          sendTime: String(h.sendTime || "—"),
-          hist: [],
-        }))
-      : baseOps;
+  const ops: FtwRecord[] = apiHist.map((h) => ({
+    nik: String(h.nik || ""),
+    name: String(h.name || h.nik || ""),
+    shift: (h.shift || "pagi") as FtwRecord["shift"],
+    st: (h.status || "belum") as StKey,
+    dept: String(h.dept || "Operation"),
+    sleep: h.sleepHours ? `${h.sleepHours} jam` : "—",
+    sleepMin: Number(h.sleepMin || 0),
+    restHours: Number(h.restHours || 0),
+    sendTime: String(h.sendTime || "—"),
+    hist: [],
+  }));
   const selectedOp = ops.find((o) => o.nik === fhOp);
 
   const stBadge = (key: StKey) => {
@@ -200,23 +194,20 @@ function FtwHistoryInner() {
     const emp = emps.find((e) => e.nik === op.nik);
     const company = emp?.company ?? "PT Unggul Dinamika Utama";
     const pos = emp?.pos ?? "—";
-    /* Riwayat dari API — fallback ke data sintetis hanya jika API kosong */
-    const histEntries =
-      apiHist.length > 0
-        ? apiHist
-            .filter((h) => String(h.nik || "") === op.nik)
-            .map((h) => ({
-              d: Number(h.d ?? 0),
-              iso: String(h.iso || ""),
-              date: String(h.date || ""),
-              st: Number(h.st ?? 0),
-              sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
-              sleep: String(h.sleep || "—"),
-              status: (h.status || "belum") as StKey,
-              restHours: Number(h.restHours || 0),
-              sendTime: String(h.sendTime || "—"),
-            }))
-        : ftwHistoryFor(op, lang, 90);
+    /* Riwayat dari API — satu-satunya sumber data */
+    const histEntries = apiHist
+      .filter((h) => String(h.nik || "") === op.nik)
+      .map((h) => ({
+        d: Number(h.d ?? 0),
+        iso: String(h.iso || ""),
+        date: String(h.date || ""),
+        st: Number(h.st ?? 0),
+        sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
+        sleep: String(h.sleep || "—"),
+        status: (h.status || "belum") as StKey,
+        restHours: Number(h.restHours || 0),
+        sendTime: String(h.sendTime || "—"),
+      }));
     for (const entry of histEntries) {
       if (d1 && entry.iso < d1) continue;
       if (d2 && entry.iso > d2) continue;

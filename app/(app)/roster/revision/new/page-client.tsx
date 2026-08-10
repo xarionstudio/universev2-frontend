@@ -149,7 +149,7 @@ export default function RosterRevisionNewPage() {
     const ts = Date.now().toString(36).toUpperCase().slice(-4);
     const sid = `REV-${d.getMonth() + 1 < 10 ? "0" : ""}${d.getMonth() + 1}${d.getDate() < 10 ? "0" : ""}${d.getDate()}-${ts}`;
     try {
-      await rosterApi.submitBatchRevision(
+      const result = await rosterApi.submitBatchRevision(
         entries.map((e) => ({
           nik: e.nik,
           name: e.name,
@@ -159,27 +159,33 @@ export default function RosterRevisionNewPage() {
           status: "pending",
         }))
       );
+      if (!result) throw new Error("No response from server");
+      // Refetch revisions from API to ensure server state is the source of truth
+      const fresh = await rosterApi.getRevisions();
+      if (fresh && Array.isArray(fresh)) {
+        setApRows(
+          fresh.map((rev) => ({
+            sid: String(rev.sid || ""),
+            name: String(rev.name || rev.nik || ""),
+            nik: String(rev.nik || ""),
+            whatId: String(rev.whatId || ""),
+            whatEn: String(rev.whatEn || rev.whatId || ""),
+            whenId: String(rev.whenId || ""),
+            whenEn: String(rev.whenEn || rev.whenId || ""),
+            status: (rev.status || "pending") as ApRow["status"],
+            byId: rev.byId ? String(rev.byId) : undefined,
+            byEn: rev.byEn ? String(rev.byEn) : undefined,
+          }))
+        );
+      }
+      pushToast("success", `${entries.length} ${t.toastRevT}`, t.toastRevD);
+      setEntries([]);
+      setReviewOpen(false);
+      router.push("/roster/revision");
     } catch {
-      // Fallback local addition
+      // Failed to persist to backend — show error, do NOT silently add locally
+      pushToast("error", `${entries.length} ${t.toastRevT}`, t.toastRevD);
     }
-    const rows: ApRow[] = entries.map((e) => {
-      const what = `${e.tgl} — kode ${e.kode} · ${e.alasan}`;
-      return {
-        sid,
-        name: e.name,
-        nik: e.nik,
-        whatId: what,
-        whatEn: what,
-        whenId: "baru saja",
-        whenEn: "just now",
-        status: "pending",
-      };
-    });
-    setApRows((prev) => [...prev, ...rows]);
-    pushToast("success", `${entries.length} ${t.toastRevT}`, t.toastRevD);
-    setEntries([]);
-    setReviewOpen(false);
-    router.push("/roster/revision");
   }
 
   return (

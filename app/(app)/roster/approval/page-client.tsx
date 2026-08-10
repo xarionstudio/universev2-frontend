@@ -87,10 +87,34 @@ export default function RosterApprovalPage() {
     if (i === null || i === undefined) return;
     const r = apRows[i];
     if (!r) return;
+    const raw = r as Record<string, unknown>;
     const revId =
-      typeof (r as Record<string, unknown>).id === "number"
-        ? ((r as Record<string, unknown>).id as number)
-        : i + 1;
+      typeof raw.id === "number"
+        ? (raw.id as number)
+        : typeof raw.id === "string" && !isNaN(Number(raw.id))
+          ? Number(raw.id)
+          : null;
+    if (revId === null) {
+      // No valid backend ID — fallback local state update only
+      const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
+      const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
+      setApRows((prev) =>
+        prev.map((row, j) =>
+          j === i
+            ? {
+                ...row,
+                status: ok ? "approved" : "rejected",
+                byId: by,
+                byEn: by,
+              }
+            : row
+        )
+      );
+      const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
+      if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
+      else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);
+      return;
+    }
     try {
       if (ok && extra) {
         await rosterApi.approveRevisionWithNote(revId, extra);

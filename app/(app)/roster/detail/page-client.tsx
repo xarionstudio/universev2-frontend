@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 
 import { rosterApi } from "@/lib/api/roster";
-import { legendGroupsFor, rosterMeta } from "@/lib/data/roster";
+import type { ShiftCodeGroup } from "@/lib/api/types";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,13 +37,12 @@ export default function RosterDetailPage() {
   const router = useRouter();
 
   const key = useSearchParams().get("p");
-  const metas = rosterMeta(lang);
-  const meta = metas.find((m) => m.key === key) ?? metas[0];
 
   const [apiDetail, setApiDetail] = React.useState<Record<
     string,
     unknown
   > | null>(null);
+  const [legendGroups, setLegendGroups] = React.useState<ShiftCodeGroup[]>([]);
 
   React.useEffect(() => {
     if (key) {
@@ -57,14 +56,34 @@ export default function RosterDetailPage() {
           .catch(() => {});
       }
     }
+    rosterApi
+      .getShiftCodes()
+      .then((data) => {
+        if (data && Array.isArray(data)) {
+          setLegendGroups(data);
+        }
+      })
+      .catch(() => {});
   }, [key]);
 
-  const preview = apiDetail;
+  const preview = apiDetail as {
+    meta?: Record<string, unknown>;
+    rows?: Record<string, unknown>[];
+    days?: string[];
+  } | null;
+  const meta = {
+    label: String(preview?.meta?.label || "Roster"),
+    dept: String(preview?.meta?.dept || "Operation"),
+    file: String(preview?.meta?.file || "roster.xlsx"),
+    emp: String(preview?.meta?.emp || "—"),
+    rows: String(preview?.meta?.rows || "—"),
+    by: String(preview?.meta?.by || "—"),
+    date: String(preview?.meta?.date || "—"),
+    status: String(preview?.meta?.status || "aktif") as "aktif" | "arsip",
+  };
   const [q, setQ] = React.useState("");
   const needle = q.trim().toLowerCase();
-  const rows = (
-    (preview as { rows?: Record<string, unknown>[] }).rows || []
-  ).filter(
+  const rows = (preview?.rows || []).filter(
     (r) =>
       !needle ||
       String(r.name || "")
@@ -75,7 +94,6 @@ export default function RosterDetailPage() {
         .includes(needle)
   );
   const pg = usePagination(rows);
-  const legendGroups = legendGroupsFor(lang);
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,11 +201,11 @@ export default function RosterDetailPage() {
           <span className="text-xs text-(--text-tertiary)">{t.legendNote}</span>
         </Toolbar>
         {legendGroups.map((g, gi) => (
-          <div key={g.label}>
+          <div key={g.group}>
             <div
               className={`mb-2 text-xs font-semibold tracking-[.05em] text-(--text-tertiary) uppercase ${gi === 0 ? "" : "mt-4"}`}
             >
-              {g.label}
+              {lang === "en" ? g.groupEn : g.group}
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2">
               {g.codes.map((c) => (
@@ -198,7 +216,7 @@ export default function RosterDetailPage() {
                   <b className="min-w-9.5 flex-none rounded-md border border-[rgba(0,212,255,.3)] bg-[rgba(0,212,255,.12)] px-1 py-0.75 text-center font-mono text-[11px] font-bold text-primary-bright">
                     {c.k}
                   </b>
-                  {c.v}
+                  {lang === "en" ? c.vEn : c.v}
                 </div>
               ))}
             </div>

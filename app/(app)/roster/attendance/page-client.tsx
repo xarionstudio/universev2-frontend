@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Download, Search } from "lucide-react";
 
 import { attendanceApi } from "@/lib/api/attendance";
-import { attData, type AttStatus } from "@/lib/data/attendance";
+import type { AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
@@ -99,15 +99,9 @@ function AttendanceInner() {
     }
   }, [from, to]);
 
-  /* API sebagai sumber utama — hardcode hanya dipakai saat API kosong total */
-  const baseRows = attData(lang);
-  const rows = (
-    apiAtt.length > 0
-      ? apiAtt
-      : (baseRows as unknown as Record<string, unknown>[])
-  )
+  /* API sebagai satu-satunya sumber data */
+  const rows = apiAtt
     .map((r) => {
-      const isApi = apiAtt.length > 0;
       const raw = r as Record<string, unknown>;
       return {
         name: String(raw.name || raw.nik || ""),
@@ -118,9 +112,7 @@ function AttendanceInner() {
         inM: String(raw.inM || ""),
         out: String(raw.out || raw.checkOut || ""),
         outM: String(raw.outM || ""),
-        st: (isApi
-          ? String(raw.st || raw.status || "belum")
-          : raw.st) as AttStatus,
+        st: String(raw.st || raw.status || "belum") as AttStatus,
         date: String(raw.date || ""),
         dLabel: String(raw.dLabel || raw.date || ""),
       };

@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { Fingerprint, LayoutGrid, Wifi, WifiOff } from "lucide-react";
 
 import { displayApi } from "@/lib/api/display";
-import { displayMachines } from "@/lib/data/display-screens";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 
@@ -31,27 +30,21 @@ export default function DisplayFingerprintPage() {
       .catch(() => {});
   }, []);
 
-  const machines =
-    apiMachines.length > 0
-      ? apiMachines.map((m) => ({
-          id: String(m.id || m.code || ""),
-          loc: String(m.location || m.loc || "—"),
-          online: Boolean(m.online ?? true),
-          meta: m.online
-            ? `${Number(m.scansToday || 0)} scan`
-            : `Offline sejak ${String(m.offlineSince || "—")}`,
-        }))
-      : displayMachines;
+  const machines = apiMachines.map((m) => ({
+    id: String(m.id || m.code || ""),
+    loc: String(m.location || m.loc || "—"),
+    online: Boolean(m.online ?? true),
+    meta: m.online
+      ? `${Number(m.scansToday || 0)} scan`
+      : `Offline sejak ${String(m.offlineSince || "—")}`,
+  }));
 
   const onlineN = machines.filter((m) => m.online).length;
   const offlineN = machines.filter((m) => !m.online).length;
-  const totalScans =
-    apiMachines.length > 0
-      ? apiMachines.reduce(
-          (sum: number, m) => sum + Number(m.scansToday || 0),
-          0
-        )
-      : 1208;
+  const totalScans = apiMachines.reduce(
+    (sum: number, m) => sum + Number(m.scansToday || 0),
+    0
+  );
 
   return (
     <DisplayShell

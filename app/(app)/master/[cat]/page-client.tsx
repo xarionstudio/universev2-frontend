@@ -11,7 +11,6 @@ import {
   type MdCat,
   type MdEntry,
 } from "@/lib/data/master-data";
-import { unitsDb } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +72,7 @@ export default function MasterDataPage() {
   const cat = params.cat as MdCat;
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
-  const { mdData, setMdData } = useAppStore();
+  const { mdData, setMdData, udbAll } = useAppStore();
 
   const [q, setQ] = React.useState("");
   const [stF, setStF] = React.useState("");
@@ -100,21 +99,22 @@ export default function MasterDataPage() {
   const en = lang === "en";
   const catLabel = mdCatLabels[cat][lang];
 
-  /* opsi dropdown dari sumber yang benar (bukan teks bebas):
+  /* opsi dropdown dari Database Unit via API (bukan hardcoded):
      bus ← Database Unit class BUS; lokasi excavator ← digger + master bus/tempudo */
+  const allUnits = React.useMemo(() => udbAll(), [udbAll]);
   const busCodeOpts = React.useMemo(() => {
     const used = new Set(
       mdData.bus.filter((r) => r.id !== editId).map((r) => r.name)
     );
-    return unitsDb
+    return allUnits
       .filter((u) => u.cls === "BUS" && u.active && !used.has(u.code))
       .map((u) => u.code);
-  }, [mdData.bus, editId]);
+  }, [mdData.bus, editId, allUnits]);
   const diggerOpts = React.useMemo(() => {
     const used = new Set(
       mdData.lokasiex.filter((r) => r.id !== editId).map((r) => r.name)
     );
-    return unitsDb
+    return allUnits
       .filter(
         (u) =>
           (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") &&
@@ -122,7 +122,7 @@ export default function MasterDataPage() {
           !used.has(u.code)
       )
       .map((u) => u.code);
-  }, [mdData.lokasiex, editId]);
+  }, [mdData.lokasiex, editId, allUnits]);
   const busOpts = React.useMemo(
     () => mdData.bus.filter((r) => r.active).map((r) => r.name),
     [mdData.bus]
@@ -132,7 +132,7 @@ export default function MasterDataPage() {
     [mdData.tempudo]
   );
   const busTypeOf = (code: string) =>
-    unitsDb.find((u) => u.code === code)?.egi ?? "";
+    allUnits.find((u) => u.code === code)?.egi ?? "";
 
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {

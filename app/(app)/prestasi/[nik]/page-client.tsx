@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 
 import { prestasiApi } from "@/lib/api/prestasi";
+import type { PrestasiRecord } from "@/lib/api/types";
 import type { FtwStatus } from "@/lib/data/ftw";
 import {
-  buildLeaderboard,
   fmtSleep,
   isOperatingCode,
   PERIOD_DAYS,
@@ -27,7 +27,6 @@ import {
 import { useI18n } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n/id";
 import { cn } from "@/lib/utils";
-import { useAppStore } from "@/components/providers/app-store";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Pagination, usePagination } from "@/components/ui/pagination";
@@ -106,11 +105,11 @@ export default function PrestasiHistoryPage() {
   const { t, lang } = useI18n();
   const params = useParams();
   const nik = String(params?.nik ?? "");
-  const { empAll, faAlloc } = useAppStore();
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
   const [apiHistory, setApiHistory] = React.useState<
     import("@/lib/api/types").PrestasiDay[] | null
   >(null);
+  const [apiBoard, setApiBoard] = React.useState<PrestasiRecord[] | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -124,27 +123,29 @@ export default function PrestasiHistoryPage() {
       .catch(() => {
         if (!cancelled) setApiHistory(null);
       });
+    prestasiApi
+      .getLeaderboard({ days: PERIOD_DAYS[period] })
+      .then((records) => {
+        if (!cancelled && records && records.length > 0) setApiBoard(records);
+        else if (!cancelled) setApiBoard(null);
+      })
+      .catch(() => {
+        if (!cancelled) setApiBoard(null);
+      });
     return () => {
       cancelled = true;
     };
   }, [nik, period]);
 
-  const board = React.useMemo(() => {
-    const operators = empAll().filter(
-      (e) => e.status === "aktif" && e.komp && e.komp.length
-    );
-    return buildLeaderboard({ operators, alloc: faAlloc, period });
-  }, [empAll, faAlloc, period]);
+  const me = apiBoard?.find((e) => e.nik === nik);
 
-  const me = board.find((e) => e.nik === nik);
-
-  /* Riwayat dari backend API bila tersedia — fallback ke simulasi lokal */
+  /* Riwayat dari backend API — satu-satunya sumber data */
   const days = React.useMemo(() => {
     if (apiHistory && apiHistory.length > 0) {
       return [...apiHistory].reverse() as unknown as PrestasiDay[];
     }
-    return me ? [...me.days].reverse() : [];
-  }, [apiHistory, me]);
+    return [];
+  }, [apiHistory]);
 
   const pg = usePagination(days);
 

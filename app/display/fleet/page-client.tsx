@@ -31,7 +31,7 @@ export default function DisplayFleetPage() {
   const params = useSearchParams();
   const deviceName = params.get("name") ?? undefined;
   const fleetId = params.get("fleet");
-  const { fleets, empAll, mdData } = useAppStore();
+  const { mdData } = useAppStore();
   const [apiFleets, setApiFleets] = React.useState<Record<string, unknown>[]>(
     []
   );
@@ -51,48 +51,32 @@ export default function DisplayFleetPage() {
   }, []);
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */
-  const fleet =
-    fleets.find((f) => f.id === fleetId) ??
-    fleets.find((f) => f.active) ??
-    fleets[0];
-
-  /* operator dari alokasi harian: tanggal hari ini + shift menurut jam
-     (06:00–17:59 = pagi); bisa dipaksa lewat ?shift= untuk pengujian */
-  const nameByNik = React.useMemo(
-    () => new Map(empAll().map((e) => [e.nik, e.name])),
-    [empAll]
-  );
-
-  /* Kartu dari API backend bila tersedia — fallback ke formasi lokal */
-  const cards: FleetCard[] = React.useMemo(() => {
-    if (apiFleets.length > 0) {
-      const target = fleetId
-        ? apiFleets.find((f) => String(f.id) === fleetId)
-        : apiFleets[0];
-      if (target && Array.isArray(target.units)) {
-        return (target.units as Record<string, unknown>[]).map((u) => ({
-          code: String(u.code || ""),
-          opName: u.opName ? String(u.opName) : null,
-          opNik: u.opNik ? String(u.opNik) : null,
-          tone: (u.tone || "success") as FleetCard["tone"],
-          label: String(u.label || "Ready"),
-        }));
+  const fleetApi =
+    apiFleets.find((f) => String(f.id) === fleetId) ?? apiFleets[0];
+  const fleet = fleetApi
+    ? {
+        digger: String(fleetApi.digger || ""),
+        loc: String(fleetApi.loc || ""),
+        bus: String(fleetApi.bus || ""),
       }
+    : undefined;
+
+  /* Kartu dari API backend — satu-satunya sumber data */
+  const cards: FleetCard[] = React.useMemo(() => {
+    const target = fleetId
+      ? apiFleets.find((f) => String(f.id) === fleetId)
+      : apiFleets[0];
+    if (target && Array.isArray(target.units)) {
+      return (target.units as Record<string, unknown>[]).map((u) => ({
+        code: String(u.code || ""),
+        opName: u.opName ? String(u.opName) : null,
+        opNik: u.opNik ? String(u.opNik) : null,
+        tone: (u.tone || "success") as FleetCard["tone"],
+        label: String(u.label || "Ready"),
+      }));
     }
-    if (!fleet) return [];
-    const alloc = {} as Record<string, string>;
-    return fleet.units.map((code) => {
-      const nik = alloc[code];
-      const opName = nik ? nameByNik.get(nik) : undefined;
-      return {
-        code,
-        opName: opName || null,
-        opNik: opName ? nik : null,
-        tone: "success",
-        label: "Ready",
-      };
-    });
-  }, [apiFleets, fleetId, fleet, nameByNik]);
+    return [];
+  }, [apiFleets, fleetId]);
   const count = (tone: string) => cards.filter((c) => c.tone === tone).length;
 
   return (
