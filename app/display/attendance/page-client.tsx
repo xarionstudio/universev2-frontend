@@ -15,9 +15,10 @@ export default function DisplayAttendancePage() {
   const { mdData } = useAppStore();
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
   const runtext =
-    mdData.runtext.find((r) => r.active && r.a === "Display Attendance")
-      ?.name ??
-    mdData.runtext.find((r) => r.active)?.name ??
+    (mdData?.runtext || []).find(
+      (r) => r.active && r.a === "Display Attendance"
+    )?.name ??
+    (mdData?.runtext || []).find((r) => r.active)?.name ??
     "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.";
 
   React.useEffect(() => {
@@ -35,27 +36,32 @@ export default function DisplayAttendancePage() {
     () =>
       apiRows.map((a) => {
         const st = String(a.st || a.status || "belum");
+        const label =
+          st === "hadir" || st === "unfit"
+            ? "Hadir"
+            : st === "terlambat"
+              ? "Terlambat"
+              : "Belum absen";
+        const tone =
+          st === "hadir" || st === "unfit"
+            ? "success"
+            : st === "terlambat"
+              ? "warning"
+              : st === "belum"
+                ? "danger"
+                : "neutral";
         return {
           nik: String(a.nik || ""),
           name: String(a.name || a.nik || ""),
           pos: String(a.pos || "Operator"),
-          dept: String(a.dept || "Operation"),
-          label:
-            st === "hadir"
-              ? "Hadir"
-              : st === "terlambat"
-                ? "Terlambat"
-                : "Belum absen",
-          variant: (st === "hadir"
+          dept: String(a.dept || ""),
+          label,
+          variant: (st === "hadir" || st === "unfit"
             ? "success"
             : st === "terlambat"
               ? "warning"
               : "neutral") as "success" | "warning" | "neutral",
-          tone: (st === "hadir"
-            ? "success"
-            : st === "terlambat"
-              ? "warning"
-              : "neutral") as "success" | "warning" | "neutral" | "danger",
+          tone: tone as "success" | "warning" | "neutral" | "danger",
         };
       }),
     [apiRows]

@@ -1,3 +1,7 @@
+/* ---------- Dynamic business rules (from backend) ---------- */
+
+import { useAuthPolicy } from "@/components/providers/business-rules";
+
 /* Penanganan password untuk mock data.
 
    PERINGATAN PENTING — baca sebelum memakai ulang pola ini:
@@ -44,19 +48,35 @@ export async function verifyPassword(
 
 /* ---- Aturan kekuatan password ---- */
 
+/* Fallback value — gunakan useAuthPolicy() untuk dynamic value dari backend */
 export const PW_MIN = 8;
 
 export type PwIssue = "len" | "num" | "letter";
 
 /* Dikembalikan sebagai daftar kode agar pemanggil yang memilih string i18n */
-export function passwordIssues(pw: string): PwIssue[] {
+export function passwordIssues(
+  pw: string,
+  minLength: number = PW_MIN
+): PwIssue[] {
   const out: PwIssue[] = [];
-  if (pw.length < PW_MIN) out.push("len");
+  if (pw.length < minLength) out.push("len");
   if (!/[0-9]/.test(pw)) out.push("num");
   if (!/[a-zA-Z]/.test(pw)) out.push("letter");
   return out;
 }
 
-export function isPasswordStrong(pw: string): boolean {
-  return passwordIssues(pw).length === 0;
+export function isPasswordStrong(
+  pw: string,
+  minLength: number = PW_MIN
+): boolean {
+  return passwordIssues(pw, minLength).length === 0;
 }
+
+/**
+ * Hook untuk mendapatkan authentication policy dinamis dari backend.
+ * Fallback ke hardcoded values jika backend error.
+ *
+ * @example
+ * const { passwordMinLength } = useAuthPolicy();
+ */
+export { useAuthPolicy } from "@/components/providers/business-rules";

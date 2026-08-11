@@ -2,6 +2,8 @@
  * lib/api/users.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
+import { downloadBlob } from "@/lib/utils";
+
 import { apiFetch } from "./client";
 import type { ApiUser } from "./types";
 
@@ -59,5 +61,19 @@ export const usersApi = {
       method: "POST",
       body: formData,
     });
+  },
+
+  /** Download users as CSV */
+  async export(): Promise<void> {
+    const url =
+      (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api") +
+      "/users/export";
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename="?([^";]+)"?/.exec(cd);
+    const name = m?.[1] || "users_export.csv";
+    downloadBlob(blob, name);
   },
 };

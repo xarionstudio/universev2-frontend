@@ -136,11 +136,8 @@ export default function UnitStatusPage() {
   const drawerUnit = drawerCode
     ? units.find((u) => u.code === drawerCode)
     : undefined;
-  /* Tampilkan history dari API bila tersedia, fallback ke hist lokal */
-  const drawerHist =
-    apiHist.length > 0
-      ? apiHist
-      : ((drawerUnit?.hist as [string, string, string, string][]) ?? []);
+  /* History murni dari API — tidak ada fallback data lokal */
+  const drawerHist = apiHist;
   const dlgUnit = dlgCode ? units.find((u) => u.code === dlgCode) : undefined;
 
   function openDialog(code: string) {
@@ -159,6 +156,21 @@ export default function UnitStatusPage() {
       await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
     } catch {
       // Fallback local update
+    }
+    // Apabila status baru adalah breakdown, laporkan juga lewat endpoint
+    // status-report agar tercatat sebagai breakdown report (bukan hanya
+    // ubah status biasa).
+    if (kind === "breakdown") {
+      try {
+        await fleetApi.reportBreakdown(dlgUnit.code, {
+          what: newSt,
+          why,
+          loc: dlgUnit.loc,
+        });
+      } catch {
+        // Kegagalan report tidak menggagalkan ubah status — sudah tercatat
+        // via updateUnitStatus di atas.
+      }
     }
     const now = new Date();
     const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;

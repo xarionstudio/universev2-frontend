@@ -5,7 +5,58 @@
  * Supports httpOnly cookies (credentials: "include") and structured responses.
  * ────────────────────────────────────────────────────────────────────────── */
 
-import type { ApiResponse } from "./types";
+import type { ApiResponse, PagedData, PaginationMeta } from "./types";
+
+/** Unwrap `{ items, pagination }` or pass through a plain array. */
+export function unwrapPagedItems<T>(
+  data: T[] | PagedData<T> | null | undefined
+): T[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (
+    typeof data === "object" &&
+    "items" in data &&
+    Array.isArray((data as PagedData<T>).items)
+  ) {
+    return (data as PagedData<T>).items;
+  }
+  return [];
+}
+
+export function paginationMeta(data: unknown): PaginationMeta | null {
+  if (
+    data &&
+    typeof data === "object" &&
+    "pagination" in data &&
+    (data as PagedData<unknown>).pagination
+  ) {
+    return (data as PagedData<unknown>).pagination;
+  }
+  return null;
+}
+
+/** Fetch all pages from a paginated list endpoint (max 200 items/page). */
+export async function apiFetchAllItems<T>(
+  endpoint: string,
+  options: FetchOptions = {}
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 1;
+  const perPage = 200;
+
+  while (true) {
+    const data = await apiFetch<T[] | PagedData<T>>(endpoint, {
+      ...options,
+      params: { ...options.params, page, perPage },
+    });
+    all.push(...unwrapPagedItems(data));
+    const meta = paginationMeta(data);
+    if (!meta || page >= meta.totalPages) break;
+    page += 1;
+  }
+
+  return all;
+}
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
@@ -85,7 +136,7 @@ export async function apiFetch<T>(
   }
 
   // Handle No Content
-  if (response.status === 24) {
+  if (response.status === 204) {
     return {} as T;
   }
 

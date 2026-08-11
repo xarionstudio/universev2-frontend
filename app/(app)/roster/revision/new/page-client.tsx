@@ -78,13 +78,8 @@ export default function RosterRevisionNewPage() {
         }
       })
       .catch(() => {
-        // Fallback to a minimal list if API unavailable
-        setCodes([
-          "D — Day Shift",
-          "N — Night Shift",
-          "OFF — Off / Libur",
-          "S — Sakit",
-        ]);
+        // API unavailable — leave codes empty; user sees empty state
+        setCodes([]);
       });
   }, []);
 

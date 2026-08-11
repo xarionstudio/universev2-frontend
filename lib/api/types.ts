@@ -102,6 +102,18 @@ export type Employee = {
   emg: string;
   foto?: string;
   komp?: Competency[];
+  mcuExp?: string;
+  ind?: string;
+  birth?: string;
+  religion?: string;
+  marital?: string;
+  gender?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  emergencyName?: string;
+  emergencyRel?: string;
+  emergencyPhone?: string;
   createdAt: string;
   updatedAt: string;
 };

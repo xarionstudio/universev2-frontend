@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { notFound, useParams } from "next/navigation";
-import { Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
+import { Download, Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
 
 import { masterApi } from "@/lib/api/master";
 import {
@@ -104,15 +104,15 @@ export default function MasterDataPage() {
   const allUnits = React.useMemo(() => udbAll(), [udbAll]);
   const busCodeOpts = React.useMemo(() => {
     const used = new Set(
-      mdData.bus.filter((r) => r.id !== editId).map((r) => r.name)
+      (mdData?.bus || []).filter((r) => r.id !== editId).map((r) => r.name)
     );
     return allUnits
       .filter((u) => u.cls === "BUS" && u.active && !used.has(u.code))
       .map((u) => u.code);
-  }, [mdData.bus, editId, allUnits]);
+  }, [mdData?.bus, editId, allUnits]);
   const diggerOpts = React.useMemo(() => {
     const used = new Set(
-      mdData.lokasiex.filter((r) => r.id !== editId).map((r) => r.name)
+      (mdData?.lokasiex || []).filter((r) => r.id !== editId).map((r) => r.name)
     );
     return allUnits
       .filter(
@@ -122,14 +122,14 @@ export default function MasterDataPage() {
           !used.has(u.code)
       )
       .map((u) => u.code);
-  }, [mdData.lokasiex, editId, allUnits]);
+  }, [mdData?.lokasiex, editId, allUnits]);
   const busOpts = React.useMemo(
-    () => mdData.bus.filter((r) => r.active).map((r) => r.name),
-    [mdData.bus]
+    () => (mdData?.bus || []).filter((r) => r.active).map((r) => r.name),
+    [mdData?.bus]
   );
   const tempudoOpts = React.useMemo(
-    () => mdData.tempudo.filter((r) => r.active).map((r) => r.name),
-    [mdData.tempudo]
+    () => (mdData?.tempudo || []).filter((r) => r.active).map((r) => r.name),
+    [mdData?.tempudo]
   );
   const busTypeOf = (code: string) =>
     allUnits.find((u) => u.code === code)?.egi ?? "";
@@ -209,7 +209,7 @@ export default function MasterDataPage() {
     }
   }, [cat, t, en, busCodeOpts, diggerOpts, busOpts, tempudoOpts]);
 
-  const entries = mdData[cat];
+  const entries = mdData?.[cat] || [];
   const needle = q.trim().toLowerCase();
   const filtered = entries.filter((r) => {
     if (stF === "1" && !r.active) return false;
@@ -281,27 +281,35 @@ export default function MasterDataPage() {
     }
     const data = { name, a: fA, b: fB, active: fActive };
     const editingEntry = editId
-      ? mdData[cat].find((r) => r.id === editId)
+      ? (mdData?.[cat] || []).find((r) => r.id === editId)
       : undefined;
     const code = editingEntry?.code ?? name;
     if (editId) {
       try {
         await masterApi.update(cat, code, data);
-      } catch {
-        // Fallback local update
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to update master entry";
+        pushToast("error", t.mdEditToastT, msg);
+        return;
       }
     } else {
       try {
         await masterApi.create(cat, data);
-      } catch {
-        // Fallback local create
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to create master entry";
+        pushToast("error", t.mdAddToastT, msg);
+        return;
       }
     }
     setMdData((prev) => ({
       ...prev,
       [cat]: editId
-        ? prev[cat].map((r) => (r.id === editId ? { ...r, ...data } : r))
-        : [...prev[cat], { id: `${cat}-${Date.now()}`, code, ...data }],
+        ? (prev[cat] || []).map((r) =>
+            r.id === editId ? { ...r, ...data } : r
+          )
+        : [...(prev[cat] || []), { id: `${cat}-${Date.now()}`, code, ...data }],
     }));
     setDlgOpen(false);
     pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
@@ -311,12 +319,16 @@ export default function MasterDataPage() {
     if (!delTarget) return;
     try {
       await masterApi.delete(cat, delTarget.code);
-    } catch {
-      // Fallback local delete
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to delete master entry";
+      pushToast("error", t.mdDelToastT, msg);
+      setDelTarget(null);
+      return;
     }
     setMdData((prev) => ({
       ...prev,
-      [cat]: prev[cat].filter((r) => r.id !== delTarget.id),
+      [cat]: (prev[cat] || []).filter((r) => r.id !== delTarget.id),
     }));
     setDelTarget(null);
     pushToast("success", t.mdDelToastT, delTarget.name);
@@ -370,6 +382,20 @@ export default function MasterDataPage() {
               <option value="1">{t.stAktif}</option>
               <option value="0">{t.stNonaktif}</option>
             </Select>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await masterApi.export(cat);
+                  pushToast("success", t.toastExportT, `${cat}.xlsx`);
+                } catch {
+                  pushToast("error", t.toastExportT, t.toastExportD);
+                }
+              }}
+            >
+              <Download />
+              {t.export}
+            </Button>
           </ToolbarGroup>
         </Toolbar>
 

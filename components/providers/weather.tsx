@@ -18,6 +18,9 @@ import {
 } from "@/lib/weather/open-meteo";
 import { DEFAULT_SITE, siteOfMess } from "@/lib/weather/sites";
 import { useAppStore } from "@/components/providers/app-store";
+/* ---------- Dynamic business rules (from backend) ---------- */
+
+import { useWeatherConfig } from "@/components/providers/business-rules";
 import { usePermissions } from "@/components/providers/permissions";
 
 /* Sumber tunggal data cuaca untuk shell admin.
@@ -85,7 +88,17 @@ export type WeatherContextValue = {
 
 /* Blok `current` Open-Meteo di hulu diperbarui tiap ~15 menit; polling lebih
    cepat hanya membakar kuota tanpa data baru. */
+/* Fallback value — gunakan useWeatherConfig() untuk dynamic value dari backend */
 export const WEATHER_REFRESH_MS = 15 * 60 * 1000;
+
+/**
+ * Hook untuk mendapatkan weather configuration dinamis dari backend.
+ * Fallback ke hardcoded values jika backend error.
+ *
+ * @example
+ * const { refreshIntervalMs } = useWeatherConfig();
+ */
+export { useWeatherConfig } from "@/components/providers/business-rules";
 
 /* Jitter ±10%: saat pergantian shift puluhan orang membuka aplikasi dalam
    menit yang sama; tanpa jitter mereka menembak API serempak selamanya. */

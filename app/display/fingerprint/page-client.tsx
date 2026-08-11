@@ -16,9 +16,13 @@ export default function DisplayFingerprintPage() {
   const [apiMachines, setApiMachines] = React.useState<
     Record<string, unknown>[]
   >([]);
+  const runtextOpts = mdData?.runtext || [];
   const runtext =
-    mdData.runtext.find((r) => r.active)?.name ??
+    runtextOpts.find((r) => r.active)?.name ??
     "Wajib P2H sebelum mengoperasikan unit.";
+
+  // Ensure runtext is always a string
+  const safeRuntext = runtext || "Wajib P2H sebelum mengoperasikan unit.";
 
   React.useEffect(() => {
     displayApi
@@ -50,7 +54,7 @@ export default function DisplayFingerprintPage() {
     <DisplayShell
       title="Mesin Fingerprint"
       deviceName={deviceName}
-      runtext={runtext}
+      runtext={safeRuntext}
       stats={[
         {
           icon: <LayoutGrid className="text-primary-bright" />,

@@ -102,8 +102,12 @@ export default function FleetSettingPage() {
   )
     .filter((code) => !fleets.some((f) => f.digger === code && f.id !== editId))
     .sort();
-  const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name);
-  const areaOpts = mdData.area.filter((a) => a.active).map((a) => a.name);
+  const busOpts = (mdData?.bus || [])
+    .filter((b) => b.active)
+    .map((b) => b.name);
+  const areaOpts = (mdData?.area || [])
+    .filter((a) => a.active)
+    .map((a) => a.name);
 
   /* pilihan unit OHT — langsung dari Database Unit, unit milik fleet lain disembunyikan */
   const usedElsewhere = new Set(

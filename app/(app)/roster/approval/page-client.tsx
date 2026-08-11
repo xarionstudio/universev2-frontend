@@ -87,13 +87,8 @@ export default function RosterApprovalPage() {
     if (i === null || i === undefined) return;
     const r = apRows[i];
     if (!r) return;
-    const raw = r as Record<string, unknown>;
-    const revId =
-      typeof raw.id === "number"
-        ? (raw.id as number)
-        : typeof raw.id === "string" && !isNaN(Number(raw.id))
-          ? Number(raw.id)
-          : null;
+    const raw = r as ApRow;
+    const revId = typeof raw.id === "number" ? raw.id : null;
     if (revId === null) {
       // No valid backend ID — fallback local state update only
       const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");

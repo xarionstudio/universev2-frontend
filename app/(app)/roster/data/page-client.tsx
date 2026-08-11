@@ -64,7 +64,7 @@ export default function RosterDataPage() {
           label: String(r.label || r.month || "Roster"),
           file: String(r.file || "roster.xlsx"),
           dept: String(r.dept || "Operation"),
-          month: String(r.month || "2026-08"),
+          month: String(r.month || ""),
           status: (r.status || "aktif") as "aktif" | "arsip",
           upd: String(r.upd || "hari ini"),
           by: String(r.by || "admin"),
@@ -208,7 +208,14 @@ export default function RosterDataPage() {
                       </IconButton>
                       <IconButton
                         aria-label={t.rdDl}
-                        onClick={() => pushToast("success", t.rdDlT, r.file)}
+                        onClick={async () => {
+                          try {
+                            await rosterApi.exportRoster(r.key);
+                            pushToast("success", t.rdDlT, r.file);
+                          } catch {
+                            pushToast("error", t.rdDlT, r.file);
+                          }
+                        }}
                       >
                         <Download />
                       </IconButton>

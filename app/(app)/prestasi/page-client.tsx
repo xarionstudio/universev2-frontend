@@ -70,8 +70,7 @@ export default function PrestasiPage() {
      menampilkan daftar orang yang berbeda untuk hal yang sama. */
   const [apiBoard, setApiBoard] = React.useState<PrestasiRecord[] | null>(null);
 
-  /* Ambil leaderboard dari backend API — fallback ke simulasi lokal bila
-     backend tidak tersedia atau belum ada data. */
+  /* Ambil leaderboard dari backend API — bila gagal/kosong, tampilkan state kosong. */
   React.useEffect(() => {
     let cancelled = false;
     const days = PERIOD_DAYS[period];

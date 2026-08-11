@@ -48,7 +48,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${instrumentSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body>
+      <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <Providers>{children}</Providers>
       </body>

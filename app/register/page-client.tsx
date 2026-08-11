@@ -31,14 +31,8 @@ import { Select } from "@/components/ui/select";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
-const POSITIONS = [
-  "Operator Dump Truck",
-  "Operator Digger",
-  "Foreman",
-  "Supervisor",
-  "Admin Roster",
-];
-const DEPARTMENTS = ["Operation", "Plant", "SDI", "HRGA", "SHE"];
+const POSITIONS: string[] = [];
+const DEPARTMENTS: string[] = [];
 
 const ctaClass =
   "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";

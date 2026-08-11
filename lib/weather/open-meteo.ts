@@ -9,7 +9,9 @@
 
 import type { Dict } from "@/lib/i18n/id";
 
-const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
+const ENDPOINT =
+  process.env.NEXT_PUBLIC_WEATHER_OPEN_METEO_URL ||
+  "https://api.open-meteo.com/v1/forecast";
 
 /* ------------------------------------------------------------------ *
  * Tipe publik

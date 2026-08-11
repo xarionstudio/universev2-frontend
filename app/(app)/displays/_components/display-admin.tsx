@@ -68,7 +68,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
 
   const rows = kind === "att" ? store.dspAtt : store.dspFleet;
   const setRows = kind === "att" ? store.setDspAtt : store.setDspFleet;
-  const runtextOpts = store.mdData.runtext
+  const runtextOpts = (store.mdData?.runtext || [])
     .filter((e) => e.active)
     .map((e) => e.name);
 
@@ -150,18 +150,22 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       name: data.name,
       runtext: data.runtext,
       active: data.active,
+      content: kind,
       fleetId: fleet
         ? Number(fleet.id.replace("fl-", "")) || undefined
         : undefined,
     };
     if (editing) {
       const numId = Number(editing.id);
-      if (!isNaN(numId)) {
-        try {
-          await settingsApi.updateDisplay(numId, apiData);
-        } catch {
-          // Fallback local update
-        }
+      if (isNaN(numId)) {
+        pushToast("error", t.dspToastEdit, t.dspToastEdit);
+        return;
+      }
+      try {
+        await settingsApi.updateDisplay(numId, apiData);
+      } catch {
+        pushToast("error", t.dspToastEdit, t.dspToastEdit);
+        return;
       }
       setRows((prev) =>
         prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d))
@@ -171,21 +175,9 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       try {
         await settingsApi.createDisplay(apiData);
       } catch {
-        // Fallback local addition
+        pushToast("error", t.dspToastAdd, t.dspToastAdd);
+        return;
       }
-      const prefix = kind === "att" ? "DSP-A" : "DSP-F";
-      const id = `${prefix}${String(rows.length + 1).padStart(2, "0")}`;
-      setRows((prev) => [
-        ...prev,
-        {
-          id,
-          online: true,
-          hb: "baru saja",
-          loc: "",
-          content: kind === "att" ? "att" : "fleet",
-          ...data,
-        },
-      ]);
       pushToast("success", t.dspToastAdd);
     }
     setDlgOpen(false);
@@ -194,12 +186,17 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   async function delDo() {
     if (!delTarget) return;
     const numId = Number(delTarget.id);
-    if (!isNaN(numId)) {
-      try {
-        await settingsApi.deleteDisplay(numId);
-      } catch {
-        // Fallback local deletion
-      }
+    if (isNaN(numId)) {
+      pushToast("error", t.dspToastDel, t.dspToastDel);
+      setDelTarget(null);
+      return;
+    }
+    try {
+      await settingsApi.deleteDisplay(numId);
+    } catch {
+      pushToast("error", t.dspToastDel, t.dspToastDel);
+      setDelTarget(null);
+      return;
     }
     setRows((prev) => prev.filter((d) => d.id !== delTarget.id));
     pushToast("success", t.dspToastDel);

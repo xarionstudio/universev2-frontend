@@ -10,16 +10,16 @@ import { rolesApi } from "@/lib/api/roles";
 import { rosterApi } from "@/lib/api/roster";
 import { settingsApi } from "@/lib/api/settings";
 import { usersApi } from "@/lib/api/users";
-import { withKomp, type Employee } from "@/lib/data/employees";
-import { type Fleet } from "@/lib/data/fleet";
-import { type FaAlloc } from "@/lib/data/fleet-alloc";
-import { type MdCat, type MdEntry } from "@/lib/data/master-data";
-import { type Notif } from "@/lib/data/notifications";
-import { type ApRow } from "@/lib/data/roster";
-import { type Audio, type Display } from "@/lib/data/settings-data";
-import { type Unit } from "@/lib/data/unit-status";
-import { unitsDb as udbBase, type UnitDb } from "@/lib/data/units-db";
-import { type UmRole, type UmUser } from "@/lib/data/users";
+import type { Employee } from "@/lib/data/employees";
+import type { Fleet } from "@/lib/data/fleet";
+import type { FaAlloc } from "@/lib/data/fleet-alloc";
+import type { MdCat, MdEntry } from "@/lib/data/master-data";
+import type { Notif } from "@/lib/data/notifications";
+import type { ApRow } from "@/lib/data/roster";
+import type { Audio, Display } from "@/lib/data/settings-data";
+import type { Unit } from "@/lib/data/unit-status";
+import type { UnitDb } from "@/lib/data/units-db";
+import type { UmRole, UmUser } from "@/lib/data/users";
 import { useSession } from "@/components/providers/session";
 
 export { type FaAlloc } from "@/lib/data/fleet-alloc";
@@ -62,6 +62,7 @@ type AppStore = {
   setUnits: React.Dispatch<React.SetStateAction<Unit[]>>;
   /* database unit */
   udbAdded: UnitDb[];
+  setUdbAdded: React.Dispatch<React.SetStateAction<UnitDb[]>>;
   udbOverrides: Record<string, Partial<UnitDb>>;
   udbAll: () => UnitDb[];
   saveUdb: (
@@ -101,8 +102,8 @@ const AppStoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const { user: sessionUser, hydrated } = useSession();
-  const [userName, setUserName] = React.useState("First Angel Paustine");
-  const [userEmail, setUserEmail] = React.useState("angel@unggul.co.id");
+  const [userName, setUserName] = React.useState("");
+  const [userEmail, setUserEmail] = React.useState("");
   const [notifs, setNotifs] = React.useState<Notif[]>([]);
   const [empOverrides, setEmpOverrides] = React.useState<
     Record<string, Partial<Employee>>
@@ -152,24 +153,47 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Fetch Notifications
+    console.log(
+      "[AppStore] Fetching notifications, hydrated:",
+      hydrated,
+      "sessionUser:",
+      !!sessionUser
+    );
     notificationsApi
       .getNotifications()
       .then((data) => {
+        console.log("[AppStore] Notifications fetched:", data);
         if (data && Array.isArray(data)) {
-          setNotifs(
-            data.map((n) => ({
-              id: String(n.id),
+          // Load read status from localStorage to preserve user's read actions
+          let readStatus: Record<string, boolean> = {};
+          try {
+            const stored = localStorage.getItem("universe-notif-read");
+            if (stored) readStatus = JSON.parse(stored);
+          } catch {}
+
+          const mapped = data.map((n) => {
+            const id = String(n.id);
+            // Use localStorage read status if available, otherwise use API status
+            const isRead =
+              readStatus[id] !== undefined ? readStatus[id] : n.read;
+            return {
+              id: id,
               tone: n.tone,
               textId: n.textId,
               textEn: n.textEn,
               timeId: n.timeId,
               timeEn: n.timeEn,
-              read: n.read,
-            }))
-          );
+              read: isRead,
+              createdAt: n.createdAt,
+            };
+          });
+          console.log("[AppStore] Mapped notifications:", mapped);
+          setNotifs(mapped);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("[AppStore] Failed to fetch notifications:", err);
+      });
 
     // Fetch Roster Revisions (approval queue)
     rosterApi
@@ -178,6 +202,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         if (data && Array.isArray(data) && data.length > 0) {
           setApRows(
             data.map((r) => ({
+              id: typeof r.id === "number" ? r.id : undefined,
               sid: String(r.sid || ""),
               name: String(r.name || r.nik || ""),
               nik: String(r.nik || ""),
@@ -249,20 +274,32 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     // Fetch Employees
     employeesApi
-      .getEmployees()
-      .then((data) => {
-        if (data && Array.isArray(data) && data.length > 0) {
+      .getEmployees({ perPage: 200, page: 1 })
+      .then(async (firstPage) => {
+        let items = firstPage.items ?? [];
+        const totalPages = firstPage.pagination?.totalPages ?? 1;
+        if (totalPages > 1) {
+          const rest = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, i) =>
+              employeesApi.getEmployees({ perPage: 200, page: i + 2 })
+            )
+          );
+          for (const page of rest) {
+            items = items.concat(page.items ?? []);
+          }
+        }
+        if (items.length > 0) {
           setEmpAdded(
-            data.map(
+            items.map(
               (e) =>
                 ({
                   nik: e.nik,
                   name: e.name,
-                  company: e.company || "PT Unggul Dinamika Utama",
-                  dept: e.dept || "Operation",
-                  pos: e.pos || "Operator Dump Truck",
-                  equip: e.equip || "HD 785-7",
-                  join: e.join || "2022-01-01",
+                  company: e.company || "",
+                  dept: e.dept || "",
+                  pos: e.pos || "",
+                  equip: e.equip || "",
+                  join: e.join || "",
                   status: (e.status || "aktif") as Employee["status"],
                   simper: e.simper || "",
                   simperExp: e.simperExp || "",
@@ -272,7 +309,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   blood: e.blood || "",
                   religion: e.religion || "",
                   marital: e.marital || "",
-                  gender: e.gender || "L",
+                  gender: e.gender || "",
                   phone: e.phone || "",
                   email: e.email || "",
                   address: e.address || "",
@@ -281,7 +318,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   emergencyPhone: e.emergencyPhone || "",
                   exp: 1,
                   license: [],
-                  mcu: "Fit",
+                  mcu: e.mcu || "",
                   medis: [],
                   komp: e.komp || [],
                 }) as unknown as Employee
@@ -290,8 +327,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {});
-
-    // Fetch Unit Statuses
     fleetApi
       .getUnitStatuses()
       .then((data) => {
@@ -389,8 +424,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               id: e.id != null ? String(e.id) : `${cat}-${i}`,
               code: String(e.code || e.name || `${cat}-${i}`),
               name: String(e.name || e.code || ""),
-              a: String(e.a || ""),
-              b: String(e.b || ""),
+              a: String(
+                (e as unknown as Record<string, unknown>).a ||
+                  (e as unknown as Record<string, unknown>).description ||
+                  (e as unknown as Record<string, unknown>).category ||
+                  (e as unknown as Record<string, unknown>).location ||
+                  (e as unknown as Record<string, unknown>).busCode ||
+                  (e as unknown as Record<string, unknown>).block ||
+                  (e as unknown as Record<string, unknown>).targetDisplay ||
+                  ""
+              ),
+              b: String(
+                (e as unknown as Record<string, unknown>).b ||
+                  (e as unknown as Record<string, unknown>).pickupType ||
+                  (e as unknown as Record<string, unknown>).departureTime ||
+                  (e as unknown as Record<string, unknown>).tempudoCode ||
+                  (e as unknown as Record<string, unknown>).textColor ||
+                  ""
+              ),
               active: e.active !== false,
             })),
           ] as const;
@@ -463,10 +514,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [hydrated, sessionUser]);
 
+  // Save read status to localStorage whenever notifs change
+  React.useEffect(() => {
+    try {
+      const readStatus: Record<string, boolean> = {};
+      notifs.forEach((n) => {
+        if (n.read) readStatus[n.id] = true;
+      });
+      localStorage.setItem("universe-notif-read", JSON.stringify(readStatus));
+    } catch {}
+  }, [notifs]);
+
   const empAll = React.useCallback(() => {
     const list = empAdded;
     const base = list.map((r) => ({ ...r, ...(empOverrides[r.nik] || {}) }));
-    return withKomp(base.filter((r) => !empDeleted[r.nik]));
+    return base.filter((r) => !empDeleted[r.nik]);
   }, [empOverrides, empAdded, empDeleted]);
 
   const saveEmployee = React.useCallback(
@@ -499,16 +561,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const saveUdb = React.useCallback(
     (uid: string | null, data: Partial<UnitDb> & { code: string }) => {
       if (uid) {
-        if (udbBase.some((u) => u.uid === uid)) {
-          setUdbOverrides((prev) => ({
-            ...prev,
-            [uid]: { ...prev[uid], ...data },
-          }));
-        } else {
-          setUdbAdded((prev) =>
-            prev.map((u) => (u.uid === uid ? { ...u, ...data } : u))
-          );
-        }
+        setUdbAdded((prev) =>
+          prev.some((u) => u.uid === uid)
+            ? prev.map((u) => (u.uid === uid ? { ...u, ...data } : u))
+            : prev
+        );
+        setUdbOverrides((prev) => {
+          // Ensure overrides don't conflict with real DB entries.
+          const rest = { ...prev };
+          delete rest[uid];
+          return rest;
+        });
       } else {
         setUdbAdded((prev) => [
           ...prev,
@@ -550,6 +613,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     units,
     setUnits,
     udbAdded,
+    setUdbAdded,
     udbOverrides,
     udbAll,
     saveUdb,

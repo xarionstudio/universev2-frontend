@@ -61,8 +61,6 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-import { downloadCsv } from "./_lib/csv";
-
 export default function UsersPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
@@ -189,13 +187,16 @@ export default function UsersPage() {
       }
       try {
         const numId = Number(editing.id);
-        if (!isNaN(numId)) {
-          await usersApi.update(numId, data);
+        if (isNaN(numId)) {
+          pushToast("error", t.umUserEditT, t.umUserEditT);
+          return;
         }
+        await usersApi.update(numId, data);
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Failed to update user";
         pushToast("error", t.umUserEditT, msg);
+        return;
       }
       setUmUsers((prev) =>
         prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
@@ -209,24 +210,23 @@ export default function UsersPage() {
           nik: nik || undefined,
           roles,
         });
-        if (newUser) {
-          setUmUsers((prev) => [
-            ...prev,
-            {
-              id: String(newUser.id),
-              email: newUser.email,
-              kar: newUser.kar,
-              nik: newUser.nik || "",
-              roles: newUser.roles || [],
-              on: newUser.on,
-            },
-          ]);
-        }
+        if (!newUser) throw new Error("No response from server");
+        setUmUsers((prev) => [
+          ...prev,
+          {
+            id: String(newUser.id),
+            email: newUser.email,
+            kar: newUser.kar,
+            nik: newUser.nik || "",
+            roles: newUser.roles || [],
+            on: newUser.on,
+          },
+        ]);
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Failed to create user";
         pushToast("error", t.umUserEditT, msg);
-        setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }]);
+        return;
       }
       pushToast("success", t.umToastInvite, `${email} — ${t.umToastInviteD}`);
     }
@@ -243,12 +243,19 @@ export default function UsersPage() {
       return;
     }
     const numId = Number(offTarget.id);
-    if (!isNaN(numId)) {
-      try {
-        await usersApi.toggleStatus(numId, nextOn);
-      } catch {
-        // Fallback local update
-      }
+    if (isNaN(numId)) {
+      pushToast("error", t.umUserOffT, t.umUserOffT);
+      setOffTarget(null);
+      return;
+    }
+    try {
+      await usersApi.toggleStatus(numId, nextOn);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to toggle status";
+      pushToast("error", t.umUserOffT, msg);
+      setOffTarget(null);
+      return;
     }
     setUmUsers((prev) =>
       prev.map((u) => (u.id === offTarget.id ? { ...u, on: nextOn } : u))
@@ -325,29 +332,33 @@ export default function UsersPage() {
             ? t.umPwErrConf
             : undefined;
 
-  function onDo(u: UmUser) {
+  async function onDo(u: UmUser) {
+    const numId = Number(u.id);
+    if (isNaN(numId)) {
+      pushToast("error", t.umUserOffT, t.umUserOffT);
+      return;
+    }
+    try {
+      await usersApi.toggleStatus(numId, true);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to toggle status";
+      pushToast("error", t.umUserOffT, msg);
+      return;
+    }
     setUmUsers((prev) =>
       prev.map((x) => (x.id === u.id ? { ...x, on: true } : x))
     );
     pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`);
   }
 
-  function exportCsv() {
-    const head = "email;karyawan;nik;roles;status";
-    const body = umUsers
-      .map((u) =>
-        [
-          u.email,
-          u.kar ?? "",
-          u.nik ?? "",
-          u.roles.map(roleName).join(","),
-          u.on ? "aktif" : "nonaktif",
-        ].join(";")
-      )
-      .join("\n");
-    const name = `users_${new Date().toISOString().slice(0, 10)}.csv`;
-    downloadCsv(name, `${head}\n${body}`);
-    pushToast("success", t.umToastExp, name);
+  async function exportCsv() {
+    try {
+      await usersApi.export();
+      pushToast("success", t.umToastExp, "users_export.csv");
+    } catch {
+      pushToast("error", t.umToastExp, "users_export.csv");
+    }
   }
 
   async function importChange(e: React.ChangeEvent<HTMLInputElement>) {

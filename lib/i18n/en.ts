@@ -865,6 +865,7 @@ export const en: Dict = {
   lblDateTo: "To date",
   toastExportT: "Export started",
   toastExportD: "attendance_2026-07-11.xlsx is being prepared.",
+  empExportErr: "Failed to export employees.",
 
   /* --- my profile --- */
   pfSub: "Manage your account information and password.",

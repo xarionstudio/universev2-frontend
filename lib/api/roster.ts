@@ -2,7 +2,9 @@
  * lib/api/roster.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
-import { apiFetch, apiUploadWithProgress } from "./client";
+import { downloadBlob } from "@/lib/utils";
+
+import { apiFetch, apiFetchAllItems, apiUploadWithProgress } from "./client";
 import type {
   AttendanceRow,
   RosterExportRow,
@@ -20,7 +22,7 @@ export type RevisionCode = {
 export const rosterApi = {
   /** Fetch list of roster files */
   async getRosters(): Promise<RosterMeta[]> {
-    return apiFetch<RosterMeta[]>("/rosters", {
+    return apiFetchAllItems<RosterMeta>("/rosters", {
       method: "GET",
     });
   },
@@ -73,7 +75,7 @@ export const rosterApi = {
 
   /** Fetch pending/history roster revisions */
   async getRevisions(status?: string): Promise<RosterRevision[]> {
-    return apiFetch<RosterRevision[]>("/rosters/revisions", {
+    return apiFetchAllItems<RosterRevision>("/rosters/revisions", {
       method: "GET",
       params: { status },
     });
@@ -132,5 +134,21 @@ export const rosterApi = {
       method: "GET",
       params: { date },
     });
+  },
+
+  /** Download roster export file from backend (binary xlsx). */
+  async exportRoster(key: string | number): Promise<void> {
+    const url =
+      (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api") +
+      `/rosters/${key}/export`;
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) {
+      throw new Error(`Export failed with status ${res.status}`);
+    }
+    const blob = await res.blob();
+    const contentDisposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename="?([^";]+)"?/.exec(contentDisposition);
+    const filename = match?.[1] || `roster_${key}_export.xlsx`;
+    downloadBlob(blob, filename);
   },
 };

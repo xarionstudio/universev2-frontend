@@ -1,4 +1,10 @@
+import { ftwApi } from "@/lib/api/ftw";
 import type { Lang } from "@/lib/i18n";
+// 4 jam 00 menit
+
+/* ---------- Dynamic business rules (from backend) ---------- */
+
+import { useFtwThresholds } from "@/components/providers/business-rules";
 
 /* Fit to work (log tidur).
 
@@ -16,9 +22,19 @@ import type { Lang } from "@/lib/i18n";
 export type FtwStatus = "fit" | "spare" | "pulang" | "belum";
 
 /* Ambang dalam MENIT — dipakai lintas modul, jangan di-hardcode di tempat lain */
+/* Fallback values — gunakan useFtwThresholds() untuk dynamic values dari backend */
 export const SLEEP_FIT_MIN = 330; // 5 jam 30 menit
 export const SLEEP_SPARE_1H_MIN = 300; // 5 jam 00 menit
-export const SLEEP_SPARE_2H_MIN = 240; // 4 jam 00 menit
+export const SLEEP_SPARE_2H_MIN = 240;
+
+/**
+ * Hook untuk mendapatkan FTW thresholds dinamis dari backend.
+ * Fallback ke hardcoded values jika backend error.
+ *
+ * @example
+ * const { sleepFitMin, sleepSpare1hMin, sleepSpare2hMin } = useFtwThresholds();
+ */
+export { useFtwThresholds } from "@/components/providers/business-rules";
 
 export type FtwEval = {
   status: FtwStatus;
@@ -28,16 +44,30 @@ export type FtwEval = {
   canWork: boolean;
 };
 
-export function ftwEvaluate(sleepMin: number | null | undefined): FtwEval {
-  if (sleepMin == null || sleepMin <= 0)
-    return { status: "belum", restHours: 0, canWork: false };
-  if (sleepMin >= SLEEP_FIT_MIN)
-    return { status: "fit", restHours: 0, canWork: true };
-  if (sleepMin >= SLEEP_SPARE_1H_MIN)
-    return { status: "spare", restHours: 1, canWork: true };
-  if (sleepMin >= SLEEP_SPARE_2H_MIN)
-    return { status: "spare", restHours: 2, canWork: true };
-  return { status: "pulang", restHours: 0, canWork: false };
+export async function ftwEvaluate(
+  sleepMin: number | null | undefined
+): Promise<FtwEval> {
+  // Use backend as single source of truth
+  try {
+    const result = await ftwApi.evaluateFTW(sleepMin ?? null);
+    return {
+      status: result.status,
+      restHours: result.restHours,
+      canWork: result.canWork,
+    };
+  } catch (error) {
+    // Fallback to local evaluation if backend is unavailable
+    console.warn("Backend FTW evaluation failed, using fallback:", error);
+    if (sleepMin == null || sleepMin <= 0)
+      return { status: "belum", restHours: 0, canWork: false };
+    if (sleepMin >= SLEEP_FIT_MIN)
+      return { status: "fit", restHours: 0, canWork: true };
+    if (sleepMin >= SLEEP_SPARE_1H_MIN)
+      return { status: "spare", restHours: 1, canWork: true };
+    if (sleepMin >= SLEEP_SPARE_2H_MIN)
+      return { status: "spare", restHours: 2, canWork: true };
+    return { status: "pulang", restHours: 0, canWork: false };
+  }
 }
 
 /* "7 j 20 m" / "7 h 20 m" — format tampilan dari menit */
@@ -62,122 +92,6 @@ export type FtwRecord = {
   hist: number[];
 };
 
-/* Seed: menit tidur ditulis apa adanya, status DITURUNKAN dari aturan di atas
-   sehingga data contoh tidak mungkin bertentangan dengan aturannya. */
-const SEED: Array<{
-  name: string;
-  nik: string;
-  dept: string;
-  shift: "siang" | "malam";
-  sleepMin: number | null;
-  hist: number[];
-}> = [
-  {
-    name: "First Angel Paustine",
-    nik: "503264133",
-    dept: "Operation",
-    shift: "siang",
-    sleepMin: 440,
-    hist: [1, 1, 1, 1, 0, 1, 1],
-  },
-  {
-    name: "Rahmat Hidayat",
-    nik: "503264134",
-    dept: "SDI",
-    shift: "siang",
-    sleepMin: 405,
-    hist: [1, 1, 1, 1, 1, 1, 1],
-  },
-  // < 4 jam → dipulangkan
-  {
-    name: "Budi Santoso",
-    nik: "503264135",
-    dept: "HRGA",
-    shift: "siang",
-    sleepMin: 220,
-    hist: [1, 0, 1, 0, 0, 1, 0],
-  },
-  {
-    name: "Siti Nurhaliza",
-    nik: "503264136",
-    dept: "Operation",
-    shift: "siang",
-    sleepMin: 425,
-    hist: [1, 1, 1, 1, 1, 0, 1],
-  },
-  // 5j15 → spare, istirahat 1 jam
-  {
-    name: "Andi Prasetyo",
-    nik: "503264137",
-    dept: "Plant",
-    shift: "siang",
-    sleepMin: 315,
-    hist: [1, 1, 0, 1, 1, 1, 0],
-  },
-  {
-    name: "Dewi Lestari",
-    nik: "503264138",
-    dept: "SDI",
-    shift: "siang",
-    sleepMin: 490,
-    hist: [1, 1, 1, 1, 1, 1, 1],
-  },
-  {
-    name: "Joko Widodo S.",
-    nik: "503264139",
-    dept: "Operation",
-    shift: "siang",
-    sleepMin: null,
-    hist: [1, 1, 1, 0, 1, -1, -1],
-  },
-  // 4j30 → spare, istirahat 2 jam
-  {
-    name: "Agus Salim",
-    nik: "503264141",
-    dept: "Plant",
-    shift: "malam",
-    sleepMin: 270,
-    hist: [0, 1, 0, 1, 0, 0, 0],
-  },
-  {
-    name: "Maya Sari",
-    nik: "503264142",
-    dept: "Operation",
-    shift: "malam",
-    sleepMin: 375,
-    hist: [1, 1, 1, 1, 1, 1, 1],
-  },
-  {
-    name: "Hendra Gunawan",
-    nik: "503264143",
-    dept: "Plant",
-    shift: "malam",
-    sleepMin: null,
-    hist: [1, 1, 1, 1, -1, 1, -1],
-  },
-];
-
-/** @deprecated Use backend API GET /api/ftw/today instead. */
-export function ftwData(lang: Lang): FtwRecord[] {
-  const en = lang === "en";
-  return SEED.map((s) => {
-    const ev = ftwEvaluate(s.sleepMin);
-    return {
-      ...s,
-      sleep: fmtSleepMin(s.sleepMin, en),
-      st: ev.status,
-      restHours: ev.restHours,
-    };
-  });
-}
-
-/* status hari ke-d (0=hari ini) — 7 hari pertama dari hist, sisanya deterministik */
-/** @deprecated Dummy helper for static history strip. */
-export function ftwStAt(rec: FtwRecord, d: number): number {
-  if (d < 7) return rec.hist[6 - d];
-  return [1, 1, 0, 1, 1, 1, 1][(d + rec.nik.charCodeAt(8)) % 7];
-}
-
 export type FtwHistEntry = {
   d: number;
   iso: string;
@@ -192,90 +106,55 @@ export type FtwHistEntry = {
   sendTime: string;
 };
 
-/* riwayat N hari per operator (default 90) + waktu kirim log */
-/** @deprecated Use backend API GET /api/ftw/history instead. */
-export function ftwHistoryFor(
-  rec: FtwRecord,
-  lang: Lang,
-  days = 90
-): FtwHistEntry[] {
-  const MON =
-    lang === "en"
-      ? [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ]
-      : [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "Mei",
-          "Jun",
-          "Jul",
-          "Agu",
-          "Sep",
-          "Okt",
-          "Nov",
-          "Des",
-        ];
-  const en = lang === "en";
-  const out: FtwHistEntry[] = [];
-  for (let d = 0; d < days; d++) {
-    const st = ftwStAt(rec, d);
-    const dt = new Date(Date.now() - d * 86400000);
-    const iso = dt.toISOString().slice(0, 10);
-    const dateLbl = `${dt.getDate() < 10 ? "0" : ""}${dt.getDate()} ${MON[dt.getMonth()]} ${dt.getFullYear()}`;
-    /* Menit tidur dulu, status menyusul dari aturan — bukan sebaliknya.
-       Hari "kurang" sengaja disebar 3j20–5j20 supaya ketiga tier di bawah
-       ambang (dipulangkan, spare 2 jam, spare 1 jam) semuanya terwakili. */
-    let sleepMin: number | null;
-    if (st === 1) {
-      sleepMin = 360 + ((d * 37) % 120); // 6j00–7j59 → fit
-    } else if (st === 0) {
-      sleepMin = 200 + ((d * 23) % 120); // 3j20–5j19 → pulang / spare
-    } else {
-      sleepMin = null; // belum kirim log
-    }
-    const ev = ftwEvaluate(sleepMin);
-    let send = "—";
-    if (st !== -1) {
-      const hh = rec.shift === "malam" ? 16 + (d % 3) : 3 + (d % 3);
-      const mm = (d * 17 + rec.nik.charCodeAt(8)) % 60;
-      send = `${hh < 10 ? "0" : ""}${hh}:${mm < 10 ? "0" : ""}${mm} WITA`;
-    }
-    out.push({
-      d,
-      iso,
-      date: dateLbl,
-      st,
-      sleepMin,
-      sleep: fmtSleepMin(sleepMin, en),
-      status: ev.status,
-      restHours: ev.restHours,
-      sendTime: send,
-    });
-  }
-  return out;
+/* Map status FTW ke nilai strip: 1=ok, 0=bad, -1=na */
+export function ftwStatusToSt(status: FtwStatus | string): number {
+  if (status === "fit") return 1;
+  if (status === "spare" || status === "pulang") return 0;
+  return -1;
 }
 
-/* strip 7 hari berakhir di hari ke-d */
-/** @deprecated Dummy helper for static history strip. */
-export function ftwStripAt(rec: FtwRecord, d: number): ("ok" | "bad" | "na")[] {
+/** Normalisasi log FTW dari API ke entri riwayat (d = offset hari dari anchor). */
+export function normalizeFtwHistFromApi(
+  records: Record<string, unknown>[],
+  anchorIso: string
+): (FtwHistEntry & { nik: string })[] {
+  const anchor = new Date(`${anchorIso}T00:00:00`);
+  return records.map((h) => {
+    const iso = String(h.iso || h.date || h.log_date || "");
+    const logDate = iso ? new Date(`${iso}T00:00:00`) : anchor;
+    const d = iso
+      ? Math.round((anchor.getTime() - logDate.getTime()) / 86400000)
+      : 0;
+    const status = String(h.status || h.st || "belum") as FtwStatus;
+    return {
+      nik: String(h.nik || h.employee_nik || ""),
+      d,
+      iso,
+      date: String(h.dateLabel || h.date || iso),
+      st: ftwStatusToSt(status),
+      sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
+      sleep: String(h.sleep || h.sleep_formatted || "—"),
+      status,
+      restHours: Number(h.restHours ?? h.rest_hours ?? 0),
+      sendTime: String(h.sendTime || h.send_time || "—"),
+    };
+  });
+}
+
+/** Strip 7 hari dari entri riwayat API (bukan dummy hist[]). */
+export function ftwStripFromEntries(
+  entries: FtwHistEntry[],
+  anchorD: number
+): ("ok" | "bad" | "na")[] {
   const out: ("ok" | "bad" | "na")[] = [];
   for (let k = 6; k >= 0; k--) {
-    const x = ftwStAt(rec, d + k);
-    out.push(x === 1 ? "ok" : x === 0 ? "bad" : "na");
+    const targetD = anchorD + k;
+    const entry = entries.find((e) => e.d === targetD);
+    if (!entry) {
+      out.push("na");
+      continue;
+    }
+    out.push(entry.st === 1 ? "ok" : entry.st === 0 ? "bad" : "na");
   }
   return out;
 }

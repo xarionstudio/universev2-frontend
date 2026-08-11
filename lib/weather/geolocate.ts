@@ -43,6 +43,15 @@ function str(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 }
 
+/* ---- Weather API endpoints (from env vars with defaults) ---- */
+const REVERSE_GEOCODE_URL =
+  process.env.NEXT_PUBLIC_WEATHER_REVERSE_GEOCODE_URL ||
+  "https://api.bigdatacloud.net/data/reverse-geocode-client";
+const IPAPI_URL =
+  process.env.NEXT_PUBLIC_WEATHER_IPAPI_URL || "https://ipapi.co/json/";
+const IPWHO_URL =
+  process.env.NEXT_PUBLIC_WEATHER_IPWHO_URL || "https://ipwho.is/";
+
 /* fetch JSON dengan timeout sendiri + hormat AbortSignal luar. Tidak pernah
    melempar: gagal apa pun -> null. */
 async function fetchJson(
@@ -122,9 +131,7 @@ async function reverseGeocode(
   lon: number,
   signal: AbortSignal | undefined
 ): Promise<string | null> {
-  const url =
-    "https://api.bigdatacloud.net/data/reverse-geocode-client" +
-    `?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&localityLanguage=id`;
+  const url = `${REVERSE_GEOCODE_URL}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&localityLanguage=id`;
   const j = await fetchJson(url, signal);
   if (!j || typeof j !== "object") return null;
   const o = j as Record<string, unknown>;
@@ -135,7 +142,7 @@ async function reverseGeocode(
 async function fromIpapi(
   signal: AbortSignal | undefined
 ): Promise<ResolvedLocation | null> {
-  const j = await fetchJson("https://ipapi.co/json/", signal);
+  const j = await fetchJson(IPAPI_URL, signal);
   if (!j || typeof j !== "object") return null;
   const o = j as Record<string, unknown>;
   if (o.error) return null; // mis. rate limited
@@ -148,7 +155,7 @@ async function fromIpapi(
 async function fromIpwho(
   signal: AbortSignal | undefined
 ): Promise<ResolvedLocation | null> {
-  const j = await fetchJson("https://ipwho.is/", signal);
+  const j = await fetchJson(IPWHO_URL, signal);
   if (!j || typeof j !== "object") return null;
   const o = j as Record<string, unknown>;
   if (o.success !== true) return null;

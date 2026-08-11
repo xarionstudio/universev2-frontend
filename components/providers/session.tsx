@@ -27,27 +27,52 @@ function subscribe(cb: () => void) {
   };
 }
 
-function readUser(): AuthUser | null {
+// Cache to maintain referential equality and prevent infinite loops
+const userCache: { value: AuthUser | null; raw: string | null } = {
+  value: null,
+  raw: null,
+};
+const permsCache: { value: AuthPerms | null; raw: string | null } = {
+  value: null,
+  raw: null,
+};
+
+// Cached getSnapshot functions for useSyncExternalStore
+const cachedGetUserSnapshot = () => {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (userCache.raw === raw) {
+      return userCache.value;
+    }
+    userCache.raw = raw;
+    userCache.value = raw ? JSON.parse(raw) : null;
+    return userCache.value;
   } catch {
+    userCache.value = null;
+    userCache.raw = null;
     return null;
   }
-}
+};
 
-function readPerms(): AuthPerms | null {
+const cachedGetPermsSnapshot = () => {
   try {
     const raw = localStorage.getItem(PERMS_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (permsCache.raw === raw) {
+      return permsCache.value;
+    }
+    permsCache.raw = raw;
+    permsCache.value = raw ? JSON.parse(raw) : null;
+    return permsCache.value;
   } catch {
+    permsCache.value = null;
+    permsCache.raw = null;
     return null;
   }
-}
+};
 
-const serverNull = () => null;
+const serverNullUser = (): AuthUser | null => null;
+const serverNullPerms = (): AuthPerms | null => null;
 const serverFalse = () => false;
-const clientTrue = () => true;
 
 type SessionCtx = {
   user: AuthUser | null;
@@ -62,11 +87,19 @@ type SessionCtx = {
 const Ctx = React.createContext<SessionCtx | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const user = React.useSyncExternalStore(subscribe, readUser, serverNull);
-  const perms = React.useSyncExternalStore(subscribe, readPerms, serverNull);
+  const user = React.useSyncExternalStore(
+    subscribe,
+    cachedGetUserSnapshot,
+    serverNullUser
+  );
+  const perms = React.useSyncExternalStore(
+    subscribe,
+    cachedGetPermsSnapshot,
+    serverNullPerms
+  );
   const hydrated = React.useSyncExternalStore(
     subscribe,
-    clientTrue,
+    () => true,
     serverFalse
   );
 

@@ -2,16 +2,27 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CircleAlert, Clock, Search } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Clock,
+  Download,
+  Search,
+} from "lucide-react";
 
 import { ftwApi } from "@/lib/api/ftw";
-import { ftwStripAt, type FtwRecord, type FtwStatus } from "@/lib/data/ftw";
+import {
+  ftwStripFromEntries,
+  normalizeFtwHistFromApi,
+  type FtwRecord,
+  type FtwStatus,
+} from "@/lib/data/ftw";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { ExportButtons } from "@/components/ui/export-buttons";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -68,7 +79,7 @@ const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
 };
 
 export default function FitToWorkPage() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { empAll } = useAppStore();
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -114,6 +125,21 @@ export default function FitToWorkPage() {
       .catch(() => {});
   }, [d1, d2]);
 
+  const normalizedHist = React.useMemo(
+    () => normalizeFtwHistFromApi(apiHist, d2 || todayIso),
+    [apiHist, d2, todayIso]
+  );
+
+  const histByNik = React.useMemo(() => {
+    const map = new Map<string, ReturnType<typeof normalizeFtwHistFromApi>>();
+    for (const entry of normalizedHist) {
+      const list = map.get(entry.nik) ?? [];
+      list.push(entry);
+      map.set(entry.nik, list);
+    }
+    return map;
+  }, [normalizedHist]);
+
   /* refresh dari topbar: perbarui stempel "data per" */
   useRegisterRefresh(updateFresh);
 
@@ -132,12 +158,11 @@ export default function FitToWorkPage() {
   };
 
   const emps = empAll();
-  /* status hari ini per operator — dari API backend */
   const today: FtwRecord[] = apiLogs.map((l) => ({
     nik: String(l.nik || ""),
     name: String(l.name || l.nik || ""),
-    shift: (l.shift || "pagi") as FtwRecord["shift"],
-    st: (l.status || "belum") as StKey,
+    shift: (l.shift === "malam" ? "malam" : "siang") as FtwRecord["shift"],
+    st: (l.st || l.status || "belum") as StKey,
     dept: String(l.dept || "Operation"),
     sleep: l.sleepHours ? `${l.sleepHours} jam` : "—",
     sleepMin: Number(l.sleepMin || 0),
@@ -156,26 +181,15 @@ export default function FitToWorkPage() {
     )
       continue;
     const emp = emps.find((e) => e.nik === op.nik);
-    const company = emp?.company ?? "PT Unggul Dinamika Utama";
-    const pos = emp?.pos ?? "—";
-    /* Riwayat dari API — satu-satunya sumber data */
-    const histEntries = apiHist
-      .filter((h) => String(h.nik || "") === op.nik)
-      .map((h) => ({
-        d: Number(h.d ?? 0),
-        iso: String(h.iso || ""),
-        date: String(h.date || ""),
-        st: Number(h.st ?? 0),
-        sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
-        sleep: String(h.sleep || "—"),
-        status: (h.status || "belum") as StKey,
-        restHours: Number(h.restHours || 0),
-        sendTime: String(h.sendTime || "—"),
-      }));
+    const company = emp?.company ?? "";
+    const pos = emp?.pos ?? "";
+    /* Riwayat dari API — dinormalisasi ke offset hari */
+    const histEntries = (histByNik.get(op.nik) ?? []).filter((entry) => {
+      if (d1 && entry.iso < d1) return false;
+      if (d2 && entry.iso > d2) return false;
+      return true;
+    });
     for (const entry of histEntries) {
-      if (d1 && entry.iso < d1) continue;
-      if (d2 && entry.iso > d2) continue;
-      // hari ini pakai data log asli operator, bukan deret riwayat sintetis
       const isToday = entry.d === 0;
       const key = isToday ? op.st : entry.status;
       if (st && key !== st) continue;
@@ -192,68 +206,6 @@ export default function FitToWorkPage() {
       });
     }
   }
-
-  /* Payload ekspor — SEMUA baris hasil filter (bukan cuma halaman aktif),
-     karena laporan yang cuma berisi 10 baris pertama menyesatkan. */
-  const buildExport = () => {
-    const stLabel: Record<StKey, string> = {
-      fit: t.bFit,
-      spare: t.ftwStatSpare,
-      pulang: t.ftwStatPulang,
-      belum: t.ftwStatBelum,
-    };
-    const tone: Record<StKey, "success" | "warning" | "danger" | "neutral"> = {
-      fit: "success",
-      spare: "warning",
-      pulang: "danger",
-      belum: "neutral",
-    };
-    const filters = [
-      st
-        ? `${t.thStatus}: ${stLabel[st as StKey]}`
-        : `${t.thStatus}: ${t.expAll}`,
-      shift
-        ? `${t.thShift}: ${shift === "malam" ? t.shiftNight : t.shiftDay}`
-        : `${t.thShift}: ${t.expAll}`,
-      d1 || d2 ? `${t.lblDate}: ${d1 || "…"} — ${d2 || "…"}` : null,
-      q.trim() ? `${t.searchOp}: “${q.trim()}”` : null,
-    ].filter(Boolean) as string[];
-
-    return {
-      fileBase: "fit-to-work-log-tidur",
-      title: t.expReportFtw,
-      /* cap waktu & jumlah baris ditambahkan oleh <ExportButtons> per format */
-      meta: [`${t.expFilter}: ${filters.join(" · ")}`],
-      sheetName: t.ftwLog,
-      columns: [
-        { header: t.thOperator, width: 26 },
-        { header: "NIK", width: 14 },
-        { header: t.thCompany, width: 26 },
-        { header: t.thDept, width: 16 },
-        { header: t.thPos, width: 22 },
-        { header: t.thShift, width: 10 },
-        { header: t.thSleep, width: 12, align: "right" as const },
-        { header: t.thStatus, width: 15 },
-        { header: t.ftwThRest, width: 11, align: "right" as const },
-        { header: t.lblDate, width: 14 },
-        { header: t.thSendTime, width: 14 },
-      ],
-      rows: rows.map((r) => [
-        r.op.name,
-        r.op.nik,
-        r.company,
-        r.op.dept,
-        r.pos,
-        r.op.shift === "malam" ? t.shiftNight : t.shiftDay,
-        r.sleep,
-        { text: stLabel[r.st], tone: tone[r.st] },
-        r.restHours > 0 ? `+${r.restHours} ${t.hourShort}` : "—",
-        r.date,
-        r.sendTime,
-      ]),
-      landscape: true,
-    };
-  };
 
   const perN = parseInt(per, 10);
   const total = rows.length;
@@ -373,8 +325,24 @@ export default function FitToWorkPage() {
                 aria-label={t.lblDateTo}
               />
             </div>
-            {/* ekspor mengikuti filter aktif: yang diunduh = yang terlihat */}
-            <ExportButtons build={buildExport} />
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await ftwApi.exportFtw({
+                    date: d1 || undefined,
+                    shift: shift || undefined,
+                    status: st || undefined,
+                    q: q.trim() || undefined,
+                  });
+                } catch {
+                  // toast error bisa ditambahkan jika perlu
+                }
+              }}
+            >
+              <Download />
+              {t.export}
+            </Button>
           </ToolbarGroup>
         </Toolbar>
 
@@ -399,7 +367,10 @@ export default function FitToWorkPage() {
               </TableHeader>
               <TableBody>
                 {shown.map((r) => {
-                  const strip = ftwStripAt(r.op, r.d);
+                  const strip = ftwStripFromEntries(
+                    histByNik.get(r.op.nik) ?? [],
+                    r.d
+                  );
                   const bad = strip.filter((s) => s === "bad").length;
                   return (
                     <TableRow key={`${r.op.nik}-${r.d}`}>

@@ -860,6 +860,7 @@ export const id = {
   lblDateTo: "Sampai tanggal",
   toastExportT: "Export dimulai",
   toastExportD: "attendance_2026-07-11.xlsx sedang disiapkan.",
+  empExportErr: "Gagal mengekspor karyawan.",
 
   /* --- profil saya --- */
   pfSub: "Kelola informasi akun dan password Anda.",

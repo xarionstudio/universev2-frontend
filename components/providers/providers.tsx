@@ -4,6 +4,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/ui/toast";
 
 import { AppStoreProvider } from "./app-store";
+import { BusinessRulesProvider } from "./business-rules";
 import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme-provider";
 
@@ -15,7 +16,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             usePermissions() menurunkan keduanya menjadi permission efektif. */}
         <SessionProvider>
           <AppStoreProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <BusinessRulesProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </BusinessRulesProvider>
           </AppStoreProvider>
         </SessionProvider>
       </I18nProvider>

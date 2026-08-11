@@ -2,13 +2,13 @@
  * lib/api/attendance.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
-import { apiFetch } from "./client";
+import { apiFetch, apiFetchAllItems } from "./client";
 import type { AttendanceRow } from "./types";
 
 export const attendanceApi = {
   /** Fetch today's attendance logs */
   async getToday(): Promise<AttendanceRow[]> {
-    return apiFetch<AttendanceRow[]>("/attendance/today", {
+    return apiFetchAllItems<AttendanceRow>("/attendance/today", {
       method: "GET",
     });
   },

@@ -134,7 +134,7 @@ export default function DashboardPage() {
               name: String(l.name || l.nik || ""),
               shift: (l.shift || "pagi") as FtwRecord["shift"],
               st: (l.st || "belum") as FtwRecord["st"],
-              dept: String(l.dept || "Operation"),
+              dept: String(l.dept || ""),
               sleep: l.sleep || "—",
               sleepMin: Number(l.sleepMin || 0),
               restHours: Number(l.restHours || 0),
@@ -149,7 +149,7 @@ export default function DashboardPage() {
       const att = await rosterApi.getAttendance();
       if (att && Array.isArray(att)) {
         setAttToday(att as AttRow[]);
-        setBelumAbsen((att as AttRow[]).filter((r) => !r.in || r.in === "—"));
+        setBelumAbsen((att as AttRow[]).filter((r) => r.st === "belum"));
       }
     } catch {}
   }, []);

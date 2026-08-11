@@ -74,6 +74,40 @@ export function Topbar() {
   const [openDrop, setOpenDrop] = React.useState<string | null>(null);
   const unread = notifs.filter((n) => !n.read).length;
 
+  // Calculate relative time dynamically
+  const getRelativeTime = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (lang === "id") {
+        if (diffMins < 1) return "Baru saja";
+        if (diffMins < 60) return `${diffMins} menit lalu`;
+        if (diffHours < 24) return `${diffHours} jam lalu`;
+        if (diffDays < 7) return `${diffDays} hari lalu`;
+        return date.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+        });
+      } else {
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return date.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+        });
+      }
+    } catch {
+      return lang === "id" ? "Baru saja" : "Just now";
+    }
+  };
+
   const toggle = (key: string) => setOpenDrop((v) => (v === key ? null : key));
   const close = () => setOpenDrop(null);
 
@@ -267,7 +301,7 @@ export function Topbar() {
                     {lang === "id" ? n.textId : n.textEn}
                   </span>
                   <span className="mt-0.5 block text-[11px] text-(--text-tertiary)">
-                    {lang === "id" ? n.timeId : n.timeEn}
+                    {getRelativeTime(n.createdAt || new Date().toISOString())}
                   </span>
                 </span>
               </button>

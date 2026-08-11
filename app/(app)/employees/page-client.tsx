@@ -16,6 +16,7 @@ import {
 import { employeesApi } from "@/lib/api/employees";
 import type { Employee, Komp } from "@/lib/data/employees";
 import { useI18n } from "@/lib/i18n";
+import { downloadBlob } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
@@ -55,6 +56,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
+/* Departemen dinamis — dari data karyawan yang dimuat dari API */
 const DEPTS = ["Operation", "SDI", "HRGA", "Plant"] as const;
 
 function kompVariant(exp: string): BadgeVariant {
@@ -127,12 +129,15 @@ export default function EmployeesPage() {
     });
   }
 
-  function exportNow() {
-    pushToast(
-      "info",
-      t.toastExportT,
-      `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
-    );
+  async function exportNow() {
+    try {
+      const blob = await employeesApi.export("xlsx");
+      const name = `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      downloadBlob(blob, name);
+      pushToast("success", t.toastExportT, name);
+    } catch {
+      pushToast("error", t.toastExportT, t.empExportErr);
+    }
   }
 
   function resetFilters() {

@@ -8,6 +8,8 @@ import { Download, Search } from "lucide-react";
 import { attendanceApi } from "@/lib/api/attendance";
 import type { AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
+import { reportFileName } from "@/lib/report/logo";
+import { downloadXlsx } from "@/lib/report/xlsx";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,32 +102,31 @@ function AttendanceInner() {
   }, [from, to]);
 
   /* API sebagai satu-satunya sumber data */
-  const rows = apiAtt
-    .map((r) => {
-      const raw = r as Record<string, unknown>;
-      return {
-        name: String(raw.name || raw.nik || ""),
-        nik: String(raw.nik || ""),
-        dept: String(raw.dept || "Operation"),
-        code: String(raw.code || raw.shift || "D"),
-        in: String(raw.in || raw.checkIn || ""),
-        inM: String(raw.inM || ""),
-        out: String(raw.out || raw.checkOut || ""),
-        outM: String(raw.outM || ""),
-        st: String(raw.st || raw.status || "belum") as AttStatus,
-        date: String(raw.date || ""),
-        dLabel: String(raw.dLabel || raw.date || ""),
-      };
-    })
-    .filter((r) => {
-      if (from && (r.date ?? "") < from) return false;
-      if (to && (r.date ?? "") > to) return false;
-      if (status && r.st !== status) return false;
-      if (dept && r.dept !== dept) return false;
-      const needle = q.trim().toLowerCase();
-      if (!needle) return true;
-      return r.name.toLowerCase().includes(needle) || r.nik.includes(needle);
-    });
+  const allRows = apiAtt.map((r) => {
+    const raw = r as Record<string, unknown>;
+    return {
+      name: String(raw.name || raw.nik || ""),
+      nik: String(raw.nik || ""),
+      dept: String(raw.dept || ""),
+      code: String(raw.code || raw.shift || "D"),
+      in: String(raw.in || raw.checkIn || ""),
+      inM: String(raw.inM || ""),
+      out: String(raw.out || raw.checkOut || ""),
+      outM: String(raw.outM || ""),
+      st: String(raw.st || raw.status || "belum") as AttStatus,
+      date: String(raw.date || ""),
+      dLabel: String(raw.dLabel || raw.date || ""),
+    };
+  });
+  const rows = allRows.filter((r) => {
+    if (from && (r.date ?? "") < from) return false;
+    if (to && (r.date ?? "") > to) return false;
+    if (status && r.st !== status) return false;
+    if (dept && r.dept !== dept) return false;
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    return r.name.toLowerCase().includes(needle) || r.nik.includes(needle);
+  });
 
   const presentN = rows.filter(
     (r) => r.st === "hadir" || r.st === "terlambat"
@@ -180,10 +181,11 @@ function AttendanceInner() {
               onChange={(e) => setDept(e.target.value)}
             >
               <option value="">{t.allDepts}</option>
-              <option>Operation</option>
-              <option>SDI</option>
-              <option>HRGA</option>
-              <option>Plant</option>
+              {Array.from(new Set(allRows.map((r) => r.dept)))
+                .sort()
+                .map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
             </Select>
             <div className="flex items-center gap-2">
               <label
@@ -211,9 +213,47 @@ function AttendanceInner() {
             </div>
             <Button
               variant="secondary"
-              onClick={() =>
-                pushToast("success", t.toastExportT, t.toastExportD)
-              }
+              onClick={async () => {
+                if (!rows.length) {
+                  pushToast("info", t.expEmptyT, t.expEmptyD);
+                  return;
+                }
+                try {
+                  const name = reportFileName("attendance-log", "xlsx");
+                  await downloadXlsx(name, {
+                    name: t.navR4,
+                    title: t.navR4,
+                    meta: [
+                      `${t.expPrintedAt}: ${new Date().toLocaleString(lang === "en" ? "en-GB" : "id-ID")}`,
+                      `${t.expRows}: ${rows.length}`,
+                      `${t.lblDate}: ${from} — ${to}`,
+                    ],
+                    columns: [
+                      { header: t.thEmp, width: 26 },
+                      { header: "NIK", width: 14 },
+                      { header: t.lblDate, width: 14 },
+                      { header: t.thDept, width: 16 },
+                      { header: t.thRoster, width: 10 },
+                      { header: t.thIn, width: 12 },
+                      { header: t.thOut, width: 12 },
+                      { header: t.thStatus, width: 16 },
+                    ],
+                    rows: rows.map((r) => [
+                      r.name,
+                      r.nik,
+                      r.dLabel,
+                      r.dept,
+                      r.code,
+                      r.in,
+                      r.out,
+                      stLabel(r.st),
+                    ]),
+                  });
+                  pushToast("success", t.toastExportT, name);
+                } catch {
+                  pushToast("error", t.toastExportT, t.toastExportD);
+                }
+              }}
             >
               <Download />
               {t.export}

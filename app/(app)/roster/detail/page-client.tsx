@@ -73,7 +73,7 @@ export default function RosterDetailPage() {
   } | null;
   const meta = {
     label: String(preview?.meta?.label || "Roster"),
-    dept: String(preview?.meta?.dept || "Operation"),
+    dept: String(preview?.meta?.dept || ""),
     file: String(preview?.meta?.file || "roster.xlsx"),
     emp: String(preview?.meta?.emp || "—"),
     rows: String(preview?.meta?.rows || "—"),
@@ -108,7 +108,16 @@ export default function RosterDetailPage() {
           </Button>
           <Button
             variant="secondary"
-            onClick={() => pushToast("success", t.rdDlT, meta.file)}
+            onClick={async () => {
+              try {
+                if (key) {
+                  await rosterApi.exportRoster(key);
+                  pushToast("success", t.rdDlT, meta.file);
+                }
+              } catch {
+                pushToast("error", t.rdDlT, meta.file);
+              }
+            }}
           >
             <Download />
             {t.rdDl}
@@ -145,7 +154,7 @@ export default function RosterDetailPage() {
               <tr>
                 <TableHead className="w-27.5">NIK</TableHead>
                 <TableHead className="w-47.5">{t.thNama}</TableHead>
-                {((preview as { days?: string[] }).days || []).map((d) => (
+                {(preview?.days || []).map((d) => (
                   <TableHead
                     key={d}
                     className="px-1.5 py-3 text-center font-mono"

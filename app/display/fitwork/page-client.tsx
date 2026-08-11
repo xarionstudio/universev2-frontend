@@ -19,11 +19,15 @@ export default function DisplayFitworkPage() {
   const deviceName = useSearchParams().get("name") ?? undefined;
   const { mdData } = useAppStore();
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
+  const runtextOpts = mdData?.runtext || [];
   const runtext =
-    mdData.runtext.find((r) => r.active && r.a === "Display Attendance")
-      ?.name ??
-    mdData.runtext.find((r) => r.active)?.name ??
+    runtextOpts.find((r) => r.active && r.a === "Display Attendance")?.name ??
+    runtextOpts.find((r) => r.active)?.name ??
     "Rapat P5M setiap pergantian shift di front masing-masing.";
+
+  // Ensure runtext is always a string
+  const safeRuntext =
+    runtext || "Rapat P5M setiap pergantian shift di front masing-masing.";
 
   React.useEffect(() => {
     displayApi
@@ -43,8 +47,8 @@ export default function DisplayFitworkPage() {
         return {
           nik: String(r.nik || ""),
           name: String(r.name || r.nik || ""),
-          pos: String(r.pos || "Operator"),
-          dept: String(r.dept || "Operation"),
+          pos: String(r.pos || ""),
+          dept: String(r.dept || ""),
           sleep: String(r.sleep || r.sleepHours || "—"),
           rest: r.restHours ? `${r.restHours} jam` : "—",
           label:
@@ -77,7 +81,7 @@ export default function DisplayFitworkPage() {
     <DisplayShell
       title="Fit To Work — Shift Pagi"
       deviceName={deviceName}
-      runtext={runtext}
+      runtext={safeRuntext}
       stats={[
         {
           icon: <ClipboardCheck className="text-primary-bright" />,

@@ -63,14 +63,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   const [f, setF] = React.useState<Fields>(() => ({
     nama: record?.name ?? "",
     nik: record?.nik ?? "",
-    company: record?.company ?? "PT Unggul Dinamika Utama",
-    dept: record?.dept ?? "Operation",
+    company: record?.company ?? "",
+    dept: record?.dept ?? "",
     pos: record?.pos ?? "",
     equip: record?.equip ?? "",
     join: record?.join ?? "",
     exp: record?.exp ?? "",
     license: record?.license ?? "",
-    mcu: record?.mcu ?? "Fit",
+    mcu: record?.mcu ?? "",
     medis: record?.medis ?? "",
     mess: record?.mess ?? "",
     kamar: record?.kamar ?? "",
@@ -81,10 +81,10 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   /* opsi mess dari master data (Master Data → Mess) — bukan daftar hardcoded */
   const messOpts = React.useMemo(
     () =>
-      mdData.mess
+      (mdData?.mess || [])
         .filter((r) => r.active)
         .map((r) => (r.a ? `${r.name} — ${r.a}` : r.name)),
-    [mdData.mess]
+    [mdData?.mess]
   );
   const [dzLabel, setDzLabel] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
@@ -97,6 +97,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   }>({});
   const [dirtyDlg, setDirtyDlg] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const photoRef = React.useRef<File | null>(null);
 
   React.useEffect(() => {
     if (nik && !record) router.replace("/employees");
@@ -125,8 +126,9 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     setDirty(true);
   }
 
-  function filePicked(name: string) {
+  function filePicked(name: string, file?: File) {
     setDzLabel(`${name} ${t.efDzReady}`);
+    if (file) photoRef.current = file;
     setDirty(true);
   }
 
@@ -177,6 +179,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         const validKomp = kompRows.filter((k) => k.cls && k.simper);
         if (validKomp.length > 0) {
           await employeesApi.updateCompetencies(nikVal, validKomp);
+        }
+        // Upload employee photo via dedicated API (bila ada foto dipilih)
+        if (photoRef.current) {
+          try {
+            await employeesApi.uploadPhoto(nikVal, photoRef.current);
+          } catch {
+            // Gagal upload foto tidak menggagalkan simpan profil
+          }
         }
       } catch {
         // Fallback to local store save
@@ -235,8 +245,9 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                 accept="image/jpeg,image/png"
                 className="hidden"
                 onChange={(e) => {
-                  const name = e.target.files?.[0]?.name;
-                  if (name) filePicked(name);
+                  const file = e.target.files?.[0];
+                  if (file) filePicked(file.name, file);
+                  e.target.value = "";
                 }}
               />
             </div>
@@ -284,8 +295,17 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   value={f.company}
                   onChange={(e) => up("company", e.target.value)}
                 >
-                  <option>PT Unggul Dinamika Utama</option>
-                  <option>PT Unggul Mitra Energi</option>
+                  {Array.from(
+                    new Set(
+                      empAll()
+                        .map((e) => e.company)
+                        .filter(Boolean)
+                    )
+                  )
+                    .sort()
+                    .map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
                 </Select>
               </Field>
               <Field label={t.thDept} htmlFor="ef-dept" required>
@@ -294,10 +314,17 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   value={f.dept}
                   onChange={(e) => up("dept", e.target.value)}
                 >
-                  <option>Operation</option>
-                  <option>SDI</option>
-                  <option>HRGA</option>
-                  <option>Plant</option>
+                  {Array.from(
+                    new Set(
+                      empAll()
+                        .map((e) => e.dept)
+                        .filter(Boolean)
+                    )
+                  )
+                    .sort()
+                    .map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
                 </Select>
               </Field>
               <Field label={t.thPos} htmlFor="ef-pos" required>
@@ -364,8 +391,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                         aria-label="Type EGI"
                       >
                         <option value=""></option>
-                        {egiTypes.map((c) => (
-                          <option key={c} value={c}>
+                        {egiTypes.map((c, i) => (
+                          <option key={`${c}-${i}`} value={c}>
                             {c}
                           </option>
                         ))}
@@ -414,15 +441,11 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                 />
               </Field>
               <Field label={t.kMcu} htmlFor="ef-mcu">
-                <Select
+                <Input
                   id="ef-mcu"
                   value={f.mcu}
                   onChange={(e) => up("mcu", e.target.value)}
-                >
-                  <option>Fit</option>
-                  <option>Fit dengan catatan</option>
-                  <option>Unfit sementara</option>
-                </Select>
+                />
               </Field>
               <Field
                 label={t.kMedHistory}

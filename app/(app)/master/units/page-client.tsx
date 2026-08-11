@@ -6,6 +6,8 @@ import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react";
 import { fleetApi } from "@/lib/api/fleet";
 import { typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
+import { reportFileName } from "@/lib/report/logo";
+import { downloadXlsx } from "@/lib/report/xlsx";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
@@ -51,9 +53,9 @@ type ImpState = {
 };
 
 export default function UnitDbPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { pushToast } = useToast();
-  const { udbAll, saveUdb } = useAppStore();
+  const { udbAll, saveUdb, setUdbAdded } = useAppStore();
 
   const [cat, setCat] = React.useState("");
   const [prod, setProd] = React.useState("");
@@ -196,6 +198,27 @@ export default function UnitDbPage() {
 
   async function doImport() {
     setImpOpen(false);
+    try {
+      const fresh = await fleetApi.getUnitDB();
+      if (fresh && Array.isArray(fresh)) {
+        setUdbAdded(
+          fresh.map((u) => ({
+            uid: String(u.id || u.code),
+            code: u.code,
+            cat: u.cat || "",
+            cls: u.cls || "",
+            egi: u.egi || "",
+            product: u.product || "",
+            active: u.active !== false,
+            standby: !!u.standby,
+            breakdown: !!u.breakdown,
+            loc: u.loc || "",
+            upd: u.upd || "",
+            by: u.by || "",
+          }))
+        );
+      }
+    } catch {}
   }
 
   const heads = [
@@ -266,9 +289,50 @@ export default function UnitDbPage() {
             </Select>
             <Button
               variant="secondary"
-              onClick={() =>
-                pushToast("info", t.toastExportT, "unit_database.xlsx")
-              }
+              onClick={async () => {
+                if (!filtered.length) {
+                  pushToast("info", t.expEmptyT, t.expEmptyD);
+                  return;
+                }
+                try {
+                  const name = reportFileName("unit-database", "xlsx");
+                  await downloadXlsx(name, {
+                    name: t.navUnitDb,
+                    title: t.navUnitDb,
+                    meta: [
+                      `${t.expPrintedAt}: ${new Date().toLocaleString(lang === "en" ? "en-GB" : "id-ID")}`,
+                      `${t.expRows}: ${filtered.length}`,
+                    ],
+                    columns: [
+                      { header: t.thUnitCode, width: 14 },
+                      { header: "Eq. class", width: 12 },
+                      { header: "EGI", width: 16 },
+                      { header: "Type EGI", width: 18 },
+                      { header: "Product", width: 18 },
+                      { header: t.thStatus, width: 20 },
+                      { header: t.thLastUpd, width: 16 },
+                    ],
+                    rows: filtered.map((u) => [
+                      u.code,
+                      u.cls,
+                      u.egi,
+                      typeOfEgi(u.egi),
+                      u.product,
+                      u.active
+                        ? t.stAktif
+                        : u.breakdown
+                          ? "Breakdown"
+                          : u.standby
+                            ? "Standby"
+                            : t.stNonaktif,
+                      `${u.upd}${u.by ? ` — ${u.by}` : ""}`,
+                    ]),
+                  });
+                  pushToast("success", t.toastExportT, name);
+                } catch {
+                  pushToast("error", t.toastExportT, t.toastExportD);
+                }
+              }}
             >
               <Download />
               {t.export}

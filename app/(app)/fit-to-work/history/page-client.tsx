@@ -192,8 +192,8 @@ function FtwHistoryInner() {
     )
       continue;
     const emp = emps.find((e) => e.nik === op.nik);
-    const company = emp?.company ?? "PT Unggul Dinamika Utama";
-    const pos = emp?.pos ?? "—";
+    const company = emp?.company ?? "";
+    const pos = emp?.pos ?? "";
     /* Riwayat dari API — satu-satunya sumber data */
     const histEntries = apiHist
       .filter((h) => String(h.nik || "") === op.nik)

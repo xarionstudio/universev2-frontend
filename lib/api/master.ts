@@ -2,15 +2,24 @@
  * lib/api/master.ts
  * ────────────────────────────────────────────────────────────────────────── */
 
+import { downloadBlob } from "@/lib/utils";
+
 import { apiFetch } from "./client";
 import type { MasterEntry, MdCat } from "./types";
 
 export const masterApi = {
   /** Fetch master data by category */
   async getByCategory(category: MdCat): Promise<MasterEntry[]> {
-    return apiFetch<MasterEntry[]>(`/master/${category}`, {
+    const response = await apiFetch<{
+      entries: MasterEntry[];
+      total: number;
+      page: number;
+      perPage: number;
+      totalPages: number;
+    }>(`/master/${category}`, {
       method: "GET",
     });
+    return response.entries || [];
   },
 
   /** Create entry in master category */
@@ -52,5 +61,19 @@ export const masterApi = {
       method: "POST",
       body: formData,
     });
+  },
+
+  /** Download master data as xlsx */
+  async export(category: MdCat): Promise<void> {
+    const url =
+      (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api") +
+      `/master/${category}/export`;
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename="?([^";]+)"?/.exec(cd);
+    const name = m?.[1] || `${category}_export.xlsx`;
+    downloadBlob(blob, name);
   },
 };
