@@ -82,6 +82,8 @@ type AppStore = {
   setAppName: (v: string) => void;
   appDesc: string;
   setAppDesc: (v: string) => void;
+  companyLogo: string;
+  setCompanyLogo: (v: string) => void;
   audios: Audio[];
   setAudios: React.Dispatch<React.SetStateAction<Audio[]>>;
   menuVis: MenuVis;
@@ -101,7 +103,7 @@ type AppStore = {
 const AppStoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const { user: sessionUser, hydrated } = useSession();
+  const { user: sessionUser, hydrated, validating } = useSession();
   const [userName, setUserName] = React.useState("");
   const [userEmail, setUserEmail] = React.useState("");
   const [notifs, setNotifs] = React.useState<Notif[]>([]);
@@ -127,6 +129,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [appDesc, setAppDesc] = React.useState(
     "Unggul Network for Integrated Vehicle Resource Smart Ecosystem"
   );
+  const [companyLogo, setCompanyLogo] = React.useState("");
   const [audios, setAudios] = React.useState<Audio[]>([]);
   const [menuVis, setMenuVis] = React.useState<MenuVis>({
     display: true,
@@ -145,14 +148,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   // Sync state with backend when user is authenticated
   React.useEffect(() => {
-    if (!hydrated || !sessionUser) return;
+    if (!hydrated || !sessionUser || validating) return;
 
     queueMicrotask(() => {
       if (sessionUser.kar) setUserName(sessionUser.kar);
       if (sessionUser.email) setUserEmail(sessionUser.email);
     });
 
-    // Fetch Notifications
+    // Fetch Notifications - only after session validation is complete
     console.log(
       "[AppStore] Fetching notifications, hydrated:",
       hydrated,
@@ -267,6 +270,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       .then((st) => {
         if (st) {
           if (st.appName) setAppName(st.appName);
+          if (st.appDesc !== undefined) setAppDesc(st.appDesc);
+          if (st.companyLogo) setCompanyLogo(st.companyLogo);
           if (st.menuVis) setMenuVis((prev) => ({ ...prev, ...st.menuVis }));
         }
       })
@@ -316,7 +321,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   emergencyName: e.emergencyName || "",
                   emergencyRel: e.emergencyRel || "",
                   emergencyPhone: e.emergencyPhone || "",
-                  exp: 1,
+                  foto: e.foto || "",
+                  exp: e.exp || "",
                   license: [],
                   mcu: e.mcu || "",
                   medis: [],
@@ -512,7 +518,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {});
-  }, [hydrated, sessionUser]);
+  }, [hydrated, sessionUser, validating]);
 
   // Save read status to localStorage whenever notifs change
   React.useEffect(() => {
@@ -627,6 +633,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setAppName,
     appDesc,
     setAppDesc,
+    companyLogo,
+    setCompanyLogo,
     audios,
     setAudios,
     menuVis,

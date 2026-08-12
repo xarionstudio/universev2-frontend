@@ -56,9 +56,6 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-/* Departemen dinamis — dari data karyawan yang dimuat dari API */
-const DEPTS = ["Operation", "SDI", "HRGA", "Plant"] as const;
-
 function kompVariant(exp: string): BadgeVariant {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -87,7 +84,19 @@ export default function EmployeesPage() {
   } | null>(null);
   const selAllRef = React.useRef<HTMLInputElement>(null);
 
-  const fN = DEPTS.filter((d) => fDepts[d]).length;
+  /* Departemen dinamis — dari data karyawan yang dimuat dari API */
+  const depts = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          empAll()
+            .map((r) => r.dept)
+            .filter(Boolean)
+        )
+      ).sort(),
+    [empAll]
+  );
+  const fN = depts.filter((d) => fDepts[d]).length;
 
   const filtered = empAll().filter((r) => {
     const needle = q.trim().toLowerCase();
@@ -151,12 +160,14 @@ export default function EmployeesPage() {
     if (!delAsk) return;
     try {
       await employeesApi.delete(delAsk.nik);
-    } catch {
-      // Fallback local cleanup
+      deleteEmployee(delAsk.nik);
+      pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
+      setDelAsk(null);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to delete employee";
+      pushToast("error", t.toastDelT, msg);
     }
-    deleteEmployee(delAsk.nik);
-    pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
-    setDelAsk(null);
   }
 
   function statusBadge(r: Employee) {
@@ -233,7 +244,7 @@ export default function EmployeesPage() {
                 <DropMenuHeading className="px-1 pt-0 pb-2">
                   {t.thDept}
                 </DropMenuHeading>
-                {DEPTS.map((d) => (
+                {depts.map((d) => (
                   <ToggleRow key={d} className="rounded-md px-1 py-1.5">
                     <Checkbox
                       checked={!!fDepts[d]}

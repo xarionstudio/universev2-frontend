@@ -79,6 +79,7 @@ type SessionCtx = {
   perms: AuthPerms | null;
   email: string | null;
   hydrated: boolean;
+  validating: boolean;
   signIn: (user: AuthUser, perms?: AuthPerms) => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -102,6 +103,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     () => true,
     serverFalse
   );
+  const [validatedUserId, setValidatedUserId] = React.useState<number | null>(
+    null
+  );
+  const validating = !!user && hydrated && validatedUserId !== user.id;
 
   const signIn = React.useCallback(
     (newUser: AuthUser, newPerms?: AuthPerms) => {
@@ -141,14 +146,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Validate session against backend profile on mount
   React.useEffect(() => {
-    if (hydrated && user) {
-      authApi.getProfile().catch(() => {
+    if (!hydrated || !user) return;
+    let cancelled = false;
+    authApi
+      .getProfile()
+      .catch(() => {
+        if (cancelled) return;
         // If cookie is invalid or expired, clear session
         localStorage.removeItem(KEY);
         localStorage.removeItem(PERMS_KEY);
         emit();
+      })
+      .finally(() => {
+        if (!cancelled) setValidatedUserId(user.id);
       });
-    }
+    return () => {
+      cancelled = true;
+    };
   }, [hydrated, user]);
 
   const value = React.useMemo(
@@ -157,11 +171,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       perms,
       email: user?.email ?? null,
       hydrated,
+      validating,
       signIn,
       signOut,
       refreshProfile,
     }),
-    [user, perms, hydrated, signIn, signOut, refreshProfile]
+    [user, perms, hydrated, validating, signIn, signOut, refreshProfile]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

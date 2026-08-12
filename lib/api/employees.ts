@@ -90,10 +90,10 @@ export const employeesApi = {
   },
 
   /** Upload photo for employee */
-  async uploadPhoto(nik: string, file: File): Promise<{ url: string }> {
+  async uploadPhoto(nik: string, file: File): Promise<{ photoUrl: string }> {
     const formData = new FormData();
     formData.append("photo", file);
-    return apiFetch<{ url: string }>(`/employees/${nik}/photo`, {
+    return apiFetch<{ photoUrl: string }>(`/employees/${nik}/photo`, {
       method: "POST",
       body: formData,
     });

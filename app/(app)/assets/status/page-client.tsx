@@ -154,41 +154,43 @@ export default function UnitStatusPage() {
     const why = reason.trim();
     try {
       await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
-    } catch {
-      // Fallback local update
-    }
-    // Apabila status baru adalah breakdown, laporkan juga lewat endpoint
-    // status-report agar tercatat sebagai breakdown report (bukan hanya
-    // ubah status biasa).
-    if (kind === "breakdown") {
-      try {
-        await fleetApi.reportBreakdown(dlgUnit.code, {
-          what: newSt,
-          why,
-          loc: dlgUnit.loc,
-        });
-      } catch {
-        // Kegagalan report tidak menggagalkan ubah status — sudah tercatat
-        // via updateUnitStatus di atas.
+      // Apabila status baru adalah breakdown, laporkan juga lewat endpoint
+      // status-report agar tercatat sebagai breakdown report (bukan hanya
+      // ubah status biasa).
+      if (kind === "breakdown") {
+        try {
+          await fleetApi.reportBreakdown(dlgUnit.code, {
+            what: newSt,
+            why,
+            loc: dlgUnit.loc,
+          });
+        } catch {
+          // Kegagalan report tidak menggagalkan ubah status — sudah tercatat
+          // via updateUnitStatus di atas.
+        }
       }
+      const now = new Date();
+      const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`;
+      setUnits((prev) =>
+        prev.map((u) =>
+          u.code === dlgUnit.code
+            ? {
+                ...u,
+                status: kind,
+                upd: `${hm} — ${why}`,
+                hist: [[when, newSt, why, kind], ...u.hist],
+              }
+            : u
+        )
+      );
+      setDlgCode(null);
+      pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to update unit status";
+      pushToast("error", `${dlgUnit.code} → ${newSt}`, msg);
     }
-    const now = new Date();
-    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`;
-    setUnits((prev) =>
-      prev.map((u) =>
-        u.code === dlgUnit.code
-          ? {
-              ...u,
-              status: kind,
-              upd: `${hm} — ${why}`,
-              hist: [[when, newSt, why, kind], ...u.hist],
-            }
-          : u
-      )
-    );
-    setDlgCode(null);
-    pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD);
   }
 
   const heads = [

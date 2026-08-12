@@ -13,6 +13,7 @@ import { apiFetch, type FetchOptions } from "./client";
 
 export interface AppSettings {
   appName: string;
+  appDesc: string;
   appEnv: string;
   companyLogo: string;
   theme: string;
@@ -177,9 +178,23 @@ export async function fetchAllBusinessRules(): Promise<
 // Settings API object (for consistency with other API modules)
 // ============================================================================
 
+export async function uploadBrandingFile(
+  kind: "logo" | "favicon",
+  file: File
+): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<{ url: string }>(`/settings/${kind}`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export const settingsApi = {
   getSettings,
   updateSettings,
+  uploadLogo: (file: File) => uploadBrandingFile("logo", file),
+  uploadFavicon: (file: File) => uploadBrandingFile("favicon", file),
   getAudioSchedules,
   createAudioSchedule,
   updateAudioSchedule,

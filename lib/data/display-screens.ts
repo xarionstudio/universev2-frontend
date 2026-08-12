@@ -1,22 +1,9 @@
-import type { FtwStatus } from "@/lib/data/ftw";
-
 /* Data layar display (TV) — display tampil id-only.
    Satu layar = satu domain: attendance (kehadiran), fitwork (kelayakan kerja),
    fleet (status unit + formasi), fingerprint (kesehatan mesin) — tanpa
    tumpang tindih informasi antar layar. */
 
 export type DisplayTone = "success" | "warning" | "danger" | "neutral" | "info";
-
-/* Running text per layar — dari master Running Text yang dikelola admin */
-export const displayRuntext: Record<
-  "att" | "ftw" | "fleet" | "finger",
-  string
-> = {
-  att: "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.",
-  ftw: "Rapat P5M setiap pergantian shift di front masing-masing.",
-  fleet: "Wajib P2H sebelum mengoperasikan unit.",
-  finger: "Wajib P2H sebelum mengoperasikan unit.",
-};
 
 /* ===== Attendance — murni kehadiran (siapa sudah/belum datang) =====
    Data diambil dari backend API GET /api/display/attendance. */
@@ -62,5 +49,3 @@ export type DisplayMachine = {
   online: boolean;
   meta: string;
 };
-
-export const displayMachines: DisplayMachine[] = [];

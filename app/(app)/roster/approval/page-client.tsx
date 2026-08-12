@@ -52,7 +52,7 @@ const stBadge: Record<ApRow["status"], BadgeVariant> = {
 export default function RosterApprovalPage() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
-  const { userName, apRows, setApRows } = useAppStore();
+  const { apRows, setApRows } = useAppStore();
   const en = lang === "en";
 
   const [filter, setFilter] = React.useState<Filter>("pending");
@@ -90,24 +90,8 @@ export default function RosterApprovalPage() {
     const raw = r as ApRow;
     const revId = typeof raw.id === "number" ? raw.id : null;
     if (revId === null) {
-      // No valid backend ID — fallback local state update only
-      const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
-      const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
-      setApRows((prev) =>
-        prev.map((row, j) =>
-          j === i
-            ? {
-                ...row,
-                status: ok ? "approved" : "rejected",
-                byId: by,
-                byEn: by,
-              }
-            : row
-        )
-      );
-      const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
-      if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
-      else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);
+      // Tidak ada ID backend — revisi tidak valid, tampilkan error
+      pushToast("error", t.toastOkT, t.toastNoD);
       return;
     }
     try {
@@ -136,26 +120,14 @@ export default function RosterApprovalPage() {
           }))
         );
       }
-    } catch {
-      // Fallback local state update
-      const who = userName.trim().split(/\s+/).slice(0, 2).join(" ");
-      const by = `${who} · ${t.justNow}${extra ? ` — ${extra}` : ""}`;
-      setApRows((prev) =>
-        prev.map((row, j) =>
-          j === i
-            ? {
-                ...row,
-                status: ok ? "approved" : "rejected",
-                byId: by,
-                byEn: by,
-              }
-            : row
-        )
-      );
+      const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
+      if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
+      else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to process revision";
+      pushToast("error", t.toastOkT, msg);
     }
-    const what = (en ? r.whatEn : r.whatId).split(" · ")[0];
-    if (ok) pushToast("success", t.toastOkT, `${r.name} — ${what}.`);
-    else pushToast("info", t.toastNoT, `${r.name} — ${t.toastNoD}`);
   }
 
   const noteRow = noteFor !== null ? apRows[noteFor] : undefined;

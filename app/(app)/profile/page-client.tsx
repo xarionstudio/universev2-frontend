@@ -106,42 +106,42 @@ export default function ProfilePage() {
           newPassword: pwNew,
         });
       }
-    } catch {
-      // Fallback local update
-    }
+      setUserName(name.trim());
+      setUserEmail(nextEmail);
+      /* sinkron ke daftar akun di User Management */
+      setUmUsers((prev) =>
+        prev.map((u) =>
+          u.id === me.id
+            ? { ...u, kar: name.trim(), email: nextEmail, ...cred }
+            : u
+        )
+      );
+      /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah
+         agar identitas tidak putus dan user tidak terlempar keluar. */
+      if (nextEmail.toLowerCase() !== me.email.toLowerCase()) {
+        signIn({
+          id: Number(me.id) || 1,
+          email: nextEmail,
+          kar: name.trim(),
+          nik: me.nik,
+          on: true,
+          roles: me.roles,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
 
-    setUserName(name.trim());
-    setUserEmail(nextEmail);
-    /* sinkron ke daftar akun di User Management */
-    setUmUsers((prev) =>
-      prev.map((u) =>
-        u.id === me.id
-          ? { ...u, kar: name.trim(), email: nextEmail, ...cred }
-          : u
-      )
-    );
-    /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah
-       agar identitas tidak putus dan user tidak terlempar keluar. */
-    if (nextEmail.toLowerCase() !== me.email.toLowerCase()) {
-      signIn({
-        id: Number(me.id) || 1,
-        email: nextEmail,
-        kar: name.trim(),
-        nik: me.nik,
-        on: true,
-        roles: me.roles,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    }
-
-    if (wantPw) {
-      setPwCur("");
-      setPwNew("");
-      setPwConf("");
-      pushToast("success", t.pfPwSavedT, t.pfPwSavedD);
-    } else {
-      pushToast("success", t.pfSavedT, t.pfSavedD);
+      if (wantPw) {
+        setPwCur("");
+        setPwNew("");
+        setPwConf("");
+        pushToast("success", t.pfPwSavedT, t.pfPwSavedD);
+      } else {
+        pushToast("success", t.pfSavedT, t.pfSavedD);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save profile";
+      pushToast("error", t.pfSavedT, msg);
     }
   }
 

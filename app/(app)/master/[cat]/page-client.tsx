@@ -58,8 +58,6 @@ type ColDef = {
   help?: string;
 };
 
-const runtextTargets = ["Semua kiosk", "Display Attendance", "Display Fleet"];
-const runtextColors = ["Cyan", "Oranye", "Putih", "Merah"];
 const colorVal: Record<string, string> = {
   Cyan: "#00D4FF",
   Oranye: "#E99B2A",
@@ -134,6 +132,23 @@ export default function MasterDataPage() {
   const busTypeOf = (code: string) =>
     allUnits.find((u) => u.code === code)?.egi ?? "";
 
+  /* Opsi target & warna running text — dinamis dari data runtext yang sudah
+     dimuat dari API, bukan daftar hardcoded */
+  const runtextTargets = React.useMemo(
+    () =>
+      Array.from(
+        new Set((mdData?.runtext || []).map((r) => r.a).filter(Boolean))
+      ).sort(),
+    [mdData?.runtext]
+  );
+  const runtextColors = React.useMemo(
+    () =>
+      Array.from(
+        new Set((mdData?.runtext || []).map((r) => r.b).filter(Boolean))
+      ).sort(),
+    [mdData?.runtext]
+  );
+
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {
       case "egi":
@@ -207,7 +222,17 @@ export default function MasterDataPage() {
           },
         ];
     }
-  }, [cat, t, en, busCodeOpts, diggerOpts, busOpts, tempudoOpts]);
+  }, [
+    cat,
+    t,
+    en,
+    busCodeOpts,
+    diggerOpts,
+    busOpts,
+    tempudoOpts,
+    runtextTargets,
+    runtextColors,
+  ]);
 
   const entries = mdData?.[cat] || [];
   const needle = q.trim().toLowerCase();

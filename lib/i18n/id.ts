@@ -396,6 +396,7 @@ export const id = {
   umRbacT: "Efek role pada UI",
   umRbacNote:
     "Aturan RBAC di UI: menu tanpa permission tidak dirender (bukan disabled); aksi dalam halaman (mis. tombol Setuju) mengikuti permission Kelola; data readonly tetap terlihat dengan permission Lihat.",
+  umNoRoles: "Belum ada role — tambahkan role terlebih dahulu.",
   /* ---- Password (diatur admin) ---- */
   umPwCol: "Password",
   umPwNever: "Belum diatur",

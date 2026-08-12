@@ -24,7 +24,6 @@ let cachedPitLocations: { name: string; mining: boolean }[] | null = null;
 
 /**
  * Fetch EGI types from backend API
- * Falls back to hardcoded values if API fails
  */
 export async function fetchEgiTypes(): Promise<string[]> {
   if (cachedEgiTypes) return cachedEgiTypes;
@@ -35,14 +34,13 @@ export async function fetchEgiTypes(): Promise<string[]> {
     cachedEgiTypes = data.map((item) => item.code);
     return cachedEgiTypes;
   } catch (error) {
-    console.warn("Failed to fetch EGI types from API, using fallback:", error);
-    return getFallbackEgiTypes();
+    console.warn("Failed to fetch EGI types from API:", error);
+    return [];
   }
 }
 
 /**
  * Fetch equipment class definitions from backend API
- * Falls back to hardcoded values if API fails
  */
 export async function fetchEqClassDefs(): Promise<[string, string][]> {
   if (cachedEqClassDefs) return cachedEqClassDefs;
@@ -55,17 +53,13 @@ export async function fetchEqClassDefs(): Promise<[string, string][]> {
     );
     return cachedEqClassDefs;
   } catch (error) {
-    console.warn(
-      "Failed to fetch equipment classes from API, using fallback:",
-      error
-    );
-    return getFallbackEqClassDefs();
+    console.warn("Failed to fetch equipment classes from API:", error);
+    return [];
   }
 }
 
 /**
  * Fetch unit makes from backend API
- * Falls back to hardcoded values if API fails
  */
 export async function fetchUnitMakes(): Promise<string[]> {
   if (cachedUnitMakes) return cachedUnitMakes;
@@ -76,14 +70,13 @@ export async function fetchUnitMakes(): Promise<string[]> {
     cachedUnitMakes = data.map((item) => item.code);
     return cachedUnitMakes;
   } catch (error) {
-    console.warn("Failed to fetch unit makes from API, using fallback:", error);
-    return getFallbackUnitMakes();
+    console.warn("Failed to fetch unit makes from API:", error);
+    return [];
   }
 }
 
 /**
  * Fetch pit locations from backend API
- * Falls back to hardcoded values if API fails
  */
 export async function fetchPitLocations(): Promise<
   { name: string; mining: boolean }[]
@@ -99,130 +92,9 @@ export async function fetchPitLocations(): Promise<
     }));
     return cachedPitLocations;
   } catch (error) {
-    console.warn(
-      "Failed to fetch pit locations from API, using fallback:",
-      error
-    );
-    return getFallbackPitLocations();
+    console.warn("Failed to fetch pit locations from API:", error);
+    return [];
   }
-}
-
-/* Fallback values - used when API is unavailable */
-function getFallbackEgiTypes(): string[] {
-  return [
-    "BUS",
-    "COMPACTOR",
-    "D6-D85SS",
-    "D8-155",
-    "D9-375",
-    "DRILL",
-    "FUEL TRUCK",
-    "GRADER",
-    "HD 465 / 773",
-    "HD 785 / 777",
-    "LIGHT VEHICLE",
-    "MANHAUL",
-    "PC 1200",
-    "PC 1250",
-    "PC 200",
-    "PC 2000",
-    "PC 2600",
-    "PC 350",
-    "PC 470",
-    "PC 6020",
-    "PC 870",
-    "SANY SYZ 440",
-    "SCANIA P410",
-    "SKT105",
-    "SKT130",
-    "SPARE",
-    "SUPPORT TRUCK",
-    "VOLVO",
-    "WATER TRUCK",
-    "SPARE",
-  ];
-}
-
-function getFallbackEqClassDefs(): [string, string][] {
-  return [
-    ["AMB", "Ambulance"],
-    ["BUS", "Bus Karyawan"],
-    ["CM", "Compactor"],
-    ["CT", "Crane Truck"],
-    ["DR", "Drill Machine"],
-    ["DZ", "Dozer"],
-    ["EX", "Excavator"],
-    ["FK", "Forklift"],
-    ["FT", "Fuel Truck"],
-    ["GD", "Grader"],
-    ["HD", "Heavy Dump Truck (60–100 t)"],
-    ["LB", "Lowboy"],
-    ["LD", "Light Dump Truck (30–40 t)"],
-    ["LT", "Light Truck"],
-    ["LV", "Light Vehicle"],
-    ["MH", "Manhaul"],
-    ["PU", "Pompa Dewatering"],
-    ["ST", "Service Truck"],
-    ["TH", "Telehandler"],
-    ["WE", "Wheel Excavator"],
-    ["WF", "Waterfill Tower"],
-    ["WT", "Water Truck"],
-  ];
-}
-
-function getFallbackUnitMakes(): string[] {
-  return [
-    "BOMAG",
-    "CATERPILLAR",
-    "COATES HIRED",
-    "DEICI",
-    "DRAGFLO",
-    "EBARA PUMP",
-    "EPIROC",
-    "FAW",
-    "HINO",
-    "HITACHI",
-    "KOMATSU",
-    "MANITOU",
-    "MITSUBISHI",
-    "MULTIFLO",
-    "NIAGARA",
-    "REL",
-    "RENAULT",
-    "SANY",
-    "SCANIA",
-    "SYKES",
-    "TRUFLO",
-    "VOLVO",
-    "XCMG",
-  ];
-}
-
-function getFallbackPitLocations(): { name: string; mining: boolean }[] {
-  return [
-    { name: "Panel East Puncak Utara", mining: true },
-    { name: "Panel East Puncak Selatan", mining: true },
-    { name: "Panel East Tengah", mining: true },
-    { name: "Panel East Bawah", mining: true },
-    { name: "Kasturi Puncak", mining: true },
-    { name: "Kasturi Tengah", mining: true },
-    { name: "Kasturi Bawah", mining: true },
-    { name: "High Dump", mining: true },
-    { name: "Low Wall", mining: true },
-    { name: "Ambalat", mining: true },
-    { name: "Mandalika", mining: true },
-    { name: "Disposal T4", mining: true },
-    { name: "CPP33", mining: false },
-    { name: "Workshop", mining: false },
-    { name: "Pondok Kontainer V Point", mining: false },
-    { name: "Parkiran T6", mining: false },
-    { name: "Parkitan Sebatik", mining: false },
-    { name: "Parkiran Panel East", mining: false },
-    { name: "Stock Room T6", mining: false },
-    { name: "Readyline", mining: false },
-    { name: "Bank Soil", mining: true },
-    { name: "Parkiran Wash Bay", mining: false },
-  ];
 }
 
 /* mapping model unit (kolom EGI) → Type EGI (grup kompetensi operator) */
@@ -258,116 +130,3 @@ export function typeOfEgi(egi: string): string {
   if (/BW ?2/.test(e)) return "COMPACTOR";
   return "SPARE";
 }
-
-/* daftar Type EGI — hasil pemetaan seluruh unit sumber */
-export const egiTypes = [
-  "BUS",
-  "COMPACTOR",
-  "D6-D85SS",
-  "D8-155",
-  "D9-375",
-  "DRILL",
-  "FUEL TRUCK",
-  "GRADER",
-  "HD 465 / 773",
-  "HD 785 / 777",
-  "LIGHT VEHICLE",
-  "MANHAUL",
-  "PC 1200",
-  "PC 1250",
-  "PC 200",
-  "PC 2000",
-  "PC 2600",
-  "PC 350",
-  "PC 470",
-  "PC 6020",
-  "PC 870",
-  "SANY SYZ 440",
-  "SCANIA P410",
-  "SKT105",
-  "SKT130",
-  "SPARE",
-  "SUPPORT TRUCK",
-  "VOLVO",
-  "WATER TRUCK",
-  "SPARE",
-];
-
-/* eq class yang benar-benar ada di data unit */
-export const eqClassDefs: [string, string][] = [
-  ["AMB", "Ambulance"],
-  ["BUS", "Bus Karyawan"],
-  ["CM", "Compactor"],
-  ["CT", "Crane Truck"],
-  ["DR", "Drill Machine"],
-  ["DZ", "Dozer"],
-  ["EX", "Excavator"],
-  ["FK", "Forklift"],
-  ["FT", "Fuel Truck"],
-  ["GD", "Grader"],
-  ["HD", "Heavy Dump Truck (60–100 t)"],
-  ["LB", "Lowboy"],
-  ["LD", "Light Dump Truck (30–40 t)"],
-  ["LT", "Light Truck"],
-  ["LV", "Light Vehicle"],
-  ["MH", "Manhaul"],
-  ["PU", "Pompa Dewatering"],
-  ["ST", "Service Truck"],
-  ["TH", "Telehandler"],
-  ["WE", "Wheel Excavator"],
-  ["WF", "Waterfill Tower"],
-  ["WT", "Water Truck"],
-];
-
-/* merek/product yang benar-benar ada di data unit */
-export const unitMakes = [
-  "BOMAG",
-  "CATERPILLAR",
-  "COATES HIRED",
-  "DEICI",
-  "DRAGFLO",
-  "EBARA PUMP",
-  "EPIROC",
-  "FAW",
-  "HINO",
-  "HITACHI",
-  "KOMATSU",
-  "MANITOU",
-  "MITSUBISHI",
-  "MULTIFLO",
-  "NIAGARA",
-  "REL",
-  "RENAULT",
-  "SANY",
-  "SCANIA",
-  "SYKES",
-  "TRUFLO",
-  "VOLVO",
-  "XCMG",
-];
-
-/* lokasi pit/area kerja resmi site (dari sheet yang sama) */
-export const pitLocations: { name: string; mining: boolean }[] = [
-  { name: "Panel East Puncak Utara", mining: true },
-  { name: "Panel East Puncak Selatan", mining: true },
-  { name: "Panel East Tengah", mining: true },
-  { name: "Panel East Bawah", mining: true },
-  { name: "Kasturi Puncak", mining: true },
-  { name: "Kasturi Tengah", mining: true },
-  { name: "Kasturi Bawah", mining: true },
-  { name: "High Dump", mining: true },
-  { name: "Low Wall", mining: true },
-  { name: "Ambalat", mining: true },
-  { name: "Mandalika", mining: true },
-  { name: "Disposal T4", mining: true },
-  { name: "CPP33", mining: false },
-  { name: "Workshop", mining: false },
-  { name: "Pondok Kontainer V Point", mining: false },
-  { name: "Parkiran T6", mining: false },
-  { name: "Parkitan Sebatik", mining: false },
-  { name: "Parkiran Panel East", mining: false },
-  { name: "Stock Room T6", mining: false },
-  { name: "Readyline", mining: false },
-  { name: "Bank Soil", mining: true },
-  { name: "Parkiran Wash Bay", mining: false },
-];

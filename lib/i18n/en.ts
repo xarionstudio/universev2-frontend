@@ -398,6 +398,7 @@ export const en: Dict = {
   umRbacT: "Role effect on the UI",
   umRbacNote:
     "RBAC rules in the UI: menus without permission are not rendered (not disabled); in-page actions (e.g. the Approve button) follow the Manage permission; read-only data stays visible with the View permission.",
+  umNoRoles: "No roles yet — add a role first.",
   /* ---- Password (set by an admin) ---- */
   umPwCol: "Password",
   umPwNever: "Not set",

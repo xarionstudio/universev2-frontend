@@ -50,11 +50,13 @@ export default function NotificationsPage() {
   async function markAll() {
     try {
       await notificationsApi.markAllRead();
-    } catch {
-      // Fallback local update
+      setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+      pushToast("success", t.ntfMarkedT);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to mark all as read";
+      pushToast("error", t.ntfMarkedT, msg);
     }
-    setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
-    pushToast("success", t.ntfMarkedT);
   }
 
   async function markOne(n: Notif) {
@@ -63,13 +65,15 @@ export default function NotificationsPage() {
     if (!isNaN(numId)) {
       try {
         await notificationsApi.markRead(numId);
-      } catch {
-        // Fallback local update
+        setNotifs((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
+        );
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to mark as read";
+        pushToast("error", t.ntfMarkedT, msg);
       }
     }
-    setNotifs((prev) =>
-      prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
-    );
   }
 
   const readFilters: { key: ReadFilter; label: string }[] = [

@@ -134,14 +134,19 @@ export function AudioTab() {
       if (!isNaN(numId)) {
         try {
           await settingsApi.updateAudioSchedule(numId, data);
-        } catch {
-          // Fallback local update
+          setAudios((prev) =>
+            prev.map((a) => (a.id === editing.id ? { ...a, ...data } : a))
+          );
+          pushToast("success", t.auToastEdit);
+        } catch (err: unknown) {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Failed to update audio schedule";
+          pushToast("error", t.auToastEdit, msg);
+          return;
         }
       }
-      setAudios((prev) =>
-        prev.map((a) => (a.id === editing.id ? { ...a, ...data } : a))
-      );
-      pushToast("success", t.auToastEdit);
     } else {
       try {
         const created = await settingsApi.createAudioSchedule(data);
@@ -161,10 +166,15 @@ export function AudioTab() {
         } else {
           setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
         }
-      } catch {
-        setAudios((prev) => [...prev, { id: `au${Date.now()}`, ...data }]);
+        pushToast("success", t.auToastAdd);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Failed to create audio schedule";
+        pushToast("error", t.auToastAdd, msg);
+        return;
       }
-      pushToast("success", t.auToastAdd);
     }
     setDlgOpen(false);
   }
@@ -175,8 +185,13 @@ export function AudioTab() {
     if (!isNaN(numId)) {
       try {
         await settingsApi.deleteAudioSchedule(numId);
-      } catch {
-        // Fallback local deletion
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Failed to delete audio schedule";
+        pushToast("error", t.auToastDel, msg);
+        return;
       }
     }
     setAudios((prev) => prev.filter((a) => a.id !== delTarget.id));

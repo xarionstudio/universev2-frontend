@@ -4,7 +4,7 @@ import * as React from "react";
 import { Pencil, Plus, Trash2, Truck, X } from "lucide-react";
 
 import { fleetApi } from "@/lib/api/fleet";
-import { FLEET_MAX_UNITS, type Fleet } from "@/lib/data/fleet";
+import { useFleetConfig, type Fleet } from "@/lib/data/fleet";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,8 @@ export default function FleetSettingPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
   const { udbAll, mdData, fleets, setFleets } = useAppStore();
+  /* Maksimum unit OHT per fleet — dinamis dari Settings → Business Rules */
+  const { maxUnits } = useFleetConfig();
 
   /* dialog tambah/edit */
   const [dlgOpen, setDlgOpen] = React.useState(false);
@@ -130,7 +132,7 @@ export default function FleetSettingPage() {
       setErrUnits("");
       return;
     }
-    if (fUnits.length >= FLEET_MAX_UNITS) {
+    if (fUnits.length >= maxUnits) {
       setErrUnits(t.flErrMax);
       return;
     }
@@ -171,7 +173,7 @@ export default function FleetSettingPage() {
       !digger || fleets.some((f) => f.digger === digger && f.id !== editId);
     setErrDigger(badDigger);
 
-    const unitsErr = fUnits.length > FLEET_MAX_UNITS ? t.flErrMax : "";
+    const unitsErr = fUnits.length > maxUnits ? t.flErrMax : "";
     setErrUnits(unitsErr);
     if (badDigger || unitsErr) return;
 
@@ -186,23 +188,29 @@ export default function FleetSettingPage() {
     if (editId && !isNaN(numId)) {
       try {
         await fleetApi.updateFleetSetting(numId, data);
-      } catch {
-        // Fallback local update
+        setFleets((prev) =>
+          prev.map((f) => (f.id === editId ? { ...f, ...data } : f))
+        );
+        pushToast("success", t.flToastEdit, digger);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to update fleet setting";
+        pushToast("error", t.flToastEdit, msg);
+        return;
       }
     } else {
       try {
         await fleetApi.createFleetSetting(data);
-      } catch {
-        // Fallback local create
+        setFleets((prev) => [...prev, { id: `fl-${Date.now()}`, ...data }]);
+        pushToast("success", t.flToastAdd, digger);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to create fleet setting";
+        pushToast("error", t.flToastAdd, msg);
+        return;
       }
     }
-    setFleets((prev) =>
-      editId
-        ? prev.map((f) => (f.id === editId ? { ...f, ...data } : f))
-        : [...prev, { id: `fl-${Date.now()}`, ...data }]
-    );
     setDlgOpen(false);
-    pushToast("success", editId ? t.flToastEdit : t.flToastAdd, digger);
   }
 
   async function doDelete() {
@@ -211,8 +219,11 @@ export default function FleetSettingPage() {
     if (!isNaN(numId)) {
       try {
         await fleetApi.deleteFleetSetting(numId);
-      } catch {
-        // Fallback local delete
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to delete fleet setting";
+        pushToast("error", t.flToastDel, msg);
+        return;
       }
     }
     setFleets((prev) => prev.filter((f) => f.id !== delTarget.id));
@@ -403,7 +414,7 @@ export default function FleetSettingPage() {
             </Field>
             <Field
               className="col-span-full"
-              label={`${t.flUnits} (OHT) — ${fUnits.length}/${FLEET_MAX_UNITS}`}
+              label={`${t.flUnits} (OHT) — ${fUnits.length}/${maxUnits}`}
               htmlFor="fl-unit-search"
               helper={t.flUnitsHelp}
               error={!!errUnits}

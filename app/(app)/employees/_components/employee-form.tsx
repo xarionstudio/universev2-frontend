@@ -15,7 +15,7 @@ import {
 
 import { employeesApi } from "@/lib/api/employees";
 import type { Employee, Komp } from "@/lib/data/employees";
-import { egiTypes } from "@/lib/data/units-db";
+import { fetchEgiTypes } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { initialsOf } from "@/components/ui/avatar";
@@ -98,6 +98,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   const [dirtyDlg, setDirtyDlg] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const photoRef = React.useRef<File | null>(null);
+  /* opsi Type EGI dari backend API — bukan daftar hardcoded */
+  const [egiOpts, setEgiOpts] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    fetchEgiTypes()
+      .then(setEgiOpts)
+      .catch(() => setEgiOpts([]));
+  }, []);
 
   React.useEffect(() => {
     if (nik && !record) router.replace("/employees");
@@ -184,13 +192,13 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         if (photoRef.current) {
           try {
             await employeesApi.uploadPhoto(nikVal, photoRef.current);
-          } catch {
-            // Gagal upload foto tidak menggagalkan simpan profil
+          } catch (err: unknown) {
+            const msg =
+              err instanceof Error ? err.message : "Failed to upload photo";
+            pushToast("error", "Upload Foto Gagal", msg);
           }
         }
-      } catch {
-        // Fallback to local store save
-      } finally {
+        // Only update local state and show success after API succeeds
         saveEmployee(nik ?? null, {
           ...payload,
           status: "aktif" as const,
@@ -202,10 +210,15 @@ export function EmployeeForm({ nik }: { nik?: string }) {
           emg: "",
           komp: kompRows.filter((k) => k.cls),
         });
-        setBusy(false);
         if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`);
         else pushToast("success", t.toastAddT, `${name} — NIK ${nikVal}`);
         router.push(`/employees/${nikVal}`);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to save employee";
+        pushToast("error", t.toastFormErrT, msg);
+      } finally {
+        setBusy(false);
       }
     })();
   }
@@ -391,7 +404,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                         aria-label="Type EGI"
                       >
                         <option value=""></option>
-                        {egiTypes.map((c, i) => (
+                        {egiOpts.map((c, i) => (
                           <option key={`${c}-${i}`} value={c}>
                             {c}
                           </option>

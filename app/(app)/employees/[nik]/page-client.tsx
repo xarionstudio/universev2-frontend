@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -87,8 +88,19 @@ export default function EmployeeDetailPage({
     <div className="flex flex-col gap-6">
       <Panel>
         <div className="flex flex-wrap items-center gap-6">
-          <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
-            {initialsOf(emp.name)}
+          <div className="grid size-24 flex-none place-items-center overflow-hidden rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+            {emp.foto ? (
+              <Image
+                src={emp.foto}
+                alt={emp.name}
+                width={96}
+                height={96}
+                className="size-full object-cover"
+                unoptimized
+              />
+            ) : (
+              initialsOf(emp.name)
+            )}
           </div>
           <div className="min-w-65 flex-1">
             <h1 className="text-2xl font-bold">{emp.name}</h1>

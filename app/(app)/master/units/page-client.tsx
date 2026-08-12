@@ -149,16 +149,17 @@ export default function UnitDbPage() {
       } else {
         await fleetApi.createUnitDB(data);
       }
-    } catch {
-      // Fallback local save
+      saveUdb(editUid, data);
+      setDlgOpen(false);
+      pushToast(
+        "success",
+        editUid ? t.udbEditToastT : t.udbToastT,
+        `${code} — ${fEgi} · ${fProd}`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save unit";
+      pushToast("error", editUid ? t.udbEditToastT : t.udbToastT, msg);
     }
-    saveUdb(editUid, data);
-    setDlgOpen(false);
-    pushToast(
-      "success",
-      editUid ? t.udbEditToastT : t.udbToastT,
-      `${code} — ${fEgi} · ${fProd}`
-    );
   }
 
   async function startImport(name: string, file?: File) {

@@ -42,10 +42,6 @@ import {
 type Shift = "pagi" | "malam";
 type Filter = "all" | "unalloc" | "alloc" | "issue";
 
-/* class unit yang di-setting operatornya — mengikuti file setting lama
-   (OHT/DT/digger/dozer/water truck/manhaul); LV, bus, pompa dsb. di luar papan */
-const OPERATED_CLS = new Set(["HD", "LD", "EX", "DZ", "WT", "MH"]);
-
 const stBadge: Record<
   FaUnit["status"],
   { variant: BadgeVariant; label: string }
@@ -84,10 +80,22 @@ export default function FleetAllocationPage() {
     return rank;
   }, [fleets]);
 
+  /* class unit yang di-setting operatornya — dinamis dari data unit yang
+     dimuat dari API (class yang punya operator di data karyawan) */
+  const operatedCls = React.useMemo(() => {
+    const empCls = new Set<string>();
+    for (const e of empAll()) {
+      for (const k of e.komp ?? []) {
+        if (k.cls) empCls.add(k.cls);
+      }
+    }
+    return empCls;
+  }, [empAll]);
+
   const faUnits: FaUnit[] = React.useMemo(
     () =>
       udbAll()
-        .filter((u) => u.active && OPERATED_CLS.has(u.cls))
+        .filter((u) => u.active && operatedCls.has(u.cls))
         .map((u) => ({
           code: u.code,
           type: `${u.egi} · ${u.product}`,
@@ -104,7 +112,7 @@ export default function FleetAllocationPage() {
             (fleetRank.get(a.code) ?? 1e9) - (fleetRank.get(b.code) ?? 1e9) ||
             a.code.localeCompare(b.code)
         ),
-    [udbAll, fleetRank]
+    [udbAll, fleetRank, operatedCls]
   );
 
   const [ftwLogs, setFtwLogs] = React.useState<Record<string, FtwStatus>>({});
@@ -192,36 +200,42 @@ export default function FleetAllocationPage() {
     });
   }
 
-  function assign(unit: FaUnit, op: FaOp) {
-    writeAlloc((next) => {
-      next[unit.code] = op.nik;
-    });
-    // Persist to backend
+  async function assign(unit: FaUnit, op: FaOp) {
     const nextAlloc = { ...alloc, [unit.code]: op.nik };
-    fleetApi
-      .saveAllocation({ date: faDate, shift, units: nextAlloc })
-      .catch(() => {});
-    setAllocFor(null);
-    pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD);
+    try {
+      await fleetApi.saveAllocation({ date: faDate, shift, units: nextAlloc });
+      writeAlloc((next) => {
+        next[unit.code] = op.nik;
+      });
+      setAllocFor(null);
+      pushToast("success", `${op.name} → ${unit.code}`, t.faToastDoD);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to assign operator";
+      pushToast("error", `${op.name} → ${unit.code}`, msg);
+    }
   }
 
-  function release(unit: FaUnit) {
+  async function release(unit: FaUnit) {
     const op = opByNik.get(alloc[unit.code] ?? "");
-    writeAlloc((next) => {
-      delete next[unit.code];
-    });
-    // Persist to backend
     const nextAlloc = { ...alloc };
     delete nextAlloc[unit.code];
-    fleetApi
-      .saveAllocation({ date: faDate, shift, units: nextAlloc })
-      .catch(() => {});
-    if (op)
-      pushToast(
-        "info",
-        `${op.name} ${t.faToastRelT} ${unit.code}`,
-        t.faToastRelD
-      );
+    try {
+      await fleetApi.saveAllocation({ date: faDate, shift, units: nextAlloc });
+      writeAlloc((next) => {
+        delete next[unit.code];
+      });
+      if (op)
+        pushToast(
+          "info",
+          `${op.name} ${t.faToastRelT} ${unit.code}`,
+          t.faToastRelD
+        );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to release operator";
+      pushToast("error", `${op?.name ?? unit.code}`, msg);
+    }
   }
 
   async function applyAuto(proposals: FaProposal[]) {
@@ -232,14 +246,13 @@ export default function FleetAllocationPage() {
       if (fresh && typeof fresh === "object") {
         setFaAlloc((prev) => ({ ...prev, ...fresh }));
       }
-    } catch {
-      // Fallback local apply
-      writeAlloc((next) => {
-        for (const pr of proposals) next[pr.code] = pr.nik;
-      });
+      setAutoOpen(false);
+      pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to auto-allocate";
+      pushToast("error", t.faAutoToastT, msg);
     }
-    setAutoOpen(false);
-    pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
   }
 
   /* salin alokasi shift yang sama dari hari sebelumnya — hanya slot kosong,

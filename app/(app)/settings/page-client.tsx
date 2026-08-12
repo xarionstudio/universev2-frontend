@@ -66,7 +66,8 @@ export default function SettingsPage() {
 function AppTab() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { appName, setAppName, appDesc, setAppDesc } = useAppStore();
+  const { appName, setAppName, appDesc, setAppDesc, setCompanyLogo } =
+    useAppStore();
   const { pref, setTheme } = useTheme();
 
   const [name, setName] = React.useState(appName);
@@ -77,6 +78,8 @@ function AppTab() {
   const [favDrag, setFavDrag] = React.useState(false);
   const logoRef = React.useRef<HTMLInputElement>(null);
   const favRef = React.useRef<HTMLInputElement>(null);
+  const logoFileRef = React.useRef<File | null>(null);
+  const favFileRef = React.useRef<File | null>(null);
 
   const themeOpts: { key: ThemePref; label: string }[] = [
     { key: "system", label: t.themeSystem },
@@ -84,15 +87,37 @@ function AppTab() {
     { key: "dark", label: t.themeDark },
   ];
 
+  function pickLogo(name: string, file?: File) {
+    setLogoName(name);
+    if (file) logoFileRef.current = file;
+  }
+
+  function pickFav(name: string, file?: File) {
+    setFavName(name);
+    if (file) favFileRef.current = file;
+  }
+
   async function save() {
     try {
-      await settingsApi.updateSettings({ appName: name });
-    } catch {
-      // Fallback local update
+      // Upload logo if a file was selected
+      if (logoFileRef.current) {
+        const res = await settingsApi.uploadLogo(logoFileRef.current);
+        if (res?.url) setCompanyLogo(res.url);
+      }
+      // Upload favicon if a file was selected
+      if (favFileRef.current) {
+        await settingsApi.uploadFavicon(favFileRef.current);
+      }
+      // Save text settings
+      await settingsApi.updateSettings({ appName: name, appDesc: desc });
+      setAppName(name);
+      setAppDesc(desc);
+      pushToast("success", t.stSavedT, t.stSavedD);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to save settings";
+      pushToast("error", t.stSavedT, msg);
     }
-    setAppName(name);
-    setAppDesc(desc);
-    pushToast("success", t.stSavedT, t.stSavedD);
   }
 
   return (
@@ -142,7 +167,7 @@ function AppTab() {
             hint="PNG/SVG · 1:1"
             className="p-4"
             onPick={() => logoRef.current?.click()}
-            onDropFile={setLogoName}
+            onDropFile={pickLogo}
             dragging={logoDrag}
             onDragChange={setLogoDrag}
             aria-label={t.stLogo}
@@ -152,7 +177,11 @@ function AppTab() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? "")}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) pickLogo(file.name, file);
+              e.target.value = "";
+            }}
           />
         </Field>
         <Field label={t.stFavicon}>
@@ -162,7 +191,7 @@ function AppTab() {
             hint="ICO/PNG · 32×32"
             className="p-4"
             onPick={() => favRef.current?.click()}
-            onDropFile={setFavName}
+            onDropFile={pickFav}
             dragging={favDrag}
             onDragChange={setFavDrag}
             aria-label={t.stFavicon}
@@ -172,7 +201,11 @@ function AppTab() {
             type="file"
             accept="image/*,.ico"
             className="hidden"
-            onChange={(e) => setFavName(e.target.files?.[0]?.name ?? "")}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) pickFav(file.name, file);
+              e.target.value = "";
+            }}
           />
         </Field>
       </FormGrid>
@@ -231,14 +264,19 @@ function MenuTab() {
             </span>
             <Checkbox
               checked={menuVis[m.key]}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const next = { ...menuVis, [m.key]: e.target.checked };
-                setMenuVis(next);
-                // Persist menu visibility to backend
-                settingsApi
-                  .updateSettings({ menuVis: next })
-                  .then(() => pushToast("success", t.stSavedT, t.stSavedD))
-                  .catch(() => {});
+                try {
+                  await settingsApi.updateSettings({ menuVis: next });
+                  setMenuVis(next);
+                  pushToast("success", t.stSavedT, t.stSavedD);
+                } catch (err: unknown) {
+                  const msg =
+                    err instanceof Error
+                      ? err.message
+                      : "Failed to save menu visibility";
+                  pushToast("error", t.stSavedT, msg);
+                }
               }}
             />
           </ToggleRow>

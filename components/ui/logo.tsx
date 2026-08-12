@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/components/providers/app-store";
 
-/* Logo resmi UNIVERSE (public/logoV1.svg) — pengganti huruf "U" dummy */
+/* Logo resmi UNIVERSE (public/logoV1.svg) — pengganti huruf "U" dummy.
+   Bila companyLogo di settings diisi, logo tersebut yang dipakai. */
 function UniverseLogo({
   className,
   priority,
@@ -10,13 +14,16 @@ function UniverseLogo({
   className?: string;
   priority?: boolean;
 }) {
+  const { companyLogo } = useAppStore();
+  const src = companyLogo || "/logoV1.svg";
   return (
     <Image
-      src="/logoV1.svg"
+      src={src}
       alt="UNIVERSE"
       width={60}
       height={60}
       priority={priority}
+      unoptimized={!!companyLogo}
       className={cn("flex-none", className)}
     />
   );

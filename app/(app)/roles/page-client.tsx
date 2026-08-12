@@ -149,41 +149,38 @@ export default function RolesPage() {
       if (!isNaN(numId)) {
         try {
           await rolesApi.update(numId, data);
-        } catch {
-          // Keep local state on fallback
+          setUmRoles((prev) =>
+            prev.map((r) => (r.id === editing.id ? { ...r, ...data } : r))
+          );
+          pushToast("success", t.umToastRoleEdit, data.name);
+        } catch (err: unknown) {
+          const msg =
+            err instanceof Error ? err.message : "Failed to update role";
+          pushToast("error", t.umToastRoleEdit, msg);
+          return;
         }
       }
-      setUmRoles((prev) =>
-        prev.map((r) => (r.id === editing.id ? { ...r, ...data } : r))
-      );
-      pushToast("success", t.umToastRoleEdit, data.name);
     } else {
       try {
         const created = await rolesApi.create(data);
-        if (created) {
-          setUmRoles((prev) => [
-            ...prev,
-            {
-              id: String(created.id),
-              name: created.name,
-              desc: created.desc,
-              locked: created.locked,
-              perms: (created.perms || {}) as Record<UmModule, UmPerm>,
-            },
-          ]);
-        } else {
-          setUmRoles((prev) => [
-            ...prev,
-            { id: `r${prev.length + 1}`, locked: false, ...data },
-          ]);
-        }
-      } catch {
+        if (!created) throw new Error("No response from server");
         setUmRoles((prev) => [
           ...prev,
-          { id: `r${prev.length + 1}`, locked: false, ...data },
+          {
+            id: String(created.id),
+            name: created.name,
+            desc: created.desc,
+            locked: created.locked,
+            perms: (created.perms || {}) as Record<UmModule, UmPerm>,
+          },
         ]);
+        pushToast("success", t.umToastRoleAdd, data.name);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to create role";
+        pushToast("error", t.umToastRoleAdd, msg);
+        return;
       }
-      pushToast("success", t.umToastRoleAdd, data.name);
     }
     setDlgOpen(false);
   }
@@ -194,8 +191,11 @@ export default function RolesPage() {
     if (!isNaN(numId)) {
       try {
         await rolesApi.delete(numId);
-      } catch {
-        // Continue local cleanup
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to delete role";
+        pushToast("error", t.umToastRoleDel, msg);
+        return;
       }
     }
     setUmRoles((prev) => prev.filter((r) => r.id !== delTarget.id));
@@ -348,36 +348,40 @@ export default function RolesPage() {
               ))}
             </Select>
           </Toolbar>
-          <div className="flex flex-col gap-2">
-            {umModules.map((m) => {
-              const perm = rbacRole.perms[m];
-              return (
-                <div
-                  key={m}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
-                    perm === "manage" &&
-                      "bg-[rgba(0,212,255,.10)] text-(--text-primary)",
-                    perm === "view" &&
-                      "bg-(--fill-subtle) text-(--text-secondary)",
-                    perm === "none" && "text-(--text-disabled)"
-                  )}
-                >
-                  <span className="flex-1">{t[MODULE_LABEL_KEYS[m]]}</span>
-                  <Badge
-                    variant={perm === "manage" ? "info" : "neutral"}
-                    className={perm === "none" ? "opacity-60" : undefined}
+          {rbacRole ? (
+            <div className="flex flex-col gap-2">
+              {umModules.map((m) => {
+                const perm = rbacRole.perms[m];
+                return (
+                  <div
+                    key={m}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm",
+                      perm === "manage" &&
+                        "bg-[rgba(0,212,255,.10)] text-(--text-primary)",
+                      perm === "view" &&
+                        "bg-(--fill-subtle) text-(--text-secondary)",
+                      perm === "none" && "text-(--text-disabled)"
+                    )}
                   >
-                    {perm === "manage"
-                      ? t.umPManage
-                      : perm === "view"
-                        ? t.umPView
-                        : t.umPNone}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
+                    <span className="flex-1">{t[MODULE_LABEL_KEYS[m]]}</span>
+                    <Badge
+                      variant={perm === "manage" ? "info" : "neutral"}
+                      className={perm === "none" ? "opacity-60" : undefined}
+                    >
+                      {perm === "manage"
+                        ? t.umPManage
+                        : perm === "view"
+                          ? t.umPView
+                          : t.umPNone}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-(--text-tertiary)">{t.umNoRoles}</p>
+          )}
           <p className="mt-4 text-xs leading-normal text-(--text-secondary)">
             {t.umRbacNote}
           </p>
