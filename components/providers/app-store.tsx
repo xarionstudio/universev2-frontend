@@ -312,6 +312,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   ind: e.ind || "",
                   birth: e.birth || "",
                   blood: e.blood || "",
+                  bpjs: e.bpjs || "",
                   religion: e.religion || "",
                   marital: e.marital || "",
                   gender: e.gender || "",
@@ -321,11 +322,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   emergencyName: e.emergencyName || "",
                   emergencyRel: e.emergencyRel || "",
                   emergencyPhone: e.emergencyPhone || "",
+                  mess: e.mess || "",
+                  kamar: e.kamar || "",
+                  hp: e.hp || "",
+                  emg: e.emg || "",
                   foto: e.foto || "",
                   exp: e.exp || "",
-                  license: [],
+                  license: e.license || "",
                   mcu: e.mcu || "",
-                  medis: [],
+                  medis: e.medis || "",
                   komp: e.komp || [],
                 }) as unknown as Employee
             )
@@ -367,6 +372,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               cls: u.cls || "",
               egi: u.egi || "",
               product: u.product || "",
+              area: u.area || "",
               active: u.active !== false,
               standby: !!u.standby,
               breakdown: !!u.breakdown,
@@ -386,7 +392,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         if (data && Array.isArray(data) && data.length > 0) {
           setFleets(
             data.map((f) => ({
-              id: `fl-${f.id}`,
+              // Preserve the database ID so edit/delete target the same row.
+              id: String(f.id),
               digger: f.digger,
               loc: f.loc,
               bus: f.bus,
@@ -426,30 +433,44 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           const entries = await masterApi.getByCategory(cat);
           return [
             cat,
-            entries.map((e, i) => ({
-              id: e.id != null ? String(e.id) : `${cat}-${i}`,
-              code: String(e.code || e.name || `${cat}-${i}`),
-              name: String(e.name || e.code || ""),
-              a: String(
-                (e as unknown as Record<string, unknown>).a ||
-                  (e as unknown as Record<string, unknown>).description ||
-                  (e as unknown as Record<string, unknown>).category ||
-                  (e as unknown as Record<string, unknown>).location ||
-                  (e as unknown as Record<string, unknown>).busCode ||
-                  (e as unknown as Record<string, unknown>).block ||
-                  (e as unknown as Record<string, unknown>).targetDisplay ||
-                  ""
-              ),
-              b: String(
-                (e as unknown as Record<string, unknown>).b ||
-                  (e as unknown as Record<string, unknown>).pickupType ||
-                  (e as unknown as Record<string, unknown>).departureTime ||
-                  (e as unknown as Record<string, unknown>).tempudoCode ||
-                  (e as unknown as Record<string, unknown>).textColor ||
-                  ""
-              ),
-              active: e.active !== false,
-            })),
+            entries.map((e, i) => {
+              const raw = e as unknown as Record<string, unknown>;
+              const base: import("@/lib/data/master-data").MdEntry = {
+                id: e.id != null ? String(e.id) : `${cat}-${i}`,
+                code: String(e.code || e.name || `${cat}-${i}`),
+                name: String(e.name || e.code || ""),
+                active: e.active !== false,
+              };
+              // Map field spesifik per kategori sesuai kolom database
+              switch (cat) {
+                case "eqclass":
+                  base.description = String(raw.description || "");
+                  break;
+                case "area":
+                  base.category = String(raw.category || "");
+                  break;
+                case "tempudo":
+                  base.location = String(raw.location || "");
+                  base.pickupType = String(raw.pickupType || "");
+                  break;
+                case "bus":
+                  base.egiType = String(raw.egiType || "");
+                  base.departureTime = String(raw.departureTime || "");
+                  break;
+                case "lokasiex":
+                  base.busCode = String(raw.busCode || "");
+                  base.tempudoCode = String(raw.tempudoCode || "");
+                  break;
+                case "mess":
+                  base.block = String(raw.block || "");
+                  break;
+                case "runtext":
+                  base.targetDisplay = String(raw.targetDisplay || "");
+                  base.textColor = String(raw.textColor || "");
+                  break;
+              }
+              return base;
+            }),
           ] as const;
         } catch {
           return [
@@ -478,19 +499,25 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           const att: Display[] = [];
           const fleet: Display[] = [];
           for (const d of data) {
+            const content = (
+              ["att", "ftw", "finger", "monitor"].includes(d.content)
+                ? "att"
+                : "fleet"
+            ) as "att" | "fleet";
             const item: Display = {
               id: String(d.id),
               name: d.name,
               loc: d.loc || "",
-              content: (d.content === "fleet" ? "fleet" : "att") as
-                "att" | "fleet",
-              fleetId: d.fleetId ? `fl-${d.fleetId}` : undefined,
+              // Hanya "fleet" & "att" yang dikelola di UI admin saat ini;
+              // ftw/finger/monitor tetap dikelompokkan sebagai attendance.
+              content,
+              fleetId: d.fleetId ? String(d.fleetId) : undefined,
               runtext: d.runtext || "",
               online: !!d.online,
               hb: d.hb || "",
               active: d.active !== false,
             };
-            if (d.content === "fleet") fleet.push(item);
+            if (content === "fleet") fleet.push(item);
             else att.push(item);
           }
           if (att.length) setDspAtt(att);
@@ -587,11 +614,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             cls: "HD",
             egi: "",
             product: "CATERPILLAR",
+            area: "",
             active: true,
             standby: false,
             breakdown: false,
             loc: "Workshop",
-            upd: new Date().toISOString().slice(0, 10),
+            // WITA (UTC+8) — avoid "yesterday" bug at 00:00–07:59 local time
+            upd: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
             by: "admin",
             ...data,
           } as UnitDb,

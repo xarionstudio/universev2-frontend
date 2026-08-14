@@ -58,7 +58,8 @@ export default function FleetAllocationPage() {
   const { udbAll, empAll, faAlloc, setFaAlloc, fleets } = useAppStore();
 
   const [faDate, setFaDate] = React.useState(() =>
-    new Date().toISOString().slice(0, 10)
+    // WITA (UTC+8) date — avoid "yesterday" bug
+    new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
   );
   const [shift, setShift] = React.useState<Shift>("pagi");
   const [filter, setFilter] = React.useState<Filter>("all");
@@ -240,11 +241,26 @@ export default function FleetAllocationPage() {
 
   async function applyAuto(proposals: FaProposal[]) {
     try {
-      await fleetApi.autoAllocate({ date: faDate, shift });
-      // Refetch allocations from backend after auto-allocate
-      const fresh = await fleetApi.getAllocations([faDate]);
+      // Backend auto-allocates AND returns the fresh allocation map
+      // (date → shift → unitCode → operatorNIK). Merge only the affected
+      // date+shift so other dates are never wiped.
+      const fresh = await fleetApi.autoAllocate({ date: faDate, shift });
       if (fresh && typeof fresh === "object") {
-        setFaAlloc((prev) => ({ ...prev, ...fresh }));
+        setFaAlloc((prev) => ({
+          ...prev,
+          [faDate]: {
+            ...(prev[faDate] ?? {}),
+            [shift]: fresh[faDate]?.[shift] ?? {},
+          },
+        }));
+        // Jumlah aktual dari server — preview frontend bisa berbeda karena
+        // backend mengalokasikan per formasi fleet.
+        const actual = Object.values(fresh[faDate]?.[shift] ?? {}).filter(
+          (nik) => nik
+        ).length;
+        setAutoOpen(false);
+        pushToast("success", `${actual} ${t.faAutoToastT}`);
+        return;
       }
       setAutoOpen(false);
       pushToast("success", `${proposals.length} ${t.faAutoToastT}`);
@@ -257,23 +273,33 @@ export default function FleetAllocationPage() {
 
   /* salin alokasi shift yang sama dari hari sebelumnya — hanya slot kosong,
      operator yang sudah terpakai hari ini dilewati */
-  function copyFromYesterday() {
+  async function copyFromYesterday() {
     const src = faAlloc[isoAddDays(faDate, -1)]?.[shift] ?? {};
     const usedNik = new Set(Object.values(alloc));
     const operable = new Map(faUnits.map((u) => [u.code, u]));
     let n = 0;
-    writeAlloc((next) => {
-      for (const [code, nik] of Object.entries(src)) {
-        const u = operable.get(code);
-        if (!u || u.status === "breakdown") continue;
-        if (next[code] || usedNik.has(nik) || !opByNik.has(nik)) continue;
-        next[code] = nik;
-        usedNik.add(nik);
-        n++;
-      }
-    });
-    if (n) pushToast("success", `${n} ${t.faCopyToastT}`);
-    else pushToast("info", t.faCopyEmptyT, t.faCopyEmptyD);
+    const next = { ...alloc };
+    for (const [code, nik] of Object.entries(src)) {
+      const u = operable.get(code);
+      if (!u || u.status === "breakdown") continue;
+      if (next[code] || usedNik.has(nik) || !opByNik.has(nik)) continue;
+      next[code] = nik;
+      usedNik.add(nik);
+      n++;
+    }
+    if (!n) {
+      pushToast("info", t.faCopyEmptyT, t.faCopyEmptyD);
+      return;
+    }
+    try {
+      await fleetApi.saveAllocation({ date: faDate, shift, units: next });
+      writeAlloc((current) => Object.assign(current, next));
+      pushToast("success", `${n} ${t.faCopyToastT}`);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to save copied allocation";
+      pushToast("error", t.faCopyToastT, msg);
+    }
   }
 
   return (

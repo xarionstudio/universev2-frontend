@@ -206,6 +206,7 @@ export type RosterRevision = {
   whatEn: string;
   whenId: string;
   whenEn: string;
+  targetDate?: string;
   status: string;
   byId?: string;
   byEn?: string;
@@ -426,6 +427,7 @@ export type DisplayDevice = {
 
 export type AppSettings = {
   appName: string;
+  appDesc: string;
   appEnv: string;
   companyLogo: string;
   theme: string;

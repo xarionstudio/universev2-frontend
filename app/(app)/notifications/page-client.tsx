@@ -6,6 +6,7 @@ import { BellOff, CheckCheck } from "lucide-react";
 import { notificationsApi } from "@/lib/api/notifications";
 import { notifToneDot, type Notif } from "@/lib/data/notifications";
 import { useI18n } from "@/lib/i18n";
+import { getRelativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Button } from "@/components/ui/button";
@@ -153,7 +154,10 @@ export default function NotificationsPage() {
                     {lang === "id" ? n.textId : n.textEn}
                   </span>
                   <span className="mt-0.5 block text-xs text-(--text-tertiary)">
-                    {lang === "id" ? n.timeId : n.timeEn}
+                    {getRelativeTime(
+                      n.createdAt || new Date().toISOString(),
+                      lang
+                    )}
                   </span>
                 </span>
                 {!n.read ? (

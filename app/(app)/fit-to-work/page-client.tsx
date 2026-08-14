@@ -18,6 +18,7 @@ import {
   type FtwStatus,
 } from "@/lib/data/ftw";
 import { useI18n } from "@/lib/i18n";
+import { todayIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { useRegisterRefresh } from "@/components/providers/refresh";
@@ -81,13 +82,13 @@ const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
 export default function FitToWorkPage() {
   const { t } = useI18n();
   const { empAll } = useAppStore();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIsoStr = todayIso();
 
   const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
   const [shift, setShift] = React.useState("");
-  const [d1, setD1] = React.useState(todayIso);
-  const [d2, setD2] = React.useState(todayIso);
+  const [d1, setD1] = React.useState(todayIsoStr);
+  const [d2, setD2] = React.useState(todayIsoStr);
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
   const [freshTime, setFreshTime] = React.useState("");
@@ -126,8 +127,8 @@ export default function FitToWorkPage() {
   }, [d1, d2]);
 
   const normalizedHist = React.useMemo(
-    () => normalizeFtwHistFromApi(apiHist, d2 || todayIso),
-    [apiHist, d2, todayIso]
+    () => normalizeFtwHistFromApi(apiHist, d2 || todayIsoStr),
+    [apiHist, d2, todayIsoStr]
   );
 
   const histByNik = React.useMemo(() => {
@@ -161,7 +162,7 @@ export default function FitToWorkPage() {
   const today: FtwRecord[] = apiLogs.map((l) => ({
     nik: String(l.nik || ""),
     name: String(l.name || l.nik || ""),
-    shift: (l.shift === "malam" ? "malam" : "siang") as FtwRecord["shift"],
+    shift: (l.shift === "malam" ? "malam" : "pagi") as FtwRecord["shift"],
     st: (l.st || l.status || "belum") as StKey,
     dept: String(l.dept || "Operation"),
     sleep: l.sleepHours ? `${l.sleepHours} jam` : "—",
@@ -299,7 +300,7 @@ export default function FitToWorkPage() {
               aria-label={t.allShift}
             >
               <option value="">{t.allShift}</option>
-              <option value="siang">{t.shiftDay}</option>
+              <option value="pagi">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
             <div className="flex items-center gap-2">

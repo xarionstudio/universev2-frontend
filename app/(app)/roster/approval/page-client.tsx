@@ -107,6 +107,7 @@ export default function RosterApprovalPage() {
       if (fresh && Array.isArray(fresh)) {
         setApRows(
           fresh.map((rev) => ({
+            id: rev.id,
             sid: String(rev.sid || ""),
             name: String(rev.name || rev.nik || ""),
             nik: String(rev.nik || ""),

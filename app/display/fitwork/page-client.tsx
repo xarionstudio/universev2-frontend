@@ -21,7 +21,9 @@ export default function DisplayFitworkPage() {
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
   const runtextOpts = mdData?.runtext || [];
   const runtext =
-    runtextOpts.find((r) => r.active && r.a === "Display Attendance")?.name ??
+    runtextOpts.find(
+      (r) => r.active && r.targetDisplay === "Display Attendance"
+    )?.name ??
     runtextOpts.find((r) => r.active)?.name ??
     "Rapat P5M setiap pergantian shift di front masing-masing.";
 

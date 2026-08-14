@@ -102,6 +102,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   const [dlgOpen, setDlgOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Display | null>(null);
   const [fName, setFName] = React.useState("");
+  const [fLoc, setFLoc] = React.useState("");
   const [fFleetId, setFFleetId] = React.useState("");
   const [fRuntext, setFRuntext] = React.useState("");
   const [fActive, setFActive] = React.useState(true);
@@ -113,6 +114,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   function openAdd() {
     setEditing(null);
     setFName("");
+    setFLoc("");
     setFFleetId(store.fleets[0]?.id ?? "");
     setFRuntext(runtextOpts[0] ?? "");
     setFActive(true);
@@ -123,6 +125,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   function openEdit(d: Display) {
     setEditing(d);
     setFName(d.name);
+    setFLoc(d.loc);
     setFFleetId(d.fleetId ?? store.fleets[0]?.id ?? "");
     setFRuntext(d.runtext);
     setFActive(d.active);
@@ -133,7 +136,7 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const fleet = store.fleets.find((f) => f.id === fFleetId);
-    if (kind === "fleet" ? !fleet : !fName.trim()) {
+    if ((kind === "fleet" ? !fleet : !fName.trim()) || !fLoc.trim()) {
       setNameErr(true);
       return;
     }
@@ -142,12 +145,19 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
         ? {
             name: `Fleet ${fleet!.digger}`,
             fleetId: fleet!.id,
+            loc: fLoc.trim(),
             runtext: fRuntext,
             active: fActive,
           }
-        : { name: fName.trim(), runtext: fRuntext, active: fActive };
+        : {
+            name: fName.trim(),
+            loc: fLoc.trim(),
+            runtext: fRuntext,
+            active: fActive,
+          };
     const apiData = {
       name: data.name,
+      loc: data.loc,
       runtext: data.runtext,
       active: data.active,
       content: kind,
@@ -173,7 +183,21 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
       pushToast("success", t.dspToastEdit);
     } else {
       try {
-        await settingsApi.createDisplay(apiData);
+        const created = await settingsApi.createDisplay(apiData);
+        setRows((prev) => [
+          ...prev,
+          {
+            id: String(created.id),
+            name: created.name,
+            loc: created.loc || fLoc.trim(),
+            content: kind,
+            fleetId: created.fleetId ? String(created.fleetId) : undefined,
+            runtext: created.runtext,
+            online: !!created.online,
+            hb: created.hb || "",
+            active: created.active,
+          },
+        ]);
       } catch {
         pushToast("error", t.dspToastAdd, t.dspToastAdd);
         return;
@@ -377,6 +401,23 @@ export function DisplayAdmin({ kind }: { kind: "att" | "fleet" }) {
                 />
               </Field>
             )}
+            <Field
+              label="Lokasi"
+              htmlFor="dsp-loc"
+              required
+              error={nameErr && !fLoc.trim()}
+              errorMessage="Lokasi display wajib diisi."
+            >
+              <Input
+                id="dsp-loc"
+                placeholder="Gate Utara"
+                value={fLoc}
+                onChange={(e) => {
+                  setFLoc(e.target.value);
+                  if (e.target.value.trim()) setNameErr(false);
+                }}
+              />
+            </Field>
             <Field
               label={t.dspRuntext}
               htmlFor="dsp-runtext"

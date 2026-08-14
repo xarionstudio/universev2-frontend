@@ -16,7 +16,9 @@ export type FaUnit = {
 export type FaOp = Employee & { ftw: FtwStatus };
 
 export function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  // WITA (UTC+8) date — avoid "yesterday" bug at 00:00–07:59 local time
+  const wita = new Date(Date.now() + 8 * 3600000);
+  return wita.toISOString().slice(0, 10);
 }
 
 /* Kompetensi yang cocok utk Type EGI unit — SIMPER masih berlaku */

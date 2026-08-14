@@ -36,8 +36,6 @@ export const ftwApi = {
       method: "GET",
       params: {
         nik: params?.nik,
-        from: params?.from,
-        to: params?.to,
         date_from: params?.from,
         date_to: params?.to,
       },

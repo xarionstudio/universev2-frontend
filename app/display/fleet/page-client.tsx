@@ -36,19 +36,20 @@ export default function DisplayFleetPage() {
     []
   );
   const runtext =
-    mdData.runtext.find((r) => r.active && r.a === "Display Fleet")?.name ??
+    mdData.runtext.find((r) => r.active && r.targetDisplay === "Display Fleet")
+      ?.name ??
     mdData.runtext.find((r) => r.active)?.name ??
     "Wajib P2H sebelum mengoperasikan unit.";
 
   React.useEffect(() => {
     displayApi
-      .getDisplayFleet()
+      .getDisplayFleet({ fleetId: fleetId || undefined })
       .then((res) => {
         if (res && Array.isArray(res))
           setApiFleets(res as Record<string, unknown>[]);
       })
       .catch(() => {});
-  }, []);
+  }, [fleetId]);
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */
   const fleetApi =

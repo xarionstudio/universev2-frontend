@@ -200,8 +200,8 @@ export default function FleetSettingPage() {
       }
     } else {
       try {
-        await fleetApi.createFleetSetting(data);
-        setFleets((prev) => [...prev, { id: `fl-${Date.now()}`, ...data }]);
+        const created = await fleetApi.createFleetSetting(data);
+        setFleets((prev) => [...prev, { id: String(created.id), ...data }]);
         pushToast("success", t.flToastAdd, digger);
       } catch (err: unknown) {
         const msg =

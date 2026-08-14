@@ -16,7 +16,7 @@ export default function DisplayAttendancePage() {
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
   const runtext =
     (mdData?.runtext || []).find(
-      (r) => r.active && r.a === "Display Attendance"
+      (r) => r.active && r.targetDisplay === "Display Attendance"
     )?.name ??
     (mdData?.runtext || []).find((r) => r.active)?.name ??
     "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.";

@@ -4,9 +4,19 @@ export type MdEntry = {
   id: string;
   code: string;
   name: string;
-  a: string;
-  b: string;
   active: boolean;
+  // Field spesifik per kategori (opsional, sesuai kolom database)
+  description?: string; // eqclass → master_eq_classes.description
+  category?: string; // area → master_areas.category
+  location?: string; // tempudo → master_tempudo.location
+  pickupType?: string; // tempudo → master_tempudo.pickup_type
+  egiType?: string; // bus → master_buses.egi_type
+  departureTime?: string; // bus → master_buses.departure_time
+  busCode?: string; // lokasiex → master_locations_ex.bus_code
+  tempudoCode?: string; // lokasiex → master_locations_ex.tempudo_code
+  block?: string; // mess → master_mess.block
+  targetDisplay?: string; // runtext → master_running_texts.target_display
+  textColor?: string; // runtext → master_running_texts.text_color
 };
 
 export type MdCat =

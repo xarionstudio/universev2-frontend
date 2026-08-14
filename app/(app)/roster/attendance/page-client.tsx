@@ -10,6 +10,7 @@ import type { AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
 import { reportFileName } from "@/lib/report/logo";
 import { downloadXlsx } from "@/lib/report/xlsx";
+import { todayIso } from "@/lib/time";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,7 @@ function AttendanceInner() {
   const { pushToast } = useToast();
   const searchParams = useSearchParams();
 
-  const initialDate =
-    searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const initialDate = searchParams.get("date") || todayIso();
   const [from, setFrom] = React.useState(initialDate);
   const [to, setTo] = React.useState(initialDate);
   const [status, setStatus] = React.useState("");

@@ -141,7 +141,7 @@ export default function EmployeesPage() {
   async function exportNow() {
     try {
       const blob = await employeesApi.export("xlsx");
-      const name = `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const name = `karyawan_${new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)}.xlsx`;
       downloadBlob(blob, name);
       pushToast("success", t.toastExportT, name);
     } catch {

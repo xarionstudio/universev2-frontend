@@ -83,7 +83,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     () =>
       (mdData?.mess || [])
         .filter((r) => r.active)
-        .map((r) => (r.a ? `${r.name} — ${r.a}` : r.name)),
+        .map((r) => (r.block ? `${r.name} — ${r.block}` : r.name)),
     [mdData?.mess]
   );
   const [dzLabel, setDzLabel] = React.useState<string | null>(null);
@@ -175,19 +175,25 @@ export function EmployeeForm({ nik }: { nik?: string }) {
       medis: f.medis,
       mess: f.mess,
       kamar: f.kamar,
+      status: record?.status ?? "aktif",
+      simper: record?.simper ?? "",
+      simperExp: record?.simperExp ?? "",
+      blood: record?.blood ?? "",
+      bpjs: record?.bpjs ?? "",
+      hp: record?.hp ?? "",
+      emg: record?.emg ?? "",
+      foto: record?.foto ?? "",
     };
     (async () => {
       try {
         if (nik) {
-          await employeesApi.update(nikVal, payload);
+          await employeesApi.update(nik, payload);
         } else {
           await employeesApi.create(payload);
         }
         // Save competencies via dedicated API
         const validKomp = kompRows.filter((k) => k.cls && k.simper);
-        if (validKomp.length > 0) {
-          await employeesApi.updateCompetencies(nikVal, validKomp);
-        }
+        await employeesApi.updateCompetencies(nikVal, validKomp);
         // Upload employee photo via dedicated API (bila ada foto dipilih)
         if (photoRef.current) {
           try {
@@ -201,13 +207,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
         // Only update local state and show success after API succeeds
         saveEmployee(nik ?? null, {
           ...payload,
-          status: "aktif" as const,
-          simper: "",
-          simperExp: "",
-          blood: "",
-          bpjs: "",
-          hp: "",
-          emg: "",
+          status: payload.status as Employee["status"],
           komp: kompRows.filter((k) => k.cls),
         });
         if (nik) pushToast("success", t.toastSaveT, `${name} ${t.toastSaveD}`);

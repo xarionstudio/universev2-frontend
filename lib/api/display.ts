@@ -3,7 +3,21 @@
  * ────────────────────────────────────────────────────────────────────────── */
 
 import { apiFetch } from "./client";
-import type { AttendanceRow, FTWRecord, Unit } from "./types";
+import type { AttendanceRow, FTWRecord } from "./types";
+
+export type DisplayFleet = {
+  id: string;
+  digger: string;
+  loc: string;
+  bus: string;
+  units: Array<{
+    code: string;
+    opName: string;
+    opNik: string;
+    tone: "success" | "danger" | "neutral" | "warning" | "info";
+    label: string;
+  }>;
+};
 
 export const displayApi = {
   /** Fetch display attendance TV data */
@@ -21,9 +35,14 @@ export const displayApi = {
   },
 
   /** Fetch display fleet TV data */
-  async getDisplayFleet(): Promise<Unit[]> {
-    return apiFetch<Unit[]>("/display/fleet", {
+  async getDisplayFleet(params?: {
+    fleetId?: string;
+    shift?: string;
+    date?: string;
+  }): Promise<DisplayFleet[]> {
+    return apiFetch<DisplayFleet[]>("/display/fleet", {
       method: "GET",
+      params,
     });
   },
 

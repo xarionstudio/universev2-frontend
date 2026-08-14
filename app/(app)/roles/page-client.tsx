@@ -210,7 +210,7 @@ export default function RolesPage() {
         [r.name, r.desc, ...umModules.map((m) => r.perms[m])].join(";")
       )
       .join("\n");
-    const name = `roles_${new Date().toISOString().slice(0, 10)}.csv`;
+    const name = `roles_${new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)}.csv`;
     downloadCsv(name, `${head}\n${body}`);
     pushToast("success", t.umToastExp, name);
   }

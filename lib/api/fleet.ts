@@ -47,10 +47,13 @@ export const fleetApi = {
   },
 
   /** Fetch allocations map */
-  async getAllocations(dates?: string[]): Promise<FleetAllocResponse> {
+  async getAllocations(
+    date?: string,
+    shift?: string
+  ): Promise<FleetAllocResponse> {
     return apiFetch<FleetAllocResponse>("/fleet/allocations", {
       method: "GET",
-      params: { dates: dates?.join(",") },
+      params: { date, shift },
     });
   },
 
@@ -100,7 +103,7 @@ export const fleetApi = {
   /** Report breakdown for a unit */
   async reportBreakdown(
     code: string,
-    payload: { what: string; why: string; loc?: string }
+    payload: { reason: string }
   ): Promise<Unit> {
     return apiFetch<Unit>(`/units/${code}/status-report`, {
       method: "POST",

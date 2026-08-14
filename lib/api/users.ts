@@ -18,7 +18,7 @@ export const usersApi = {
   /** Create new user */
   async create(data: {
     email: string;
-    kar: string;
+    name: string;
     nik?: string;
     roles?: string[];
     password?: string;
@@ -44,7 +44,7 @@ export const usersApi = {
   async toggleStatus(id: number, on: boolean): Promise<ApiUser> {
     return apiFetch<ApiUser>(`/users/${id}/status`, {
       method: "PATCH",
-      body: { on },
+      body: { active: on },
     });
   },
 

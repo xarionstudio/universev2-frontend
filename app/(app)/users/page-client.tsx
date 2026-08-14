@@ -83,6 +83,8 @@ export default function UsersPage() {
   const [fKar, setFKar] = React.useState("");
   const [fRoles, setFRoles] = React.useState<Record<string, boolean>>({});
   const [fActive, setFActive] = React.useState(true);
+  const [fPassword, setFPassword] = React.useState("");
+  const [fPasswordConf, setFPasswordConf] = React.useState("");
   const [err, setErr] = React.useState(false);
 
   /* dialog nonaktifkan */
@@ -155,6 +157,8 @@ export default function UsersPage() {
     setFKar("");
     setFRoles({});
     setFActive(true);
+    setFPassword("");
+    setFPasswordConf("");
     setErr(false);
     setDlgOpen(true);
   }
@@ -165,6 +169,8 @@ export default function UsersPage() {
     setFKar(u.kar ? `${u.kar} — ${u.nik}` : "");
     setFRoles(Object.fromEntries(u.roles.map((r) => [r, true])));
     setFActive(u.on);
+    setFPassword("");
+    setFPasswordConf("");
     setErr(false);
     setDlgOpen(true);
   }
@@ -173,12 +179,17 @@ export default function UsersPage() {
     e.preventDefault();
     const roles = Object.keys(fRoles).filter((r) => fRoles[r]);
     const email = fEmail.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || roles.length === 0) {
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      roles.length === 0 ||
+      (!editing &&
+        (passwordIssues(fPassword).length > 0 || fPassword !== fPasswordConf))
+    ) {
       setErr(true);
       return;
     }
     const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
-    const data = { email, kar: kar || "", nik: nik || "", roles, on: fActive };
+    const data = { email, name: kar || "", nik: nik || "", roles };
     if (editing) {
       const blocked = guard(editing, roles, fActive);
       if (blocked) {
@@ -192,6 +203,9 @@ export default function UsersPage() {
           return;
         }
         await usersApi.update(numId, data);
+        if (editing.on !== fActive) {
+          await usersApi.toggleStatus(numId, fActive);
+        }
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Failed to update user";
@@ -199,16 +213,28 @@ export default function UsersPage() {
         return;
       }
       setUmUsers((prev) =>
-        prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
+        prev.map((u) =>
+          u.id === editing.id
+            ? {
+                ...u,
+                email: data.email,
+                kar: data.name,
+                nik: data.nik,
+                roles: data.roles,
+                on: fActive,
+              }
+            : u
+        )
       );
       pushToast("success", t.umToastUserEdit, email);
     } else {
       try {
         const newUser = await usersApi.create({
           email,
-          kar: kar || email.split("@")[0],
+          name: kar || email.split("@")[0],
           nik: nik || undefined,
           roles,
+          password: fPassword,
         });
         if (!newUser) throw new Error("No response from server");
         setUmUsers((prev) => [
@@ -662,6 +688,38 @@ export default function UsersPage() {
               ))}
             </div>
           </Field>
+          {!editing ? (
+            <>
+              <Field
+                className="mt-4"
+                label={t.umPwNew}
+                htmlFor="um-create-pw"
+                required
+              >
+                <PasswordInput
+                  id="um-create-pw"
+                  value={fPassword}
+                  onChange={setFPassword}
+                  autoComplete="new-password"
+                  toggleLabel={t.umPwShow}
+                />
+              </Field>
+              <Field
+                className="mt-4"
+                label={t.umPwConf}
+                htmlFor="um-create-pw-conf"
+                required
+              >
+                <PasswordInput
+                  id="um-create-pw-conf"
+                  value={fPasswordConf}
+                  onChange={setFPasswordConf}
+                  autoComplete="new-password"
+                  toggleLabel={t.umPwShow}
+                />
+              </Field>
+            </>
+          ) : null}
           <ToggleRow className="mt-4" htmlFor="um-active">
             <Checkbox
               id="um-active"

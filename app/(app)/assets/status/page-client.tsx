@@ -153,21 +153,12 @@ export default function UnitStatusPage() {
     const kind = newSt.toLowerCase() as UnitStatus;
     const why = reason.trim();
     try {
-      await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
-      // Apabila status baru adalah breakdown, laporkan juga lewat endpoint
-      // status-report agar tercatat sebagai breakdown report (bukan hanya
-      // ubah status biasa).
       if (kind === "breakdown") {
-        try {
-          await fleetApi.reportBreakdown(dlgUnit.code, {
-            what: newSt,
-            why,
-            loc: dlgUnit.loc,
-          });
-        } catch {
-          // Kegagalan report tidak menggagalkan ubah status — sudah tercatat
-          // via updateUnitStatus di atas.
-        }
+        // This endpoint both changes the status and writes its mandatory
+        // breakdown history entry, so do not create a duplicate generic one.
+        await fleetApi.reportBreakdown(dlgUnit.code, { reason: why });
+      } else {
+        await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
       }
       const now = new Date();
       const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;

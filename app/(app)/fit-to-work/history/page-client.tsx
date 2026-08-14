@@ -11,6 +11,7 @@ import {
   type FtwStatus,
 } from "@/lib/data/ftw";
 import { useI18n } from "@/lib/i18n";
+import { todayIso } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
@@ -121,23 +122,21 @@ function WindowPagination({
 }
 
 function FtwHistoryInner() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { empAll } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const now = new Date();
-  const todayIso = now.toISOString().slice(0, 10);
-  const startIso = new Date(now.getTime() - 90 * 86400000)
-    .toISOString()
-    .slice(0, 10);
 
   const [fhOp, setFhOp] = React.useState(searchParams.get("nik") ?? "");
   const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
   const [shift, setShift] = React.useState("");
-  const [d1, setD1] = React.useState(startIso);
-  const [d2, setD2] = React.useState(todayIso);
+  const [d1, setD1] = React.useState(() =>
+    new Date(Date.now() - 90 * 86400000 + 8 * 3600000)
+      .toISOString()
+      .slice(0, 10)
+  );
+  const [d2, setD2] = React.useState(() => todayIso());
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
   const [apiHist, setApiHist] = React.useState<Record<string, unknown>[]>([]);
@@ -152,18 +151,27 @@ function FtwHistoryInner() {
       .catch(() => {});
   }, [fhOp, d1, d2]);
 
-  const ops: FtwRecord[] = apiHist.map((h) => ({
-    nik: String(h.nik || ""),
-    name: String(h.name || h.nik || ""),
-    shift: (h.shift || "pagi") as FtwRecord["shift"],
-    st: (h.status || "belum") as StKey,
-    dept: String(h.dept || "Operation"),
-    sleep: h.sleepHours ? `${h.sleepHours} jam` : "—",
-    sleepMin: Number(h.sleepMin || 0),
-    restHours: Number(h.restHours || 0),
-    sendTime: String(h.sendTime || "—"),
-    hist: [],
-  }));
+  const ops: FtwRecord[] = Array.from(
+    new Map(
+      apiHist.map((h) => {
+        const nik = String(h.nik || "");
+        return [
+          nik,
+          {
+            nik,
+            name: String(h.name || nik),
+            shift: (h.shift || "pagi") as FtwRecord["shift"],
+            st: (h.status || h.st || "belum") as StKey,
+            dept: String(h.dept || "Operation"),
+            sleep: String(h.sleep || "—"),
+            sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
+            restHours: Number(h.restHours || 0),
+            hist: [],
+          } satisfies FtwRecord,
+        ];
+      })
+    ).values()
+  );
   const selectedOp = ops.find((o) => o.nik === fhOp);
 
   const stBadge = (key: StKey) => {
@@ -199,7 +207,7 @@ function FtwHistoryInner() {
       .filter((h) => String(h.nik || "") === op.nik)
       .map((h) => ({
         d: Number(h.d ?? 0),
-        iso: String(h.iso || ""),
+        iso: String(h.iso || h.date || ""),
         date: String(h.date || ""),
         st: Number(h.st ?? 0),
         sleepMin: h.sleepMin != null ? Number(h.sleepMin) : null,
@@ -358,7 +366,7 @@ function FtwHistoryInner() {
               aria-label={t.allShift}
             >
               <option value="">{t.allShift}</option>
-              <option value="siang">{t.shiftDay}</option>
+              <option value="pagi">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
             <div className="flex items-center gap-2">

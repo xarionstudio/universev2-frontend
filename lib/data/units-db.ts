@@ -8,6 +8,7 @@ export type UnitDb = {
   cls: string;
   egi: string;
   product: string;
+  area: string;
   active: boolean;
   standby: boolean;
   breakdown: boolean;

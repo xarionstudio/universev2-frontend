@@ -55,7 +55,9 @@ type Entry = {
 };
 
 function yesterdayISO() {
-  return new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  // WITA (UTC+8) kemarin — avoid UTC-date bug
+  const wita = new Date(Date.now() + 8 * 3600000 - 86400000);
+  return wita.toISOString().slice(0, 10);
 }
 
 export default function RosterRevisionNewPage() {
@@ -149,8 +151,11 @@ export default function RosterRevisionNewPage() {
           nik: e.nik,
           name: e.name,
           sid,
-          code: e.kode,
-          reason: e.alasan,
+          whatId: e.kode,
+          whatEn: e.kode,
+          whenId: e.jam || e.alasan,
+          whenEn: e.jam || e.alasan,
+          targetDate: e.tgl,
           status: "pending",
         }))
       );
@@ -160,6 +165,7 @@ export default function RosterRevisionNewPage() {
       if (fresh && Array.isArray(fresh)) {
         setApRows(
           fresh.map((rev) => ({
+            id: rev.id,
             sid: String(rev.sid || ""),
             name: String(rev.name || rev.nik || ""),
             nik: String(rev.nik || ""),

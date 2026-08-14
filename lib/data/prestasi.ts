@@ -1,7 +1,7 @@
 import type { FtwStatus } from "@/lib/data/ftw";
 /* ---------- Dynamic business rules (from backend) ---------- */
 
-import { usePrestasiPoints } from "@/components/providers/business-rules";
+import { todayIso as todayIsoWita } from "@/lib/time";
 
 /* Prestasi — utilitas poin & format untuk halaman leaderboard.
 
@@ -53,7 +53,7 @@ export function isoAdd(iso: string, days: number): string {
 }
 
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayIsoWita();
 }
 
 /* ---------- Kode roster ---------- */

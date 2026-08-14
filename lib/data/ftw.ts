@@ -1,10 +1,8 @@
 import { ftwApi } from "@/lib/api/ftw";
-import type { Lang } from "@/lib/i18n";
+
 // 4 jam 00 menit
 
 /* ---------- Dynamic business rules (from backend) ---------- */
-
-import { useFtwThresholds } from "@/components/providers/business-rules";
 
 /* Fit to work (log tidur).
 
@@ -83,7 +81,7 @@ export type FtwRecord = {
   name: string;
   nik: string;
   dept: string;
-  shift: "siang" | "malam";
+  shift: "pagi" | "malam";
   /* menit tidur — sumber angka; `sleep` hanya turunan tampilannya */
   sleepMin: number | null;
   sleep: string;

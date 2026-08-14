@@ -48,10 +48,24 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-type ColKey = "name" | "a" | "b";
-type SortKey = ColKey | "active";
+/** Field keys yang valid per kategori master (sesuai kolom database) */
+type FieldKey =
+  | "name"
+  | "description"
+  | "category"
+  | "location"
+  | "pickupType"
+  | "egiType"
+  | "departureTime"
+  | "busCode"
+  | "tempudoCode"
+  | "block"
+  | "targetDisplay"
+  | "textColor";
+
+type SortKey = FieldKey | "active";
 type ColDef = {
-  key: ColKey;
+  key: FieldKey;
   label: string;
   kind?: "text" | "time" | "select" | "color" | "readonly";
   opts?: string[];
@@ -64,6 +78,35 @@ const colorVal: Record<string, string> = {
   Putih: "#FFFFFF",
   Merah: "#FC3C3B",
 };
+
+/** Ambil nilai field dari MdEntry (dengan fallback "") */
+function getField(entry: MdEntry, key: FieldKey): string {
+  const v = entry[key];
+  return typeof v === "string" ? v : "";
+}
+
+/** Ambil daftar field yang dipakai untuk kategori tertentu */
+function fieldsForCat(cat: MdCat): FieldKey[] {
+  switch (cat) {
+    case "egi":
+    case "product":
+      return ["name"];
+    case "eqclass":
+      return ["name", "description"];
+    case "area":
+      return ["name", "category"];
+    case "tempudo":
+      return ["name", "location", "pickupType"];
+    case "bus":
+      return ["name", "egiType", "departureTime"];
+    case "lokasiex":
+      return ["name", "busCode", "tempudoCode"];
+    case "mess":
+      return ["name", "block"];
+    case "runtext":
+      return ["name", "targetDisplay", "textColor"];
+  }
+}
 
 export default function MasterDataPage() {
   const params = useParams<{ cat: string }>();
@@ -83,9 +126,7 @@ export default function MasterDataPage() {
   /* dialog tambah/edit */
   const [dlgOpen, setDlgOpen] = React.useState(false);
   const [editId, setEditId] = React.useState<string | null>(null);
-  const [fName, setFName] = React.useState("");
-  const [fA, setFA] = React.useState("");
-  const [fB, setFB] = React.useState("");
+  const [fValues, setFValues] = React.useState<Record<string, string>>({});
   const [fActive, setFActive] = React.useState(true);
   const [errName, setErrName] = React.useState(false);
 
@@ -96,6 +137,7 @@ export default function MasterDataPage() {
 
   const en = lang === "en";
   const catLabel = mdCatLabels[cat][lang];
+  const fields = fieldsForCat(cat);
 
   /* opsi dropdown dari Database Unit via API (bukan hardcoded):
      bus ← Database Unit class BUS; lokasi excavator ← digger + master bus/tempudo */
@@ -137,14 +179,22 @@ export default function MasterDataPage() {
   const runtextTargets = React.useMemo(
     () =>
       Array.from(
-        new Set((mdData?.runtext || []).map((r) => r.a).filter(Boolean))
+        new Set(
+          (mdData?.runtext || [])
+            .map((r) => r.targetDisplay)
+            .filter((v): v is string => Boolean(v))
+        )
       ).sort(),
     [mdData?.runtext]
   );
   const runtextColors = React.useMemo(
     () =>
       Array.from(
-        new Set((mdData?.runtext || []).map((r) => r.b).filter(Boolean))
+        new Set(
+          (mdData?.runtext || [])
+            .map((r) => r.textColor)
+            .filter((v): v is string => Boolean(v))
+        )
       ).sort(),
     [mdData?.runtext]
   );
@@ -157,18 +207,18 @@ export default function MasterDataPage() {
       case "eqclass":
         return [
           { key: "name", label: "Kode" },
-          { key: "a", label: t.mdDesc },
+          { key: "description", label: t.mdDesc },
         ];
       case "area":
         return [
           { key: "name", label: t.mdNama },
-          { key: "a", label: t.thCat },
+          { key: "category", label: t.thCat },
         ];
       case "tempudo":
         return [
           { key: "name", label: "Kode" },
-          { key: "a", label: t.thLoc },
-          { key: "b", label: t.thType },
+          { key: "location", label: t.thLoc },
+          { key: "pickupType", label: t.thType },
         ];
       case "bus":
         return [
@@ -182,14 +232,14 @@ export default function MasterDataPage() {
               : "Dari Database Unit (class BUS) — bus yang sudah terdaftar tidak muncul.",
           },
           {
-            key: "a",
+            key: "egiType",
             label: en ? "Type" : "Tipe",
             kind: "readonly",
             help: en
               ? "Auto-filled from the selected unit."
               : "Terisi otomatis dari unit yang dipilih.",
           },
-          { key: "b", label: t.mdJam, kind: "time" },
+          { key: "departureTime", label: t.mdJam, kind: "time" },
         ];
       case "lokasiex":
         return [
@@ -202,20 +252,30 @@ export default function MasterDataPage() {
               ? "Big/medium diggers from the Unit Database — mapped ones are hidden."
               : "Big/medium digger dari Database Unit — yang sudah dipetakan tidak muncul.",
           },
-          { key: "a", label: "Bus", kind: "select", opts: busOpts },
-          { key: "b", label: "Tempudo", kind: "select", opts: tempudoOpts },
+          { key: "busCode", label: "Bus", kind: "select", opts: busOpts },
+          {
+            key: "tempudoCode",
+            label: "Tempudo",
+            kind: "select",
+            opts: tempudoOpts,
+          },
         ];
       case "mess":
         return [
           { key: "name", label: t.mdNama },
-          { key: "a", label: en ? "Block" : "Blok" },
+          { key: "block", label: en ? "Block" : "Blok" },
         ];
       case "runtext":
         return [
           { key: "name", label: en ? "Text" : "Teks" },
-          { key: "a", label: "Target", kind: "select", opts: runtextTargets },
           {
-            key: "b",
+            key: "targetDisplay",
+            label: "Target",
+            kind: "select",
+            opts: runtextTargets,
+          },
+          {
+            key: "textColor",
             label: en ? "Color" : "Warna",
             kind: "color",
             opts: runtextColors,
@@ -240,18 +300,16 @@ export default function MasterDataPage() {
     if (stF === "1" && !r.active) return false;
     if (stF === "0" && r.active) return false;
     if (!needle) return true;
-    return (
-      r.name.toLowerCase().includes(needle) ||
-      r.a.toLowerCase().includes(needle) ||
-      r.b.toLowerCase().includes(needle)
-    );
+    return fields.some((f) => getField(r, f).toLowerCase().includes(needle));
   });
 
   const sorted = sort
     ? [...filtered].sort((x, y) => {
         if (sort.key === "active")
           return (Number(x.active) - Number(y.active)) * sort.dir;
-        return x[sort.key].localeCompare(y[sort.key]) * sort.dir;
+        return (
+          getField(x, sort.key).localeCompare(getField(y, sort.key)) * sort.dir
+        );
       })
     : filtered;
 
@@ -275,13 +333,18 @@ export default function MasterDataPage() {
     setEditId(null);
     const nameCol = cols.find((c) => c.key === "name");
     const name = nameCol?.kind === "select" ? (nameCol.opts?.[0] ?? "") : "";
-    setFName(name);
-    setFA(
-      cat === "bus"
-        ? busTypeOf(name)
-        : (cols.find((c) => c.key === "a")?.opts?.[0] ?? "")
-    );
-    setFB(cols.find((c) => c.key === "b")?.opts?.[0] ?? "");
+    const vals: Record<string, string> = { name };
+    for (const c of cols) {
+      if (c.key === "name") continue;
+      if (c.kind === "select" || c.kind === "color") {
+        vals[c.key] = c.opts?.[0] ?? "";
+      } else if (c.kind === "readonly" && cat === "bus") {
+        vals[c.key] = busTypeOf(name);
+      } else {
+        vals[c.key] = "";
+      }
+    }
+    setFValues(vals);
     setFActive(true);
     setErrName(false);
     setDlgOpen(true);
@@ -289,9 +352,11 @@ export default function MasterDataPage() {
 
   function openEdit(r: MdEntry) {
     setEditId(r.id);
-    setFName(r.name);
-    setFA(r.a);
-    setFB(r.b);
+    const vals: Record<string, string> = {};
+    for (const c of cols) {
+      vals[c.key] = getField(r, c.key);
+    }
+    setFValues(vals);
     setFActive(r.active);
     setErrName(false);
     setDlgOpen(true);
@@ -299,19 +364,24 @@ export default function MasterDataPage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const name = fName.trim();
+    const name = (fValues.name || "").trim();
     if (!name) {
       setErrName(true);
       return;
     }
-    const data = { name, a: fA, b: fB, active: fActive };
+    // Build payload dengan field spesifik per kategori
+    const payload: Record<string, unknown> = { name, active: fActive };
+    for (const c of cols) {
+      if (c.key === "name") continue;
+      payload[c.key] = fValues[c.key] || "";
+    }
     const editingEntry = editId
       ? (mdData?.[cat] || []).find((r) => r.id === editId)
       : undefined;
     const code = editingEntry?.code ?? name;
     if (editId) {
       try {
-        await masterApi.update(cat, code, data);
+        await masterApi.update(cat, code, payload);
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Failed to update master entry";
@@ -320,7 +390,14 @@ export default function MasterDataPage() {
       }
     } else {
       try {
-        await masterApi.create(cat, data);
+        const created = await masterApi.create(cat, payload);
+        setMdData((prev) => ({
+          ...prev,
+          [cat]: [
+            ...(prev[cat] || []),
+            { ...created, id: String(created.id) } as unknown as MdEntry,
+          ],
+        }));
       } catch (err: unknown) {
         const msg =
           err instanceof Error ? err.message : "Failed to create master entry";
@@ -328,14 +405,14 @@ export default function MasterDataPage() {
         return;
       }
     }
-    setMdData((prev) => ({
-      ...prev,
-      [cat]: editId
-        ? (prev[cat] || []).map((r) =>
-            r.id === editId ? { ...r, ...data } : r
-          )
-        : [...(prev[cat] || []), { id: `${cat}-${Date.now()}`, code, ...data }],
-    }));
+    if (editId) {
+      setMdData((prev) => ({
+        ...prev,
+        [cat]: (prev[cat] || []).map((r) =>
+          r.id === editId ? { ...r, ...payload } : r
+        ),
+      }));
+    }
     setDlgOpen(false);
     pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
   }
@@ -359,16 +436,15 @@ export default function MasterDataPage() {
     pushToast("success", t.mdDelToastT, delTarget.name);
   }
 
-  function fieldValue(key: ColKey) {
-    return key === "name" ? fName : key === "a" ? fA : fB;
+  function fieldValue(key: FieldKey) {
+    return fValues[key] || "";
   }
-  function setFieldValue(key: ColKey, v: string) {
-    if (key === "name") {
-      setFName(v);
-      /* tipe bus mengikuti unit yang dipilih — bukan input manual */
-      if (cat === "bus") setFA(busTypeOf(v));
-    } else if (key === "a") setFA(v);
-    else setFB(v);
+  function setFieldValue(key: FieldKey, v: string) {
+    setFValues((prev) => ({ ...prev, [key]: v }));
+    /* tipe bus mengikuti unit yang dipilih — bukan input manual */
+    if (cat === "bus" && key === "name") {
+      setFValues((prev) => ({ ...prev, egiType: busTypeOf(v) }));
+    }
   }
 
   return (
@@ -464,15 +540,15 @@ export default function MasterDataPage() {
                         <span className="inline-flex items-center gap-2">
                           <i
                             className="inline-block size-3 rounded"
-                            style={{ background: colorVal[r[c.key]] }}
+                            style={{ background: colorVal[getField(r, c.key)] }}
                           />
-                          {r[c.key]}
+                          {getField(r, c.key)}
                         </span>
                       ) : c.key === "name" ? (
                         <span className="font-semibold">{r.name}</span>
                       ) : (
                         <span className="text-(--text-secondary)">
-                          {r[c.key]}
+                          {getField(r, c.key)}
                         </span>
                       )}
                     </TableCell>

@@ -142,7 +142,23 @@ export default function UnitDbPage() {
     setErrCode(badCode);
     setErrEgi(badEgi);
     if (badCode || badEgi) return;
-    const data = { code, egi: fEgi, cls: fCls, product: fProd };
+    const existing = editUid ? all.find((u) => u.uid === editUid) : undefined;
+    // The backend's update endpoint replaces all persisted fields. Retain the
+    // values that this compact form does not expose instead of resetting them.
+    const data = {
+      code,
+      egi: fEgi,
+      cls: fCls,
+      product: fProd,
+      cat: existing?.cat ?? "",
+      area: existing?.area ?? "",
+      active: existing?.active ?? true,
+      standby: existing?.standby ?? false,
+      breakdown: existing?.breakdown ?? false,
+      loc: existing?.loc ?? "",
+      upd: existing?.upd ?? "",
+      by: existing?.by ?? "",
+    };
     try {
       if (editUid) {
         await fleetApi.updateUnitDB(code, data);
@@ -210,6 +226,7 @@ export default function UnitDbPage() {
             cls: u.cls || "",
             egi: u.egi || "",
             product: u.product || "",
+            area: u.area || "",
             active: u.active !== false,
             standby: !!u.standby,
             breakdown: !!u.breakdown,
@@ -471,6 +488,7 @@ export default function UnitDbPage() {
                 placeholder="DT-122"
                 value={fCode}
                 onChange={(e) => setFCode(e.target.value)}
+                disabled={Boolean(editUid)}
               />
             </Field>
             <Field

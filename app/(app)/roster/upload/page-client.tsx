@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
 import { Dropzone } from "@/components/ui/dropzone";
+import { Input } from "@/components/ui/input";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/panel";
 import { Progress } from "@/components/ui/progress";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -54,6 +56,11 @@ export default function RosterUploadPage() {
   const [dragging, setDragging] = React.useState(false);
   const [importBusy, setImportBusy] = React.useState(false);
   const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
+  const [upMonth, setUpMonth] = React.useState(() =>
+    // WITA (UTC+8) — avoid "yesterday" bug at 00:00–07:59 local time
+    new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 7)
+  );
+  const [upDept, setUpDept] = React.useState("Operation");
 
   const [validation, setValidation] = React.useState<RosterValidation | null>(
     null
@@ -89,6 +96,9 @@ export default function RosterUploadPage() {
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("month", upMonth);
+      formData.append("dept", upDept);
+      formData.append("label", upMonth);
 
       try {
         const result = await rosterApi.uploadRosterWithProgress(
@@ -107,7 +117,7 @@ export default function RosterUploadPage() {
         setStage("idle");
       }
     },
-    [pushToast]
+    [pushToast, upMonth, upDept]
   );
 
   async function doImport() {
@@ -193,6 +203,29 @@ export default function RosterUploadPage() {
       </PageTitle>
 
       <Panel>
+        <div className="mb-4 flex flex-wrap items-center gap-4">
+          <label className="flex flex-col gap-1 text-xs text-(--text-secondary)">
+            {t.lblMonth}
+            <Input
+              type="month"
+              className="w-44 font-mono"
+              value={upMonth}
+              onChange={(e) => setUpMonth(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-(--text-secondary)">
+            {t.thDept}
+            <Select
+              className="w-44"
+              value={upDept}
+              onChange={(e) => setUpDept(e.target.value)}
+            >
+              <option value="Operation">Operation</option>
+              <option value="Plant">Plant</option>
+              <option value="SDI">SDI</option>
+            </Select>
+          </label>
+        </div>
         <Dropzone
           icon={<Upload />}
           title={t.dzTitle}
