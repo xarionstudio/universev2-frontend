@@ -10,8 +10,13 @@ import { useAppStore } from "@/components/providers/app-store";
 import { DisplayShell } from "../_components/display-shell";
 import { DisplayBadge, DisplayTable } from "../_components/display-table";
 
+/* Kiosk menampilkan data live — polling ringan menggantikan reload manual. */
+const REFRESH_MS = 60_000;
+
 export default function DisplayAttendancePage() {
-  const deviceName = useSearchParams().get("name") ?? undefined;
+  const searchParams = useSearchParams();
+  const deviceName = searchParams.get("name") ?? undefined;
+  const shiftParam = searchParams.get("shift"); // "pagi" | "malam"
   const { mdData } = useAppStore();
   const [apiRows, setApiRows] = React.useState<Record<string, unknown>[]>([]);
   const runtext =
@@ -21,55 +26,81 @@ export default function DisplayAttendancePage() {
     (mdData?.runtext || []).find((r) => r.active)?.name ??
     "Utamakan keselamatan — patuhi batas kecepatan 40 km/jam di jalan hauling.";
 
+  /* shift aktif: dari ?shift= atau jam WITA sekarang (pagi 04–17, malam 18–03) */
+  const activeShift = React.useMemo(() => {
+    if (shiftParam === "pagi" || shiftParam === "malam") return shiftParam;
+    const h = new Date().getHours();
+    return h >= 4 && h < 18 ? "pagi" : "malam";
+  }, [shiftParam]);
+  const shiftTitle = activeShift === "malam" ? "Shift Malam" : "Shift Pagi";
+
+  /* polling otomatis — kiosk menampilkan data live tanpa reload manual */
   React.useEffect(() => {
-    displayApi
-      .getDisplayAttendance()
-      .then((res) => {
-        if (res && Array.isArray(res))
-          setApiRows(res as Record<string, unknown>[]);
-      })
-      .catch(() => {});
+    let alive = true;
+    const load = () => {
+      displayApi
+        .getDisplayAttendance()
+        .then((res) => {
+          if (alive && res && Array.isArray(res))
+            setApiRows(res as Record<string, unknown>[]);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, REFRESH_MS);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
   }, []);
 
-  /* baris + statistik diturunkan dari log absensi API — sinkron dengan admin */
+  /* baris + statistik diturunkan dari log absensi API — sinkron dengan admin.
+     Baris difilter sesuai shift aktif (kode roster D=pagi / N=malam). */
   const rows = React.useMemo(
     () =>
-      apiRows.map((a) => {
-        const st = String(a.st || a.status || "belum");
-        const label =
-          st === "hadir" || st === "unfit"
-            ? "Hadir"
-            : st === "terlambat"
-              ? "Terlambat"
-              : "Belum absen";
-        const tone =
-          st === "hadir" || st === "unfit"
-            ? "success"
-            : st === "terlambat"
-              ? "warning"
-              : st === "belum"
-                ? "danger"
-                : "neutral";
-        return {
-          nik: String(a.nik || ""),
-          name: String(a.name || a.nik || ""),
-          pos: String(a.pos || "Operator"),
-          dept: String(a.dept || ""),
-          label,
-          variant: (st === "hadir" || st === "unfit"
-            ? "success"
-            : st === "terlambat"
-              ? "warning"
-              : "neutral") as "success" | "warning" | "neutral",
-          tone: tone as "success" | "warning" | "neutral" | "danger",
-        };
-      }),
-    [apiRows]
+      apiRows
+        .filter((a) => {
+          const code = String(a.shift || a.code || "");
+          const rowShift =
+            code === "D" ? "pagi" : code === "N" ? "malam" : null;
+          return rowShift === null || rowShift === activeShift;
+        })
+        .map((a) => {
+          const st = String(a.st || a.status || "belum");
+          const label =
+            st === "hadir" || st === "unfit"
+              ? "Hadir"
+              : st === "terlambat"
+                ? "Terlambat"
+                : "Belum absen";
+          const tone =
+            st === "hadir" || st === "unfit"
+              ? "success"
+              : st === "terlambat"
+                ? "warning"
+                : st === "belum"
+                  ? "danger"
+                  : "neutral";
+          return {
+            nik: String(a.nik || ""),
+            name: String(a.name || a.nik || ""),
+            pos: String(a.pos || "Operator"),
+            dept: String(a.dept || ""),
+            label,
+            variant: (st === "hadir" || st === "unfit"
+              ? "success"
+              : st === "terlambat"
+                ? "warning"
+                : "neutral") as "success" | "warning" | "neutral",
+            tone: tone as "success" | "warning" | "neutral" | "danger",
+          };
+        }),
+    [apiRows, activeShift]
   );
   const n = (label: string) => rows.filter((r) => r.label === label).length;
   return (
     <DisplayShell
-      title="Attendance — Shift Pagi"
+      title={`Attendance — ${shiftTitle}`}
       deviceName={deviceName}
       runtext={runtext}
       stats={[

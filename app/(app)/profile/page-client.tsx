@@ -5,7 +5,6 @@ import { Eye, EyeOff, KeyRound } from "lucide-react";
 
 import { profileApi } from "@/lib/api/profile";
 import { useI18n } from "@/lib/i18n";
-import { hashPassword, newSalt, verifyPassword } from "@/lib/password";
 import { useAppStore } from "@/components/providers/app-store";
 import { usePermissions } from "@/components/providers/permissions";
 import { useSession } from "@/components/providers/session";
@@ -78,32 +77,19 @@ export default function ProfilePage() {
     setErr(e);
     if (Object.values(e).some(Boolean)) return;
 
-    /* Password lama diverifikasi hanya bila memang sudah pernah diatur —
-       akun hasil undangan belum punya, jadi tidak ada yang bisa dicocokkan. */
-    let cred: Partial<typeof me> = {};
-    if (wantPw) {
-      if (me.pwHash && me.pwSalt) {
-        const ok = await verifyPassword(pwCur, me.pwSalt, me.pwHash);
-        if (!ok) {
-          setErr((p) => ({ ...p, cur: true }));
-          return;
-        }
-      }
-      const salt = newSalt();
-      cred = {
-        pwSalt: salt,
-        pwHash: await hashPassword(pwNew, salt),
-        pwAt: new Date().toISOString(),
-      };
-    }
+    /* Validasi & set password dilakukan di backend melalui
+       /profile/password (oldPassword + newPassword + confirmPassword).
+       Tidak ada hashing/verifikasi di sisi klien — hanya backend yang
+       memproses hash password yang sesungguhnya. */
 
     const nextEmail = email.trim();
     try {
       await profileApi.updateProfile({ name: name.trim(), email: nextEmail });
       if (wantPw) {
         await profileApi.updatePassword({
-          currentPassword: pwCur,
+          oldPassword: pwCur,
           newPassword: pwNew,
+          confirmPassword: pwConf,
         });
       }
       setUserName(name.trim());
@@ -111,9 +97,7 @@ export default function ProfilePage() {
       /* sinkron ke daftar akun di User Management */
       setUmUsers((prev) =>
         prev.map((u) =>
-          u.id === me.id
-            ? { ...u, kar: name.trim(), email: nextEmail, ...cred }
-            : u
+          u.id === me.id ? { ...u, kar: name.trim(), email: nextEmail } : u
         )
       );
       /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah

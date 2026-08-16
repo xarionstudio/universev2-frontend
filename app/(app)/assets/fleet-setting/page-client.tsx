@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2, Truck, X } from "lucide-react";
 
 import { fleetApi } from "@/lib/api/fleet";
 import { useFleetConfig, type Fleet } from "@/lib/data/fleet";
+import { isDiggerUnit } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -93,14 +94,7 @@ export default function FleetSettingPage() {
 
   /* digger = big/medium digger dari Database Unit (bukan semua excavator) */
   const diggerOpts = Array.from(
-    new Set(
-      all
-        .filter(
-          (u) =>
-            (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") && u.active
-        )
-        .map((u) => u.code)
-    )
+    new Set(all.filter((u) => isDiggerUnit(u)).map((u) => u.code))
   )
     .filter((code) => !fleets.some((f) => f.digger === code && f.id !== editId))
     .sort();
@@ -361,13 +355,19 @@ export default function FleetSettingPage() {
               required
               error={errDigger}
               errorMessage={t.flErrDigger}
+              helper={diggerOpts.length === 0 ? t.flDiggerHelp : undefined}
             >
               <Select
                 id="fl-digger"
                 value={fDigger}
                 onChange={(e) => setFDigger(e.target.value)}
               >
-                {editId && !diggerOpts.includes(fDigger) ? (
+                {!editId && !diggerOpts.some((c) => c === fDigger) ? (
+                  <option value="" disabled>
+                    {t.flDiggerPh}
+                  </option>
+                ) : null}
+                {editId && fDigger && !diggerOpts.includes(fDigger) ? (
                   <option value={fDigger}>{fDigger}</option>
                 ) : null}
                 {diggerOpts.map((c) => (

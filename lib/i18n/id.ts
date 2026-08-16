@@ -143,7 +143,7 @@ export const id = {
   empDelT1: "Hapus karyawan",
   empDelBody:
     "Data kepegawaian, riwayat absensi, dan log fit to work karyawan ini ikut terhapus. Tindakan tidak bisa dibatalkan.",
-  empDelDo: "Hapus karyawan",
+  empDelDo: "Hapus",
   toastDelT: "Karyawan dihapus",
   toastDelD: "dihapus dari data karyawan.",
   back: "Kembali",
@@ -609,6 +609,9 @@ export const id = {
   flSearchPh: "Cari fleet / digger…",
   flListTitle: "Daftar formasi fleet",
   flErrDigger: "Digger wajib dipilih dan belum memimpin fleet lain.",
+  flDiggerPh: "— Pilih digger —",
+  flDiggerHelp:
+    "Hanya unit kategori BIG/MEDIUM_DIGGER yang belum menjadi digger fleet lain yang ditampilkan.",
   flErrMax: "Maksimal 13 unit dalam satu fleet.",
   flDlgB:
     "Formasi relatif tetap — alokasi operator harian dilakukan di Fleet Allocation.",
@@ -717,6 +720,10 @@ export const id = {
   upDlErrors: "Unduh 5 baris error",
   upImport: "Impor 2.140 baris valid",
   upImporting: "Mengimpor…",
+  upGoData: "Buka Data Roster",
+  toastSavedT: "Roster valid tersimpan",
+  toastSavedD:
+    "Baris valid sudah tersimpan saat unggah; baris error tidak disertakan — perbaiki lalu unggah ulang.",
   toastImportT: "Roster Juli diimpor",
   toastImportD:
     "2.140 baris masuk. 5 baris error menunggu perbaikan — unduh detailnya.",

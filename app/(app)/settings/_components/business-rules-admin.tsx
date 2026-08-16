@@ -7,10 +7,8 @@ import {
   upsertBusinessRule,
   type BusinessRule,
 } from "@/lib/api/settings";
-import { useI18n } from "@/lib/i18n";
 
 export function BusinessRulesAdmin() {
-  const { t } = useI18n();
   const [rules, setRules] = useState<BusinessRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,9 +91,19 @@ export function BusinessRulesAdmin() {
       <div className="grid gap-6">
         {rules.map((rule) => (
           <div key={rule.category} className="rounded-lg border p-6">
-            <h3 className="mb-4 text-lg font-semibold capitalize">
-              {rule.category} Rules
-            </h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold capitalize">
+                {rule.category} Rules
+              </h3>
+              <button
+                type="button"
+                onClick={() => handleSave(rule.category, rule.rules)}
+                disabled={saving || loading}
+                className="rounded border px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
 
             <div className="space-y-4">
               {Object.entries(rule.rules).map(([key, value]) => (
@@ -109,10 +117,17 @@ export function BusinessRulesAdmin() {
                         type="number"
                         value={value}
                         onChange={(e) => {
-                          const newRules = { ...rule.rules };
-                          newRules[key] = parseFloat(e.target.value);
-                          handleSave(rule.category, newRules);
+                          const next = parseFloat(e.target.value);
+                          if (Number.isNaN(next)) return;
+                          setRules((prev) =>
+                            prev.map((r) =>
+                              r.category === rule.category
+                                ? { ...r, rules: { ...r.rules, [key]: next } }
+                                : r
+                            )
+                          );
                         }}
+                        onBlur={() => handleSave(rule.category, rule.rules)}
                         className="w-32 rounded border px-3 py-1"
                         disabled={saving}
                       />

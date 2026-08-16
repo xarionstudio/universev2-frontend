@@ -12,6 +12,7 @@ import {
 
 import { ftwApi } from "@/lib/api/ftw";
 import {
+  fmtSleepMin,
   ftwStripFromEntries,
   normalizeFtwHistFromApi,
   type FtwRecord,
@@ -80,7 +81,7 @@ const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
 };
 
 export default function FitToWorkPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { empAll } = useAppStore();
   const todayIsoStr = todayIso();
 
@@ -165,7 +166,10 @@ export default function FitToWorkPage() {
     shift: (l.shift === "malam" ? "malam" : "pagi") as FtwRecord["shift"],
     st: (l.st || l.status || "belum") as StKey,
     dept: String(l.dept || "Operation"),
-    sleep: l.sleepHours ? `${l.sleepHours} jam` : "—",
+    sleep: String(
+      l.sleep ||
+        (l.sleepMin ? fmtSleepMin(Number(l.sleepMin), lang === "en") : "—")
+    ),
     sleepMin: Number(l.sleepMin || 0),
     restHours: Number(l.restHours || 0),
     sendTime: String(l.sendTime || "—"),
@@ -190,20 +194,35 @@ export default function FitToWorkPage() {
       if (d2 && entry.iso > d2) return false;
       return true;
     });
-    for (const entry of histEntries) {
-      const isToday = entry.d === 0;
-      const key = isToday ? op.st : entry.status;
-      if (st && key !== st) continue;
+    if (histEntries.length > 0) {
+      for (const entry of histEntries) {
+        const isToday = entry.d === 0;
+        const key = isToday ? op.st : entry.status;
+        if (st && key !== st) continue;
+        rows.push({
+          op,
+          company,
+          pos,
+          st: key,
+          restHours: isToday ? op.restHours : entry.restHours,
+          sleep: isToday ? op.sleep : entry.sleep,
+          sendTime: entry.sendTime,
+          date: entry.date,
+          d: entry.d,
+        });
+      }
+    } else {
+      if (st && op.st !== st) continue;
       rows.push({
         op,
         company,
         pos,
-        st: key,
-        restHours: isToday ? op.restHours : entry.restHours,
-        sleep: isToday ? op.sleep : entry.sleep,
-        sendTime: entry.sendTime,
-        date: entry.date,
-        d: entry.d,
+        st: op.st,
+        restHours: op.restHours,
+        sleep: op.sleep,
+        sendTime: op.sendTime || "—",
+        date: d1 || todayIsoStr,
+        d: 0,
       });
     }
   }

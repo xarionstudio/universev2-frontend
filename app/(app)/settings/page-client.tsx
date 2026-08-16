@@ -6,6 +6,7 @@ import { Globe, Image as ImageIcon, Menu, Rows3 } from "lucide-react";
 import { settingsApi } from "@/lib/api/settings";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore, type MenuVis } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import {
   useTheme,
   type ThemePref,
@@ -20,17 +21,28 @@ import { Segmented, SegmentedButton } from "@/components/ui/segmented";
 import { useToast } from "@/components/ui/toast";
 
 import { AudioTab } from "./_components/audio-tab";
+import { BusinessRulesAdmin } from "./_components/business-rules-admin";
+import { FingerprintTab } from "./_components/fingerprint-tab";
 
-type StTab = "app" | "audio" | "menu";
+type StTab = "app" | "audio" | "menu" | "finger" | "rules";
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const { can } = usePermissions();
   const [stTab, setStTab] = React.useState<StTab>("app");
+
+  const manage = can("settings", "manage");
 
   const tabs: { key: StTab; label: string }[] = [
     { key: "app", label: t.stTabApp },
     { key: "audio", label: t.stTabAudio },
     { key: "menu", label: t.stTabMenu },
+    ...(manage
+      ? [
+          { key: "finger" as const, label: "Fingerprint" },
+          { key: "rules" as const, label: "Business Rules" },
+        ]
+      : []),
   ];
 
   return (
@@ -55,9 +67,13 @@ export default function SettingsPage() {
         <AppTab />
       ) : stTab === "audio" ? (
         <AudioTab />
-      ) : (
+      ) : stTab === "menu" ? (
         <MenuTab />
-      )}
+      ) : stTab === "finger" ? (
+        <FingerprintTab />
+      ) : stTab === "rules" ? (
+        <BusinessRulesAdmin />
+      ) : null}
     </div>
   );
 }

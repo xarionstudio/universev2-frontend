@@ -31,15 +31,38 @@ import { Select } from "@/components/ui/select";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
-const POSITIONS: string[] = [];
-const DEPARTMENTS: string[] = [];
-
 const ctaClass =
   "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 export default function RegisterPage() {
   const { t } = useI18n();
-  const { appName } = useAppStore();
+  const { appName, empAll } = useAppStore();
+
+  /* Posisi & departemen diisi dari data karyawan nyata (bukan hard-coded
+     kosong) agar form registrasi bisa di-submit. Tanpa duplikat & diurutkan. */
+  const POSITIONS = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          empAll()
+            .map((e) => e.pos)
+            .filter((p): p is string => !!p)
+        )
+      ).sort(),
+    [empAll]
+  );
+  const DEPARTMENTS = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          empAll()
+            .map((e) => e.dept)
+            .filter((p): p is string => !!p)
+        )
+      ).sort(),
+    [empAll]
+  );
+
   const [state, setState] = React.useState<FormState>("idle");
   const [errs, setErrs] = React.useState<string[]>([]);
 
@@ -59,10 +82,13 @@ export default function RegisterPage() {
     if (!name.trim()) list.push(t.errNama);
     if (!pos) list.push(`${t.regPos} — ${t.regPosPh.toLowerCase()}.`);
     if (!nik.trim()) list.push(`${t.regNik} — ${t.regNikPh.toLowerCase()}.`);
+    else if (!/^\d{9}$/.test(nik.trim())) list.push(t.errNik);
     if (!dept) list.push(`${t.regDept} — ${t.regDeptPh.toLowerCase()}.`);
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) list.push(t.pfErrEmail);
-    if (pw.length < 8)
-      list.push(`${t.pwLabel} — ${t.pfPwErrLen.toLowerCase()}`);
+    if (pw.length < 8 || !/[a-zA-Z]/.test(pw) || !/\d/.test(pw))
+      list.push(
+        `${t.pwLabel} — ${t.pfPwErrLen.toLowerCase()} (harus huruf & angka)`
+      );
     if (conf !== pw) list.push(t.pfPwErrConf);
     setErrs(list);
     if (list.length) return;
@@ -319,17 +345,27 @@ export default function RegisterPage() {
                     <label htmlFor="reg-pos" className="text-sm font-medium">
                       {t.regPos}
                     </label>
-                    <Select
-                      id="reg-pos"
-                      value={pos}
-                      onChange={(e) => setPos(e.target.value)}
-                      className="h-12"
-                    >
-                      <option value="">{t.regPosPh}</option>
-                      {POSITIONS.map((p) => (
-                        <option key={p}>{p}</option>
-                      ))}
-                    </Select>
+                    {empAll().length > 0 ? (
+                      <Select
+                        id="reg-pos"
+                        value={pos}
+                        onChange={(e) => setPos(e.target.value)}
+                        className="h-12"
+                      >
+                        <option value="">{t.regPosPh}</option>
+                        {POSITIONS.map((p) => (
+                          <option key={p}>{p}</option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        id="reg-pos"
+                        value={pos}
+                        onChange={(e) => setPos(e.target.value)}
+                        placeholder={t.regPosPh}
+                        className="h-12"
+                      />
+                    )}
                   </div>
 
                   {/* baris 2 — NIK + departemen */}
@@ -350,17 +386,27 @@ export default function RegisterPage() {
                     <label htmlFor="reg-dept" className="text-sm font-medium">
                       {t.regDept}
                     </label>
-                    <Select
-                      id="reg-dept"
-                      value={dept}
-                      onChange={(e) => setDept(e.target.value)}
-                      className="h-12"
-                    >
-                      <option value="">{t.regDeptPh}</option>
-                      {DEPARTMENTS.map((d) => (
-                        <option key={d}>{d}</option>
-                      ))}
-                    </Select>
+                    {empAll().length > 0 ? (
+                      <Select
+                        id="reg-dept"
+                        value={dept}
+                        onChange={(e) => setDept(e.target.value)}
+                        className="h-12"
+                      >
+                        <option value="">{t.regDeptPh}</option>
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d}>{d}</option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        id="reg-dept"
+                        value={dept}
+                        onChange={(e) => setDept(e.target.value)}
+                        placeholder={t.regDeptPh}
+                        className="h-12"
+                      />
+                    )}
                   </div>
                 </div>
 

@@ -145,7 +145,7 @@ export const en: Dict = {
   empDelT1: "Delete employee",
   empDelBody:
     "This employee's personnel data, attendance history, and fit-to-work logs will also be deleted. This cannot be undone.",
-  empDelDo: "Delete employee",
+  empDelDo: "Delete",
   toastDelT: "Employee deleted",
   toastDelD: "removed from employee data.",
   back: "Back",
@@ -615,6 +615,9 @@ export const en: Dict = {
   flSearchPh: "Search fleet / digger…",
   flListTitle: "Fleet formations",
   flErrDigger: "A digger is required and must not lead another fleet.",
+  flDiggerPh: "— Select digger —",
+  flDiggerHelp:
+    "Only units categorized BIG/MEDIUM_DIGGER that do not lead another fleet are shown.",
   flErrMax: "Maximum 13 units in one fleet.",
   flDlgB:
     "Formations are relatively fixed — daily operator allocation happens in Fleet Allocation.",
@@ -723,6 +726,10 @@ export const en: Dict = {
   upDlErrors: "Download 5 error rows",
   upImport: "Import 2,140 valid rows",
   upImporting: "Importing…",
+  upGoData: "Open Roster Data",
+  toastSavedT: "Valid roster saved",
+  toastSavedD:
+    "Valid rows were saved during upload; error rows were not included — fix them and re-upload.",
   toastImportT: "July roster imported",
   toastImportD:
     "2,140 rows imported. 5 error rows awaiting fixes — download the details.",

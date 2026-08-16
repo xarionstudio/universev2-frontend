@@ -2,7 +2,8 @@
 
 import * as React from "react";
 
-import { fetchAllBusinessRules, type BusinessRule } from "@/lib/api/settings";
+import { fetchAllBusinessRules } from "@/lib/api/settings";
+import { useSession } from "@/components/providers/session";
 
 type BusinessRulesContextValue = {
   rules: Record<string, Record<string, unknown>>;
@@ -42,6 +43,7 @@ export function BusinessRulesProvider({
   >({});
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { user, hydrated } = useSession();
 
   const fetchRules = React.useCallback(async () => {
     setLoading(true);
@@ -61,6 +63,20 @@ export function BusinessRulesProvider({
       setLoading(false);
     }
   }, []);
+
+  /* Muat business rules dari backend saat pengguna terautentikasi.
+     JANGAN memuat untuk halaman publik (login/register/display kiosk):
+     endpoint /settings/business-rules butuh JWT dan apiFetch mengarahkan ke
+     /login bila mendapat 401. setTimeout(0) menunda setState keluar dari body
+     effect (menghindari cascading-render lint react-hooks/set-state-in-effect). */
+  React.useEffect(() => {
+    if (hydrated && user) {
+      const id = window.setTimeout(() => {
+        fetchRules();
+      }, 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [hydrated, user, fetchRules]);
 
   const getRule = React.useCallback(
     (category: string, key: string, fallback: unknown) => {
@@ -105,6 +121,7 @@ export function usePrestasiPoints() {
     ptsStreakStep: (getRule("prestasi", "pts_streak_step", 2) as number) ?? 2,
     ptsStreakCap: (getRule("prestasi", "pts_streak_cap", 10) as number) ?? 10,
     ptsCover: (getRule("prestasi", "pts_cover", 5) as number) ?? 5,
+    ptsPenalty: (getRule("prestasi", "pts_penalty", -15) as number) ?? -15,
     sleepMinGreat:
       (getRule("prestasi", "sleep_min_great", 420) as number) ?? 420,
     periodDays: (getRule("prestasi", "period_days", {

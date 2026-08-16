@@ -11,6 +11,7 @@ import {
   type MdCat,
   type MdEntry,
 } from "@/lib/data/master-data";
+import { isDiggerUnit } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
@@ -155,12 +156,7 @@ export default function MasterDataPage() {
       (mdData?.lokasiex || []).filter((r) => r.id !== editId).map((r) => r.name)
     );
     return allUnits
-      .filter(
-        (u) =>
-          (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") &&
-          u.active &&
-          !used.has(u.code)
-      )
+      .filter((u) => isDiggerUnit(u) && !used.has(u.code))
       .map((u) => u.code);
   }, [mdData?.lokasiex, editId, allUnits]);
   const busOpts = React.useMemo(

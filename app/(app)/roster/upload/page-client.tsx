@@ -124,7 +124,10 @@ export default function RosterUploadPage() {
     if (!uploadedFile) return;
     setImportBusy(true);
     try {
-      pushToast("success", t.toastImportT, t.toastImportD);
+      /* Baris valid sudah tersimpan backend saat unggah; tombol ini hanya
+         meneruskan ke daftar. Impor dua-tahap tidak ada — dijelaskan supaya
+         user tidak mengira tombol ini yang menyimpan data. */
+      pushToast("success", t.toastSavedT, t.toastSavedD);
       router.push("/roster/data");
     } finally {
       setImportBusy(false);
@@ -426,7 +429,7 @@ export default function RosterUploadPage() {
                   </Button>
                   <Button onClick={doImport} disabled={importBusy}>
                     {importBusy ? <Spinner /> : null}
-                    {importBusy ? t.upImporting : t.upImport}
+                    {importBusy ? t.upImporting : t.upGoData}
                   </Button>
                 </div>
               </div>

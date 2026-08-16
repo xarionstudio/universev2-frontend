@@ -500,6 +500,7 @@ export type ProfileUpdateRequest = {
 };
 
 export type PasswordUpdateRequest = {
-  currentPassword: string;
+  oldPassword: string;
   newPassword: string;
+  confirmPassword: string;
 };

@@ -131,3 +131,22 @@ export function typeOfEgi(egi: string): string {
   if (/BW ?2/.test(e)) return "COMPACTOR";
   return "SPARE";
 }
+
+/* ── Kategori unit yang bisa menjadi Digger (fleet leader) ─────────────────────
+ * Sumber kebenaran kategori unit: docs/equipment.json (ADR-0006).
+ * Kategori ini menentukan unit mana yang muncul di dropdown
+ * "Digger (fleet leader)" pada Fleet Setting. Didefinisikan sekali di sini
+ * supaya logika yang sama dipakai fleet-setting & master/units. */
+export const DIGGER_CATEGORIES = ["BIG_DIGGER", "MEDIUM_DIGGER"] as const;
+
+export function isDiggerCategory(cat: string | null | undefined): boolean {
+  return (DIGGER_CATEGORIES as readonly string[]).includes(cat ?? "");
+}
+
+/** Unit bisa menjadi Digger (fleet leader): kategori digger + status aktif. */
+export function isDiggerUnit(u: {
+  cat?: string | null;
+  active?: boolean;
+}): boolean {
+  return Boolean(u.active) && isDiggerCategory(u.cat);
+}

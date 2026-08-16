@@ -87,6 +87,7 @@ export type FtwRecord = {
   sleep: string;
   st: FtwStatus;
   restHours: number;
+  sendTime?: string;
   hist: number[];
 };
 

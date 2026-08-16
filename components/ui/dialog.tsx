@@ -94,9 +94,9 @@ function DialogTitle({ className, ...props }: React.ComponentProps<"h3">) {
   );
 }
 
-function DialogBody({ className, ...props }: React.ComponentProps<"p">) {
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <p
+    <div
       data-slot="dialog-body"
       className={cn(
         "mt-2 text-sm leading-relaxed text-(--text-secondary)",

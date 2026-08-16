@@ -30,18 +30,26 @@ export const attendanceApi = {
   },
 
   /** Record manual check-in */
-  async recordCheckIn(nik: string, time?: string): Promise<AttendanceRow> {
+  async recordCheckIn(
+    nik: string,
+    machine?: string,
+    time?: string
+  ): Promise<AttendanceRow> {
     return apiFetch<AttendanceRow>("/attendance/checkin", {
       method: "POST",
-      body: { nik, time },
+      body: { nik, machine, time },
     });
   },
 
   /** Record manual check-out */
-  async recordCheckOut(nik: string, time?: string): Promise<AttendanceRow> {
+  async recordCheckOut(
+    nik: string,
+    machine?: string,
+    time?: string
+  ): Promise<AttendanceRow> {
     return apiFetch<AttendanceRow>("/attendance/checkout", {
       method: "POST",
-      body: { nik, time },
+      body: { nik, machine, time },
     });
   },
 };

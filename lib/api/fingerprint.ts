@@ -42,8 +42,8 @@ export const fingerprintApi = {
   },
 
   /** Trigger manual fingerprint sync */
-  async syncNow(): Promise<{ message: string }> {
-    return apiFetch<{ message: string }>("/fingerprint/sync", {
+  async syncNow(): Promise<{ totalSynced: number }> {
+    return apiFetch<{ totalSynced: number }>("/fingerprint/sync", {
       method: "POST",
     });
   },

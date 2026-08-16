@@ -9,12 +9,7 @@ import type { PrestasiRecord } from "@/lib/api/types";
 import {
   fmtSleep,
   PERIOD_DAYS,
-  PTS_BASE,
-  PTS_COVER,
-  PTS_ONTIME,
-  PTS_PENALTY,
-  PTS_SLEEP,
-  PTS_STREAK_STEP,
+  usePrestasiPoints,
   type PrestasiBadgeKey,
   type PrestasiPeriod,
 } from "@/lib/data/prestasi";
@@ -61,6 +56,11 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 export default function PrestasiPage() {
   const { t, lang } = useI18n();
+
+  /* Poin aturan dinamis dari backend (business_rules) — kartu aturan di bawah
+     memakai nilai yang sama dengan mesin poin Prestasi sesungguhnya. */
+  const { ptsBase, ptsOntime, ptsSleep, ptsStreakStep, ptsCover, ptsPenalty } =
+    usePrestasiPoints();
 
   const [period, setPeriod] = React.useState<PrestasiPeriod>("month");
   const [q, setQ] = React.useState("");
@@ -375,13 +375,13 @@ export default function PrestasiPage() {
           <ul className="flex flex-col gap-1.5 text-xs text-(--text-secondary)">
             {(
               [
-                [t.prRuleBase, `+${PTS_BASE}`],
-                [t.prRuleOntime, `+${PTS_ONTIME}`],
-                [t.prRuleSleep, `+${PTS_SLEEP}`],
-                [t.prRuleStreak, `+${PTS_STREAK_STEP}`],
-                [t.prRuleSpare, `+${PTS_BASE}`],
-                [t.prRuleCover, `+${PTS_COVER}`],
-                [t.prRulePenalty, String(PTS_PENALTY)],
+                [t.prRuleBase, `+${ptsBase}`],
+                [t.prRuleOntime, `+${ptsOntime}`],
+                [t.prRuleSleep, `+${ptsSleep}`],
+                [t.prRuleStreak, `+${ptsStreakStep}`],
+                [t.prRuleSpare, `+${ptsBase}`],
+                [t.prRuleCover, `+${ptsCover}`],
+                [t.prRulePenalty, String(ptsPenalty)],
                 [t.prRuleNotScheduled, "0"],
               ] as [string, string][]
             ).map(([label, pts]) => (

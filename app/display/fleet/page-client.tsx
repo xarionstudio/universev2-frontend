@@ -36,19 +36,30 @@ export default function DisplayFleetPage() {
     []
   );
   const runtext =
-    mdData.runtext.find((r) => r.active && r.targetDisplay === "Display Fleet")
-      ?.name ??
-    mdData.runtext.find((r) => r.active)?.name ??
+    (mdData?.runtext || []).find(
+      (r) => r.active && r.targetDisplay === "Display Fleet"
+    )?.name ??
+    (mdData?.runtext || []).find((r) => r.active)?.name ??
     "Wajib P2H sebelum mengoperasikan unit.";
 
+  /* polling otomatis — kiosk menampilkan alokasi live tanpa reload manual */
   React.useEffect(() => {
-    displayApi
-      .getDisplayFleet({ fleetId: fleetId || undefined })
-      .then((res) => {
-        if (res && Array.isArray(res))
-          setApiFleets(res as Record<string, unknown>[]);
-      })
-      .catch(() => {});
+    let alive = true;
+    const load = () => {
+      displayApi
+        .getDisplayFleet({ fleetId: fleetId || undefined })
+        .then((res) => {
+          if (alive && res && Array.isArray(res))
+            setApiFleets(res as Record<string, unknown>[]);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
   }, [fleetId]);
 
   /* satu layar = satu formasi fleet (digger + maks. 13 OHT) */

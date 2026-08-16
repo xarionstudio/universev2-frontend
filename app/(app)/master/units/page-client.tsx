@@ -4,7 +4,7 @@ import * as React from "react";
 import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react";
 
 import { fleetApi } from "@/lib/api/fleet";
-import { typeOfEgi } from "@/lib/data/units-db";
+import { DIGGER_CATEGORIES, typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { reportFileName } from "@/lib/report/logo";
 import { downloadXlsx } from "@/lib/report/xlsx";
@@ -70,6 +70,7 @@ export default function UnitDbPage() {
   const [fEgi, setFEgi] = React.useState("");
   const [fCls, setFCls] = React.useState("HD");
   const [fProd, setFProd] = React.useState("CATERPILLAR");
+  const [fCat, setFCat] = React.useState("");
   const [errCode, setErrCode] = React.useState(false);
   const [errEgi, setErrEgi] = React.useState(false);
 
@@ -88,6 +89,11 @@ export default function UnitDbPage() {
   const classes = Array.from(new Set(all.map((u) => u.cls))).sort();
   const products = Array.from(new Set(all.map((u) => u.product))).sort();
   const egis = Array.from(new Set(all.map((u) => u.egi))).sort();
+  /* opsi kategori: kategori digger (dipakai logika bisnis alokasi fleet) +
+     kategori yang sudah terpakai di data — tanpa meng-hardcode seluruh katalog. */
+  const catOpts = Array.from(
+    new Set([...DIGGER_CATEGORIES, ...all.map((u) => u.cat).filter(Boolean)])
+  ).sort();
 
   const needle = q.trim().toLowerCase();
   const filtered = all.filter((u) => {
@@ -115,6 +121,7 @@ export default function UnitDbPage() {
     setFEgi(egis[0] || "");
     setFCls("HD");
     setFProd("CATERPILLAR");
+    setFCat("");
     setErrCode(false);
     setErrEgi(false);
     setDlgOpen(true);
@@ -128,6 +135,7 @@ export default function UnitDbPage() {
     setFEgi(u.egi);
     setFCls(u.cls);
     setFProd(u.product);
+    setFCat(u.cat || "");
     setErrCode(false);
     setErrEgi(false);
     setDlgOpen(true);
@@ -150,7 +158,7 @@ export default function UnitDbPage() {
       egi: fEgi,
       cls: fCls,
       product: fProd,
-      cat: existing?.cat ?? "",
+      cat: fCat,
       area: existing?.area ?? "",
       active: existing?.active ?? true,
       standby: existing?.standby ?? false,
@@ -530,6 +538,20 @@ export default function UnitDbPage() {
                 onChange={(e) => setFProd(e.target.value)}
               >
                 {products.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Category" htmlFor="udb-cat">
+              <Select
+                id="udb-cat"
+                value={fCat}
+                onChange={(e) => setFCat(e.target.value)}
+              >
+                <option value="">—</option>
+                {catOpts.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

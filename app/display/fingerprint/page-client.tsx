@@ -24,31 +24,50 @@ export default function DisplayFingerprintPage() {
   // Ensure runtext is always a string
   const safeRuntext = runtext || "Wajib P2H sebelum mengoperasikan unit.";
 
+  /* polling otomatis — kiosk menampilkan status live tanpa reload manual.
+     REFRESH_MS sedikit lebih cepat karena status online/offline adalah sinyal
+     operasional yang harus segar. */
   React.useEffect(() => {
-    displayApi
-      .getDisplayFingerprint()
-      .then((res) => {
-        if (res && Array.isArray(res))
-          setApiMachines(res as Record<string, unknown>[]);
-      })
-      .catch(() => {});
+    let alive = true;
+    const load = () => {
+      displayApi
+        .getDisplayFingerprint()
+        .then((res) => {
+          if (alive && res && Array.isArray(res))
+            setApiMachines(res as Record<string, unknown>[]);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 30_000);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+    };
   }, []);
 
-  const machines = apiMachines.map((m) => ({
-    id: String(m.id || m.code || ""),
-    loc: String(m.location || m.loc || "—"),
-    online: Boolean(m.online ?? true),
-    meta: m.online
-      ? `${Number(m.scansToday || 0)} scan`
-      : `Offline sejak ${String(m.offlineSince || "—")}`,
-  }));
+  const machines = apiMachines.map((m) => {
+    const online = Boolean(m.online ?? true);
+    return {
+      id: String(m.id || m.code || ""),
+      loc: String(m.location || m.loc || "—"),
+      online,
+      /* backend mengirim `meta` siap-tampil (mis. "terakhir sinkron 02 Jan 15:04").
+         Sebelumnya dipakai scansToday/offlineSince yang tidak pernah dikirim. */
+      meta: online
+        ? String(m.meta || m.scansToday || "belum ada data scan")
+        : `Offline sejak ${String(m.meta || m.offlineSince || "—")}`,
+    };
+  });
 
   const onlineN = machines.filter((m) => m.online).length;
   const offlineN = machines.filter((m) => !m.online).length;
-  const totalScans = apiMachines.reduce(
-    (sum: number, m) => sum + Number(m.scansToday || 0),
-    0
-  );
+  /* Backend tidak mengirim jumlah scan hari ini → jangan klaim angka 0 yang
+     menyesatkan; tampilkan "—" saat data tidak tersedia. */
+  const hasScans = apiMachines.some((m) => m.scansToday != null);
+  const totalScans = hasScans
+    ? apiMachines.reduce((sum: number, m) => sum + Number(m.scansToday || 0), 0)
+    : null;
 
   return (
     <DisplayShell
@@ -78,7 +97,7 @@ export default function DisplayFingerprintPage() {
         {
           icon: <Fingerprint className="text-primary-bright" />,
           iconClass: "bg-[rgba(0,212,255,.14)] border-[rgba(0,212,255,.4)]",
-          value: String(totalScans.toLocaleString("id-ID")),
+          value: totalScans != null ? totalScans.toLocaleString("id-ID") : "—",
           label: "Scan Hari Ini",
         },
       ]}
