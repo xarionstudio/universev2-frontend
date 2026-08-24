@@ -4,6 +4,7 @@ import * as React from "react";
 import { Megaphone, Monitor, WifiOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { APP_VERSION } from "@/lib/version";
 import { LogoBadge } from "@/components/ui/logo";
 
 /* Shell layar kiosk TV 16:9 (dilihat ±6 m) — kanvas tetap 1920×1080 di-letterbox
@@ -251,6 +252,13 @@ export function DisplayShell({
             </div>
           </div>
         ) : null}
+      </div>
+
+      {/* stempel versi — supaya tim support tahu build yang berjalan di TV
+          tanpa menyentuh perangkatnya; sengaja di luar kanvas skala agar
+          ukurannya tetap kecil di layar mana pun */}
+      <div className="fixed bottom-4 left-4 z-90 rounded-lg border border-(--glass-2-border) bg-(--overlay-fill) px-2.5 py-1.5 font-mono text-[11px] text-(--text-tertiary)">
+        {APP_VERSION}
       </div>
 
       {/* demo switch (bukan bagian desain kiosk) */}

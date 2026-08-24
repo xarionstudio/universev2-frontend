@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,11 +14,14 @@ import {
   Truck,
 } from "lucide-react";
 
+import { errorMessage } from "@/lib/api";
+import { useAuthPageConfig } from "@/lib/auth-page-config";
 import { useI18n } from "@/lib/i18n";
-import { verifyPassword } from "@/lib/password";
 import { cn } from "@/lib/utils";
+import { Footer } from "@/components/layout/footer";
 import { useAppStore } from "@/components/providers/app-store";
 import { useSession } from "@/components/providers/session";
+import { AuthSlideshow } from "@/components/ui/auth-slideshow";
 import { Spinner } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DepthScene } from "@/components/ui/depth-scene";
@@ -27,15 +29,18 @@ import { Input } from "@/components/ui/input";
 import { UniverseLogo } from "@/components/ui/logo";
 import { LogoBadge3D } from "@/components/ui/logo-3d";
 
-/* Layout dua panel mengikuti referensi universe-2 (Figma 1512:2810):
-   kartu 1200×760, panel kiri = foto armada + brand + hero + fitur,
-   panel kanan glass overlap 21px berisi form. Style memakai token DS ini. */
+/* SATU kartu glass 1200×760 berisi dua kolom: kiri slideshow foto (berganti
+   otomatis tiap 5 detik, daftarnya diatur superadmin di Settings → Halaman
+   Auth) + brand + hero, kanan form login. Menggantikan layout dua panel
+   terpisah-overlap dari referensi universe-2 — form dan foto kini menyatu
+   dalam satu kartu. Style tetap memakai token DS ini. */
 
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { appName, umUsers } = useAppStore();
-  const { signIn } = useSession();
+  const { appName } = useAppStore();
+  const { login } = useSession();
+  const { slides } = useAuthPageConfig();
   const emailRef = React.useRef<HTMLInputElement>(null);
   const pwRef = React.useRef<HTMLInputElement>(null);
   const [showPw, setShowPw] = React.useState(false);
@@ -43,11 +48,17 @@ export default function LoginPage() {
   const [err, setErr] = React.useState(false);
   const [errMsg, setErrMsg] = React.useState<string | null>(null);
 
-  /* Login kini benar-benar mencari akunnya di User Management supaya RBAC
-     punya subjek yang nyata — sebelumnya email apa pun diterima dan tidak
-     pernah dipakai lagi. Password diverifikasi hanya bila sudah pernah
-     diatur admin; akun yang baru diundang (belum punya password) tetap bisa
-     masuk, mengikuti alur undangan yang sudah tertulis di UI. */
+  /* Kredensial diverifikasi backend (POST /api/auth/login), bukan lagi
+     dicocokkan dengan daftar mock di app-store.
+
+     Password dikirim APA ADANYA lewat HTTPS dan di-hash di server; jangan
+     tergoda memakai lib/password.ts di sini — digest buatan browser tidak
+     akan pernah cocok dengan yang tersimpan, dan hashing di klien memang
+     bukan pengamanan.
+
+     Pesan galat memakai teks dari backend (sudah berbahasa manusia dan
+     membedakan "kredensial salah" dari "akun nonaktif"); string i18n dipakai
+     sebagai cadangan saat server tidak terjangkau. */
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const email = emailRef.current?.value.trim() || "";
@@ -59,40 +70,19 @@ export default function LoginPage() {
       return;
     }
 
-    const account = umUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
-    if (!account) {
-      setErr(true);
-      setErrMsg(t.loginErrUnknown);
-      emailRef.current?.focus();
-      return;
-    }
-    if (!account.on) {
-      setErr(true);
-      setErrMsg(t.loginErrOff);
-      return;
-    }
-
     setErr(false);
     setErrMsg(null);
     setBusy(true);
 
-    if (account.pwHash && account.pwSalt) {
-      const ok = await verifyPassword(pw, account.pwSalt, account.pwHash);
-      if (!ok) {
-        setBusy(false);
-        setErr(true);
-        setErrMsg(t.loginErrPw);
-        pwRef.current?.focus();
-        return;
-      }
-    }
-
-    setTimeout(() => {
-      signIn(account.email);
+    try {
+      await login({ email, password: pw });
       router.push("/dashboard");
-    }, 600);
+    } catch (e2) {
+      setBusy(false);
+      setErr(true);
+      setErrMsg(errorMessage(e2, t.loginErr));
+      pwRef.current?.focus();
+    }
   }
 
   const features = [
@@ -113,30 +103,25 @@ export default function LoginPage() {
       <div className="relative z-1 grid min-h-screen place-items-center p-6">
         {/* zoom .8 mengikuti keputusan universe-2 — kartu 760px muat nyaman
             di layar 1080–1200px tanpa scroll */}
-        <main className="relative h-190 w-full max-w-300 zoom-[0.8] max-lg:h-auto max-lg:max-w-130">
-          {/* ── panel kiri: foto + brand + hero (selalu dark di atas foto) ── */}
+        <main className="relative flex h-190 w-full max-w-300 zoom-[0.8] overflow-hidden rounded-panel glass-card max-lg:h-auto max-lg:max-w-130">
+          {/* ── kolom kiri: slideshow + brand + hero (selalu dark di atas foto) ── */}
           <div
             data-theme="dark"
-            className="absolute top-0 left-0 h-full w-150 overflow-hidden rounded-panel border border-(--glass-1-border) text-(--text-primary) max-lg:hidden"
+            className="relative w-1/2 flex-none overflow-hidden text-(--text-primary) max-lg:hidden"
           >
-            <Image
-              src="/login-bg.avif"
-              alt=""
-              fill
-              sizes="600px"
-              className="object-cover object-center"
-              priority
-              aria-hidden
-            />
-            {/* vignette radial dari referensi — menggelapkan tepi bawah foto */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url("data:image/svg+xml;utf8,<svg viewBox='0 0 600 760' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.8'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(5 33.35 -126.64 18.986 250 354.5)'><stop stop-color='rgba(249,246,238,0.12)' offset='0.534'/><stop stop-color='rgba(187,189,190,0.34)' offset='0.572'/><stop stop-color='rgba(125,133,142,0.56)' offset='0.610'/><stop stop-color='rgba(63,76,94,0.78)' offset='0.648'/><stop stop-color='rgba(1,19,46,1)' offset='0.686'/></radialGradient></defs></svg>")`,
-              }}
-            />
+            <AuthSlideshow slides={slides}>
+              {/* vignette radial dari referensi — menggelapkan tepi bawah foto */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg viewBox='0 0 600 760' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.8'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(5 33.35 -126.64 18.986 250 354.5)'><stop stop-color='rgba(249,246,238,0.12)' offset='0.534'/><stop stop-color='rgba(187,189,190,0.34)' offset='0.572'/><stop stop-color='rgba(125,133,142,0.56)' offset='0.610'/><stop stop-color='rgba(63,76,94,0.78)' offset='0.648'/><stop stop-color='rgba(1,19,46,1)' offset='0.686'/></radialGradient></defs></svg>")`,
+                }}
+              />
+            </AuthSlideshow>
 
-            <div className="relative z-10 flex h-full flex-col justify-between px-15 py-12.5">
+            {/* pointer-events-none: konten kiri murni dekoratif — biarkan
+                klik tembus ke dot navigasi slideshow di bawahnya */}
+            <div className="pointer-events-none relative z-10 flex h-full flex-col justify-between px-15 py-12.5">
               {/* brand — kiri atas */}
               <div className="flex items-center gap-3">
                 <UniverseLogo priority className="size-11.5" />
@@ -150,8 +135,8 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* hero + fitur — bawah */}
-              <div className="flex flex-col gap-5">
+              {/* hero + fitur — bawah, diberi ruang untuk dot slideshow */}
+              <div className="flex flex-col gap-5 pb-6">
                 <div>
                   <h1 className="text-[40px] leading-tight font-bold">
                     {t.loginHero1}
@@ -185,124 +170,122 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ── panel kanan: glass + form — overlap 21px di atas panel kiri ── */}
-          <div className="absolute top-0 left-144.75 z-10 h-full w-155 rounded-panel glass-card max-lg:relative max-lg:left-0 max-lg:h-auto max-lg:w-full">
-            <div className="flex h-full flex-col items-center justify-between px-20 py-10 max-lg:gap-8 max-lg:px-8">
-              {/* logo + heading */}
-              <div className="flex flex-col items-center gap-5 text-center">
-                <LogoBadge3D className="size-24" logoClassName="size-11" />
-                <div className="flex flex-col items-center gap-1">
-                  <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
-                    {t.loginWelcome}{" "}
-                    <span role="img" aria-label="wave">
-                      👋
-                    </span>
-                  </h2>
-                  <p className="text-sm text-(--text-secondary)">
-                    {t.loginWelcomeSub}
-                  </p>
-                </div>
+          {/* ── kolom kanan: form — masih dalam kartu yang sama ── */}
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-between px-12 py-10 max-lg:gap-8 max-lg:px-8">
+            {/* logo + heading */}
+            <div className="flex flex-col items-center gap-5 text-center">
+              <LogoBadge3D className="size-24" logoClassName="size-11" />
+              <div className="flex flex-col items-center gap-1">
+                <h2 className="text-[32px] font-bold tracking-(--tracking-brand)">
+                  {t.loginWelcome}{" "}
+                  <span role="img" aria-label="wave">
+                    👋
+                  </span>
+                </h2>
+                <p className="text-sm text-(--text-secondary)">
+                  {t.loginWelcomeSub}
+                </p>
               </div>
-
-              {/* form */}
-              <div className="w-full max-w-114.5">
-                <div
-                  role="alert"
-                  className={cn(
-                    "mb-5 items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-danger-text",
-                    err ? "flex" : "hidden"
-                  )}
-                >
-                  <CircleAlert className="mt-0.5 size-4 flex-none" />
-                  <span>{errMsg ?? t.loginErr}</span>
-                </div>
-                <form
-                  onSubmit={onSubmit}
-                  noValidate
-                  className="flex flex-col gap-5"
-                >
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="email" className="text-sm font-medium">
-                      {t.emailLabel}
-                    </label>
-                    <div className="relative">
-                      <Mail className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
-                      <Input
-                        ref={emailRef}
-                        id="email"
-                        type="email"
-                        autoComplete="username"
-                        placeholder="nama@unggul.co.id"
-                        className="h-13 pl-12"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="pw" className="text-sm font-medium">
-                      {t.pwLabel}
-                    </label>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
-                      <Input
-                        ref={pwRef}
-                        id="pw"
-                        type={showPw ? "text" : "password"}
-                        autoComplete="current-password"
-                        placeholder="••••••••"
-                        className="h-13 pr-13 pl-12"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw((v) => !v)}
-                        aria-pressed={showPw}
-                        aria-label={t.pwToggle}
-                        className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-primary"
-                      >
-                        {showPw ? (
-                          <EyeOff className="size-4.25" />
-                        ) : (
-                          <Eye className="size-4.25" />
-                        )}
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <label className="flex cursor-pointer items-center gap-2 select-none">
-                        <Checkbox id="remember" name="remember" />
-                        <span className="text-xs text-(--text-secondary)">
-                          {t.loginRemember}
-                        </span>
-                      </label>
-                      <a
-                        href="#"
-                        onClick={(e) => e.preventDefault()}
-                        className="text-xs font-bold"
-                      >
-                        {t.forgotPw}
-                      </a>
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="mt-3 inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:translate-y-0 disabled:cursor-progress"
-                  >
-                    {busy ? (
-                      <Spinner className="size-4 border-[rgba(1,4,22,.3)] border-t-on-cta" />
-                    ) : null}
-                    {busy ? t.loginChecking : t.loginBtn}
-                  </button>
-                  <p className="text-center text-xs text-(--text-secondary)">
-                    {t.loginNoAcc}{" "}
-                    <Link href="/register" className="font-bold">
-                      {t.loginRegLink}
-                    </Link>
-                  </p>
-                </form>
-              </div>
-
-              {/* copyright */}
-              <p className="text-xs text-(--text-tertiary)">{t.loginCopy}</p>
             </div>
+
+            {/* form */}
+            <div className="w-full max-w-114.5">
+              <div
+                role="alert"
+                className={cn(
+                  "mb-5 items-start gap-2 rounded-control border border-(--badge-danger-border) bg-(--badge-danger-fill) px-4 py-3 text-sm leading-normal text-danger-text",
+                  err ? "flex" : "hidden"
+                )}
+              >
+                <CircleAlert className="mt-0.5 size-4 flex-none" />
+                <span>{errMsg ?? t.loginErr}</span>
+              </div>
+              <form
+                onSubmit={onSubmit}
+                noValidate
+                className="flex flex-col gap-5"
+              >
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    {t.emailLabel}
+                  </label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
+                    <Input
+                      ref={emailRef}
+                      id="email"
+                      type="email"
+                      autoComplete="username"
+                      placeholder="nama@unggul.co.id"
+                      className="h-13 pl-12"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="pw" className="text-sm font-medium">
+                    {t.pwLabel}
+                  </label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
+                    <Input
+                      ref={pwRef}
+                      id="pw"
+                      type={showPw ? "text" : "password"}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      className="h-13 pr-13 pl-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw((v) => !v)}
+                      aria-pressed={showPw}
+                      aria-label={t.pwToggle}
+                      className="absolute top-1/2 right-2.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-(--text-tertiary) hover:bg-(--fill-hover) hover:text-(--text-primary) focus-visible:outline-2 focus-visible:outline-primary"
+                    >
+                      {showPw ? (
+                        <EyeOff className="size-4.25" />
+                      ) : (
+                        <Eye className="size-4.25" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 select-none">
+                      <Checkbox id="remember" name="remember" />
+                      <span className="text-xs text-(--text-secondary)">
+                        {t.loginRemember}
+                      </span>
+                    </label>
+                    <a
+                      href="#"
+                      onClick={(e) => e.preventDefault()}
+                      className="text-xs font-bold"
+                    >
+                      {t.forgotPw}
+                    </a>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="mt-3 inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:translate-y-0 disabled:cursor-progress"
+                >
+                  {busy ? (
+                    <Spinner className="size-4 border-[rgba(1,4,22,.3)] border-t-on-cta" />
+                  ) : null}
+                  {busy ? t.loginChecking : t.loginBtn}
+                </button>
+                <p className="text-center text-xs text-(--text-secondary)">
+                  {t.loginNoAcc}{" "}
+                  <Link href="/register" className="font-bold">
+                    {t.loginRegLink}
+                  </Link>
+                </p>
+              </form>
+            </div>
+
+            {/* copyright + versi */}
+            <Footer />
           </div>
         </main>
       </div>

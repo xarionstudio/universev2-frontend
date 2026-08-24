@@ -1,4 +1,18 @@
-/* User Management (akun login) + Role RBAC per modul — dari desain */
+/* User Management (akun login) + Role RBAC per modul — dari desain.
+
+   Halaman Users & Roles masih memakai data di berkas ini; yang sudah pindah
+   ke backend adalah sesi dan permission (lihat components/providers/session).
+
+   Karena itu ID di sini DISAMAKAN dengan seed backend (migrations/000002):
+   user 1..5 dan role 1..3, bukan lagi "u1"/"r1". Alasannya konkret —
+   usePermissions().user sekarang berisi user sungguhan dari API, sementara
+   tabel di halaman Users masih membaca daftar mock. Tanpa ID yang sama,
+   perbandingan seperti `me.id === target.id` (penjaga "jangan nonaktifkan
+   akun sendiri") tidak akan pernah cocok dan penjaganya mati diam-diam.
+
+   Email dan NIK di bawah juga sudah sama persis dengan seed backend, jadi
+   berkas ini adalah cermin dari data sungguhan sampai kedua halaman itu
+   dipindah memakai usersApi/rolesApi. */
 
 export type UmPerm = "none" | "view" | "manage";
 
@@ -55,50 +69,50 @@ export type UmRole = {
 
 export const initialUmUsers: UmUser[] = [
   {
-    id: "u1",
+    id: "1",
     email: "angel@unggul.co.id",
     kar: "First Angel Paustine",
     nik: "503264133",
-    roles: ["r1"],
+    roles: ["1"],
     on: true,
   },
   {
-    id: "u2",
+    id: "2",
     email: "rahmat.h@unggul.co.id",
     kar: "Rahmat Hidayat",
     nik: "503264134",
-    roles: ["r2"],
+    roles: ["2"],
     on: true,
   },
   {
-    id: "u3",
+    id: "3",
     email: "dewi.l@unggul.co.id",
     kar: "Dewi Lestari",
     nik: "503264138",
-    roles: ["r2"],
+    roles: ["2"],
     on: true,
   },
   {
-    id: "u4",
+    id: "4",
     email: "clinic@unggul.co.id",
     kar: null,
     nik: null,
-    roles: ["r3"],
+    roles: ["3"],
     on: true,
   },
   {
-    id: "u5",
+    id: "5",
     email: "budi.plant@unggul.co.id",
     kar: "Hendra Gunawan",
     nik: "503264143",
-    roles: ["r3"],
+    roles: ["3"],
     on: false,
   },
 ];
 
 export const initialUmRoles: UmRole[] = [
   {
-    id: "r1",
+    id: "1",
     name: "Superadmin",
     desc: "Semua modul + user & role",
     locked: true,
@@ -117,7 +131,7 @@ export const initialUmRoles: UmRole[] = [
     },
   },
   {
-    id: "r2",
+    id: "2",
     name: "Admin",
     desc: "Operasional harian — roster, fit to work, fleet, master",
     locked: false,
@@ -136,7 +150,7 @@ export const initialUmRoles: UmRole[] = [
     },
   },
   {
-    id: "r3",
+    id: "3",
     name: "Viewer",
     desc: "Hanya lihat — tanpa aksi ubah",
     locked: false,

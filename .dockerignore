@@ -1,0 +1,38 @@
+# Konteks build sengaja dijaga tipis: node_modules host berisi biner win32
+# (SWC, sharp) yang tidak bisa dipakai di image Linux, dan .next host adalah
+# hasil build untuk Windows. Keduanya HARUS dibangun ulang di dalam image,
+# bukan disalin.
+node_modules
+.next
+.next-verify
+out
+build
+
+# Env tidak pernah masuk image. Nilai yang perlu di-inline ke bundel browser
+# dikirim sebagai build arg (lihat Dockerfile), sedangkan .env.local milik
+# mesin pengembang tidak boleh ikut terbawa dan menimpanya.
+.env
+.env.*
+
+.git
+.gitignore
+.claude
+.vscode
+.idea
+
+# Perkakas yang hanya relevan di mesin pengembang
+.husky
+.editorconfig
+.hintrc
+.prettierignore
+.prettierrc.json
+eslint.config.mjs
+
+Dockerfile
+Dockerfile.dev
+docker-compose*.yml
+*.md
+*.log
+*.tsbuildinfo
+*.Identifier
+coverage

@@ -4,9 +4,18 @@
    dari banyak role, menjawab can(), dan memetakan route/menu ke modul.
 
    CATATAN KEAMANAN: seluruh pengecekan di sini berjalan di klien, jadi
-   sifatnya kenyamanan UI — bukan penegakan keamanan. Selama belum ada
-   backend, siapa pun yang membuka devtools bisa melewatinya. Saat API nyata
-   dipasang, setiap endpoint WAJIB mengulang pengecekan yang sama di server. */
+   sifatnya kenyamanan UI — bukan penegakan keamanan. Penegakannya kini ADA di
+   backend: internal/middleware/rbac.go memeriksa ulang modul & level yang sama
+   untuk setiap route. Melewati pengecekan di berkas ini lewat devtools karena
+   itu hanya membuat menu tampak terbuka; datanya tetap dijawab 403.
+
+   Sumber permission-nya juga sudah bergeser. effectivePerms() di bawah dulu
+   dipakai usePermissions() untuk menggabungkan role sendiri; sekarang
+   penggabungan itu dikerjakan server (RoleRepo.GetPermissionsForRoles) dan
+   frontend tinggal menerjemahkannya di lib/api/adapters.ts — termasuk
+   pemetaan modul `fingerprint` yang tidak punya baris sendiri di backend.
+   effectivePerms() dipertahankan karena halaman Users memakainya untuk
+   mempratinjau efek perubahan role SEBELUM disimpan. */
 
 import {
   umModules,

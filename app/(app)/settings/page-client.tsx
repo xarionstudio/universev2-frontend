@@ -19,8 +19,9 @@ import { Segmented, SegmentedButton } from "@/components/ui/segmented";
 import { useToast } from "@/components/ui/toast";
 
 import { AudioTab } from "./_components/audio-tab";
+import { AuthPageTab } from "./_components/auth-page-tab";
 
-type StTab = "app" | "audio" | "menu";
+type StTab = "app" | "auth" | "audio" | "menu";
 
 export default function SettingsPage() {
   const { t } = useI18n();
@@ -28,6 +29,7 @@ export default function SettingsPage() {
 
   const tabs: { key: StTab; label: string }[] = [
     { key: "app", label: t.stTabApp },
+    { key: "auth", label: t.stTabAuth },
     { key: "audio", label: t.stTabAudio },
     { key: "menu", label: t.stTabMenu },
   ];
@@ -52,6 +54,8 @@ export default function SettingsPage() {
 
       {stTab === "app" ? (
         <AppTab />
+      ) : stTab === "auth" ? (
+        <AuthPageTab />
       ) : stTab === "audio" ? (
         <AudioTab />
       ) : (

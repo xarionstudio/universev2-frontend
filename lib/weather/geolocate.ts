@@ -34,11 +34,17 @@ export type ResolvedLocation = {
   source: LocationSource;
 };
 
-const GPS_TIMEOUT_MS = 6000;
+const GPS_TIMEOUT_MS = 8000;
 const HTTP_TIMEOUT_MS = 6000;
-/* posisi boleh dipakai ulang sampai 10 menit — di meja kerja tidak berpindah,
-   dan ini menghindari prompt/penguncian GPS berulang. */
-const GPS_MAX_AGE_MS = 10 * 60 * 1000;
+/* posisi boleh dipakai ulang sampai 2 menit — cukup segar untuk akurasi
+   desa tanpa membebani baterai dengan prompt GPS berulang. */
+const GPS_MAX_AGE_MS = 2 * 60 * 1000;
+
+/* User-Agent wajib menurut kebijakan Nominatim; tanpa ini permintaan
+   sering ditolak dan kartu jatuh ke penyedia cadangan yang hanya mengenal
+   tingkat kecamatan (mis. "Kaubun" alih-alih "Bumi Etam"). */
+const NOMINATIM_UA =
+  "UniverseWeather/1.0 (dashboard; contact: admin@universe.local)";
 
 /* ---- validasi runtime: jangan percaya bentuk JSON dari luar ---- */
 function num(v: unknown): number | null {
@@ -67,7 +73,12 @@ async function fetchJson(
   try {
     const r = await fetch(url, {
       signal: ac.signal,
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/json",
+        ...(url.includes("nominatim.openstreetmap.org")
+          ? { "User-Agent": NOMINATIM_UA }
+          : {}),
+      },
     });
     if (!r.ok) return null;
     return (await r.json()) as unknown;
@@ -81,7 +92,8 @@ async function fetchJson(
 
 /* ---- 1. GPS ---- */
 function tryGps(
-  signal: AbortSignal | undefined
+  signal: AbortSignal | undefined,
+  forceFresh = false
 ): Promise<{ lat: number; lon: number } | null> {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     return Promise.resolve(null);
@@ -109,9 +121,9 @@ function tryGps(
         /* ditolak / tidak tersedia / timeout — semua jadi null tanpa suara */
         () => finish(null),
         {
-          enableHighAccuracy: false,
+          enableHighAccuracy: true,
           timeout: GPS_TIMEOUT_MS,
-          maximumAge: GPS_MAX_AGE_MS,
+          maximumAge: forceFresh ? 0 : GPS_MAX_AGE_MS,
         }
       );
     } catch {
@@ -143,6 +155,46 @@ type GeoName = { label: string | null; area: string | null };
 
 const EMPTY_NAME: GeoName = { label: null, area: null };
 
+/* Buang awalan administratif yang membuat baris lokasi terasa kaku. */
+function cleanAdminName(value: string | null): string | null {
+  if (!value) return null;
+  return (
+    value
+      .replace(/^(Kabupaten|Kota|Kecamatan|Desa|Kelurahan)\s+/i, "")
+      .trim() || null
+  );
+}
+
+/* Susun label (desa/kelurahan) dan area (kecamatan/kabupaten) dari objek
+   address Nominatim/OSM. Urutan field mengikuti hierarki administratif
+   Indonesia: desa -> kecamatan -> kabupaten. */
+function namesFromAddress(o: Record<string, unknown>): GeoName {
+  const village =
+    str(o.village) ?? str(o.hamlet) ?? str(o.neighbourhood) ?? str(o.quarter);
+  const district =
+    str(o.suburb) ??
+    str(o.city_district) ??
+    str(o.town) ??
+    str(o.city) ??
+    str(o.municipality);
+  const regency =
+    cleanAdminName(str(o.county)) ?? cleanAdminName(str(o.state_district));
+
+  const label = village ?? district;
+  let area: string | null = null;
+  if (village && district && district !== village) {
+    area = cleanAdminName(district);
+  } else if (district && regency && regency !== district) {
+    area = regency;
+  } else if (village && regency && regency !== village) {
+    area = regency;
+  } else if (!village && regency) {
+    area = regency;
+  }
+
+  return label ? { label: cleanAdminName(label) ?? label, area } : EMPTY_NAME;
+}
+
 /* Nominatim — punya tingkat desa/kelurahan.
    zoom=14 meminta ketelitian setingkat desa/suburb; lebih dalam dari itu
    jawabannya mulai berisi nama jalan, yang bukan penanda lokasi yang berguna
@@ -160,17 +212,44 @@ async function reverseNominatim(
   if (!j || typeof j !== "object") return null;
   const a = (j as Record<string, unknown>).address;
   if (!a || typeof a !== "object") return null;
-  const o = a as Record<string, unknown>;
-  const label =
-    str(o.village) ??
-    str(o.hamlet) ??
-    str(o.suburb) ??
-    str(o.town) ??
-    str(o.city) ??
-    str(o.municipality) ??
-    str(o.city_district);
-  const area = str(o.county) ?? str(o.state_district) ?? str(o.state);
-  return label ? { label, area } : null;
+  return namesFromAddress(a as Record<string, unknown>);
+}
+
+/* Photon (Komoot) — cadangan OSM dengan data desa Indonesia, tanpa key. */
+async function reversePhoton(
+  lat: number,
+  lon: number,
+  signal: AbortSignal | undefined
+): Promise<GeoName | null> {
+  const url =
+    "https://photon.komoot.io/reverse" +
+    `?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}` +
+    "&lang=id";
+  const j = await fetchJson(url, signal);
+  if (!j || typeof j !== "object") return null;
+  const features = (j as Record<string, unknown>).features;
+  if (!Array.isArray(features) || features.length === 0) return null;
+  const props = (features[0] as Record<string, unknown> | undefined)
+    ?.properties;
+  if (!props || typeof props !== "object") return null;
+  const p = props as Record<string, unknown>;
+  const village = str(p.name);
+  const district = str(p.district) ?? str(p.city) ?? str(p.county);
+  const regency = cleanAdminName(str(p.state));
+  const type = str(p.type);
+  if (type === "house" || type === "street") {
+    return district
+      ? { label: cleanAdminName(district), area: regency }
+      : EMPTY_NAME;
+  }
+  const label = village ?? district;
+  let area: string | null = null;
+  if (village && district && district !== village) {
+    area = cleanAdminName(district);
+  } else if (regency && regency !== label) {
+    area = regency;
+  }
+  return label ? { label: cleanAdminName(label) ?? label, area } : null;
 }
 
 /* BigDataCloud — cadangan; tanpa key, CORS ok, tanpa batas laju ketat. */
@@ -227,6 +306,10 @@ async function reverseGeocode(
     if (got) return got;
   }
   if (!signal?.aborted) {
+    const photon = await reversePhoton(lat, lon, signal);
+    if (photon) return photon;
+  }
+  if (!signal?.aborted) {
     const got = await reverseBigDataCloud(lat, lon, signal);
     if (got) return got;
   }
@@ -276,11 +359,12 @@ async function fromIpwho(
 export async function resolveLocation(opts: {
   fallback: { lat: number; lon: number; label: string };
   signal?: AbortSignal;
+  forceFreshGps?: boolean;
 }): Promise<ResolvedLocation> {
-  const { fallback, signal } = opts;
+  const { fallback, signal, forceFreshGps = false } = opts;
 
   /* 1. GPS — lokasi maps saat ini */
-  const gps = await tryGps(signal);
+  const gps = await tryGps(signal, forceFreshGps);
   if (gps) {
     const name = await reverseGeocode(gps.lat, gps.lon, signal);
     return {

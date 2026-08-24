@@ -98,6 +98,10 @@ export type WeatherContextValue = {
    cepat hanya membakar kuota tanpa data baru. */
 export const WEATHER_REFRESH_MS = 15 * 60 * 1000;
 
+/* Interval penyegaran lokasi — GPS bisa berubah saat operator pindah site
+   atau memberi izin lokasi setelah tab sudah terbuka. */
+export const LOCATION_REFRESH_MS = 30 * 60 * 1000;
+
 /* Jitter ±10%: saat pergantian shift puluhan orang membuka aplikasi dalam
    menit yang sama; tanpa jitter mereka menembak API serempak selamanya. */
 const JITTER = 0.1;
@@ -193,33 +197,65 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.nik, empAll]);
 
-  /* Resolusi lokasi SEKALI per sesi: GPS -> IP -> koordinat site. Bergantung
-     hanya pada koordinat fallback (primitif) supaya tidak menembak ulang GPS
-     tiap render. setState di sini ada SETELAH await (aturan React Compiler
-     terpenuhi). Tidak pernah melempar — resolveLocation selalu mengembalikan
-     nilai. */
+  /* Resolusi lokasi: GPS -> IP -> koordinat site. Diulang saat tab kembali
+     terlihat dan setiap LOCATION_REFRESH_MS supaya posisi tetap akurat. */
   const fbLat = fallbackSite.lat;
   const fbLon = fallbackSite.lon;
   const fbLabel = fallbackSite.label;
   React.useEffect(() => {
     let alive = true;
-    const ac = new AbortController();
-    void resolveLocation({
-      fallback: { lat: fbLat, lon: fbLon, label: fbLabel },
-      signal: ac.signal,
-    }).then((r) => {
-      if (!alive) return;
-      setLoc({
-        lat: r.lat,
-        lon: r.lon,
-        label: r.label ?? fbLabel,
-        area: r.area ?? "",
-        source: r.source,
+
+    const run = (forceFreshGps = false) => {
+      const ac = new AbortController();
+      void resolveLocation({
+        fallback: { lat: fbLat, lon: fbLon, label: fbLabel },
+        signal: ac.signal,
+        forceFreshGps,
+      }).then((r) => {
+        if (!alive) return;
+        setLoc((prev) => {
+          const next = {
+            lat: r.lat,
+            lon: r.lon,
+            label: r.label ?? fbLabel,
+            area: r.area ?? "",
+            source: r.source,
+          };
+          /* Hindari re-fetch cuaca bila koordinat hampir tidak berubah. */
+          if (
+            prev &&
+            prev.source === next.source &&
+            Math.abs(prev.lat - next.lat) < 0.0005 &&
+            Math.abs(prev.lon - next.lon) < 0.0005 &&
+            prev.label === next.label &&
+            prev.area === next.area
+          ) {
+            return prev;
+          }
+          return next;
+        });
       });
-    });
+      return ac;
+    };
+
+    let active = run(false);
+    const timer = setInterval(() => {
+      active.abort();
+      active = run(true);
+    }, LOCATION_REFRESH_MS);
+
+    const onVisibility = () => {
+      if (!alive || document.visibilityState !== "visible") return;
+      active.abort();
+      active = run(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       alive = false;
-      ac.abort();
+      active.abort();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fbLat, fbLon, fbLabel]);
 

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useI18n } from "@/lib/i18n";
 import { moduleOfPath } from "@/lib/rbac";
+import { Footer } from "@/components/layout/footer";
 import { RbacDenied } from "@/components/layout/rbac-denied";
 import { ShellProvider } from "@/components/layout/shell-context";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -74,6 +75,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="flex min-w-0 flex-1 flex-col gap-6 max-sm:gap-4">
                   {denied === null ? children : <RbacDenied reason={denied} />}
                 </div>
+                {/* footer versi — flex-1 pada konten di atas mendorongnya ke
+                    dasar shell walau isi halamannya pendek */}
+                <Footer />
               </div>
             </div>
           </div>

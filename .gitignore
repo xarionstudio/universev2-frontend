@@ -41,3 +41,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# jangan abaikan template env — nilainya bukan rahasia
+!.env.example
+# .env.docker frontend hanya berisi alamat backend dan nomor port; tidak ada
+# kredensial di dalamnya, dan Compose butuh berkas ini untuk jalan.
+!.env.docker

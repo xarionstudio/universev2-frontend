@@ -9,6 +9,7 @@ import { ftwData, type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Pagination, usePagination } from "@/components/ui/pagination";
@@ -115,7 +116,14 @@ function attentionRows(
 
 export default function DashboardPage() {
   const { t, lang } = useI18n();
-  const { userName, units } = useAppStore();
+  const { userName: storeName, units } = useAppStore();
+  /* Sapaan harus menyebut orang yang BENAR-BENAR login. Sebelumnya diambil
+     dari app-store yang nilai awalnya masih persona mock ("First Angel"),
+     sehingga siapa pun yang masuk disapa dengan nama orang lain. Store tetap
+     dipakai sebagai cadangan agar tidak ada kedip teks kosong saat sesi belum
+     terbaca — pola yang sama dengan topbar. */
+  const { user: me } = usePermissions();
+  const userName = me?.kar ?? storeName;
   const breakUnits = units.filter((u) => u.status === "breakdown");
   /* statistik dari sumber yang sama dengan modul & display TV */
   /* "Unfit" = benar-benar tidak boleh bekerja (dipulangkan, < 4 jam).

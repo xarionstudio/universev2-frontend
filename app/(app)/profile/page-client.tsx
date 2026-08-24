@@ -3,8 +3,8 @@
 import * as React from "react";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 
+import { errorMessage, profileApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { hashPassword, newSalt, verifyPassword } from "@/lib/password";
 import { useAppStore } from "@/components/providers/app-store";
 import { usePermissions } from "@/components/providers/permissions";
 import { useSession } from "@/components/providers/session";
@@ -19,22 +19,15 @@ import { useToast } from "@/components/ui/toast";
 export default function ProfilePage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const {
-    userName,
-    setUserName,
-    userEmail,
-    setUserEmail,
-    setUmUsers,
-    umRoles,
-  } = useAppStore();
+  const { userName, setUserName, userEmail, setUserEmail } = useAppStore();
 
   /* Dulu akun sesi dipatok konstanta SESSION_UID = "u1"; sekarang diambil
      dari sesi yang benar-benar login, jadi halaman ini mengikuti siapa pun
      yang masuk. */
-  const { user: me } = usePermissions();
-  const { signIn } = useSession();
+  const { user: me, roles: allRoles } = usePermissions();
+  const { applyUserPatch } = useSession();
   const roleNames = (me?.roles ?? []).flatMap((rid) => {
-    const role = umRoles.find((r) => r.id === rid);
+    const role = allRoles.find((r) => r.id === rid);
     return role ? [role.name] : [];
   });
 
@@ -77,39 +70,42 @@ export default function ProfilePage() {
     setErr(e);
     if (Object.values(e).some(Boolean)) return;
 
-    /* Password lama diverifikasi hanya bila memang sudah pernah diatur —
-       akun hasil undangan belum punya, jadi tidak ada yang bisa dicocokkan. */
-    let cred: Partial<typeof me> = {};
-    if (wantPw) {
-      if (me.pwHash && me.pwSalt) {
-        const ok = await verifyPassword(pwCur, me.pwSalt, me.pwHash);
-        if (!ok) {
-          setErr((p) => ({ ...p, cur: true }));
-          return;
-        }
-      }
-      const salt = newSalt();
-      cred = {
-        pwSalt: salt,
-        pwHash: await hashPassword(pwNew, salt),
-        pwAt: new Date().toISOString(),
-      };
+    const nextName = name.trim();
+    const nextEmail = email.trim();
+
+    /* Profil dan password adalah DUA endpoint terpisah di backend, jadi
+       dikirim berurutan — profil dulu. Kalau ganti password gagal (mis.
+       password lama salah), perubahan nama/email yang sudah tersimpan tetap
+       sah; pengguna cukup mengulang bagian passwordnya. */
+    try {
+      await profileApi.updateProfile({ name: nextName, email: nextEmail });
+    } catch (e2) {
+      pushToast("error", t.pfSavedT, errorMessage(e2, t.pfErrEmail));
+      return;
     }
 
-    const nextEmail = email.trim();
-    setUserName(name.trim());
+    if (wantPw) {
+      /* Password lama TIDAK lagi dicocokkan di browser: digest-nya memang
+         tidak pernah dikirim ke klien (tag json:"-" di model.User). Server
+         yang memverifikasi, dan menjawab 400 bila salah. */
+      try {
+        await profileApi.updatePassword({
+          oldPassword: pwCur,
+          newPassword: pwNew,
+          confirmPassword: pwConf,
+        });
+      } catch (e2) {
+        setErr((p) => ({ ...p, cur: true }));
+        pushToast("error", t.pfPwSavedT, errorMessage(e2, t.pfPwErrCur));
+        return;
+      }
+    }
+
+    /* Sesi menyimpan salinan user; ditambal supaya topbar & sapaan langsung
+       ikut berubah tanpa perlu login ulang. */
+    applyUserPatch({ kar: nextName, email: nextEmail });
+    setUserName(nextName);
     setUserEmail(nextEmail);
-    /* sinkron ke daftar akun di User Management */
-    setUmUsers((prev) =>
-      prev.map((u) =>
-        u.id === me.id
-          ? { ...u, kar: name.trim(), email: nextEmail, ...cred }
-          : u
-      )
-    );
-    /* Sesi dikunci pada email; kalau emailnya berubah, sesi ikut dipindah
-       agar identitas tidak putus dan user tidak terlempar keluar. */
-    if (nextEmail.toLowerCase() !== me.email.toLowerCase()) signIn(nextEmail);
 
     if (wantPw) {
       setPwCur("");

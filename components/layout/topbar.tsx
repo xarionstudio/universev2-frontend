@@ -56,16 +56,19 @@ export function Topbar() {
     userEmail: storeEmail,
     notifs,
     setNotifs,
-    umRoles,
   } = useAppStore();
-  const { signOut } = useSession();
-  const { user: me } = usePermissions();
+  const { logout } = useSession();
+  const { user: me, roles: myRoleList } = usePermissions();
   /* Identitas nyata dari sesi; store dipakai sebagai cadangan saat sesi
      belum terbaca agar tidak ada kedip teks kosong. */
   const userName = me?.kar ?? storeName;
   const userEmail = me?.email ?? storeEmail;
+  /* Nama role datang dari GET /api/roles, bukan lagi dari daftar mock.
+     Endpoint itu di balik permission `users:view`, jadi untuk role biasa
+     daftarnya kosong dan topbar menampilkan label umum t.userRole — bukan
+     nama yang salah. */
   const myRoles = (me?.roles ?? []).flatMap((rid) => {
-    const r = umRoles.find((x) => x.id === rid);
+    const r = myRoleList.find((x) => x.id === rid);
     return r ? [r.name] : [];
   });
   const { setSideOpen } = useShell();
@@ -316,11 +319,18 @@ export function Topbar() {
               <b className="block text-left text-[13px] leading-tight font-semibold">
                 {userShort}
               </b>
-              {/* role sebenarnya dari sesi — dulu label ini dipatok
-                  "Superadmin" untuk semua orang, menyesatkan di UI RBAC */}
-              <span className="text-[11px] text-(--text-tertiary)">
-                {myRoles.length ? myRoles.join(" · ") : t.userRole}
-              </span>
+              {/* Nama role hanya ditampilkan bila benar-benar diketahui.
+                  Sebelumnya baris ini jatuh ke t.userRole yang isinya
+                  "Superadmin" — sehingga akun Viewer pun tampil sebagai
+                  Superadmin di layar. Lebih baik kosong daripada salah:
+                  ini UI RBAC, dan label peran yang keliru menyesatkan soal
+                  hak akses. Daftar nama role butuh permission `users:view`
+                  (lihat myRoleList di atas), jadi kosong itu wajar. */}
+              {myRoles.length ? (
+                <span className="text-[11px] text-(--text-tertiary)">
+                  {myRoles.join(" · ")}
+                </span>
+              ) : null}
             </span>
             <ChevronDown className="size-3.5 text-(--text-tertiary) max-md:hidden" />
           </button>
@@ -361,10 +371,10 @@ export function Topbar() {
             <DropMenuItem
               className="text-danger-text hover:bg-(--badge-danger-fill) hover:text-danger-text"
               onClick={() => {
-                // lewat provider agar state sesi ikut kosong, bukan hanya
-                // localStorage — kalau tidak, RBAC masih memakai user lama
-                signOut();
-                router.push("/login");
+                /* Lewat provider agar tiga hal ikut bersih sekaligus: token
+                   lokal, cookie `jwt` di server, dan state RBAC. Provider
+                   juga yang mengarahkan ke /login setelah selesai. */
+                void logout();
               }}
             >
               <LogOut />

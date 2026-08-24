@@ -1,0 +1,43 @@
+# Override pengembangan untuk docker compose.
+# Pakai: docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# BACA INI DULU — mode ini TIDAK memberi hot-reload di host Windows, dan itu
+# hasil pengujian, bukan dugaan. Bind mount dari Windows tidak meneruskan event
+# inotify, sehingga watcher Turbopack tidak pernah tahu berkas berubah:
+# perubahan di host sampai ke dalam container (terbaca dengan `docker exec cat`)
+# tetapi dev server tetap menyajikan versi lama. WATCHPACK_POLLING dan
+# CHOKIDAR_USEPOLLING tidak menolong — keduanya variabel watchpack milik
+# webpack, sedangkan Next 16 memakai Turbopack. `watchOptions.pollIntervalMs`
+# milik Next juga sudah dicoba dan tidak menggerakkan watcher Turbopack.
+#
+# Jadi alurnya: ubah kode -> `docker compose ... restart frontend` (sudah
+# diverifikasi memungut perubahan). Untuk pengembangan sehari-hari `pnpm dev`
+# di host tetap jauh lebih baik; mode ini gunanya untuk mereproduksi perilaku
+# Linux (mis. probe ICMP, resolusi DNS container).
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Tag terpisah, dan ini bukan kosmetik: tanpa override ini build dev
+    # menimpa universev2-frontend:latest, lalu `docker compose up -d` tanpa
+    # --build akan menjalankan image DEV sambil mengaku produksi.
+    image: universev2-frontend:dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      # Kode sumber diikat dari host, jadi restart sudah cukup untuk memungut
+      # perubahan — tanpa build ulang. Konsekuensi lain: .env.local milik host
+      # ikut terlihat di dalam container, sehingga di mode ini
+      # NEXT_PUBLIC_API_BASE_URL dibaca dari sana, bukan dari build arg di
+      # docker-compose.yml.
+      - .:/app
+      # Volume anonim yang MENAUNGI dua folder di atas hasil bind mount.
+      # node_modules host berisi biner win32 dan .next host adalah build
+      # Windows; keduanya harus tetap versi container.
+      - /app/node_modules
+      - /app/.next
+    # `next dev` butuh waktu lebih lama untuk siap dan tidak perlu di-restart
+    # hanya karena kompilasi pertama lambat.
+    healthcheck:
+      start_period: 90s

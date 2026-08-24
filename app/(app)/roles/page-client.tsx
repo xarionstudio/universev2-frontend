@@ -82,7 +82,10 @@ export default function RolesPage() {
   const impRef = React.useRef<HTMLInputElement>(null);
 
   const [q, setQ] = React.useState("");
-  const [rbacSel, setRbacSel] = React.useState("r2");
+  /* "2" = Admin. ID role kini mengikuti seed backend (lihat lib/data/users.ts),
+     jadi nilai awal ini ikut berubah dari "r2" agar pratinjau RBAC tidak
+     terbuka dalam keadaan kosong. */
+  const [rbacSel, setRbacSel] = React.useState("2");
 
   /* dialog tambah/edit role */
   const [dlgOpen, setDlgOpen] = React.useState(false);

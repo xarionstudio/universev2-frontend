@@ -1,0 +1,83 @@
+# Stack frontend. Sengaja TERPISAH dari compose backend, bukan digabung.
+#
+# Alasannya satu dan tidak bisa dinegosiasikan: volume dan network Compose
+# diberi awalan nama project. Menarik db + backend ke dalam project baru
+# (mis. "universe-real") membuat `pgdata` menjadi universe-real_pgdata — volume
+# BARU yang kosong — sementara data yang ada tetap tertinggal di
+# universev2-backend_pgdata. Jadi stack backend dibiarkan apa adanya dan
+# frontend berdiri sebagai project sendiri. Di Docker Desktop keduanya tampak
+# sebagai dua stack bersebelahan.
+#
+# Pakai:
+#   docker compose --env-file .env.docker up -d --build
+name: universev2-frontend
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Keduanya terpaku saat build, bukan saat container jalan. Mengubahnya
+        # menuntut `--build`; `restart` tidak mengubah apa pun.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend:8080}
+    image: universev2-frontend
+    container_name: universev-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT_MAP:-3000}:${FRONTEND_PORT:-3000}"
+    environment:
+      NODE_ENV: production
+      PORT: ${FRONTEND_PORT:-3000}
+      HOSTNAME: 0.0.0.0
+    # /api/device/ping memakai ICMP sebagai cadangan. Proses di dalam container
+    # berjalan sebagai non-root, dan ping butuh socket ICMP; rentang gid ini
+    # yang mengizinkannya tanpa memberi container CAP_NET_RAW penuh.
+    sysctls:
+      net.ipv4.ping_group_range: "0 2147483647"
+    # Jalan menuju host untuk kebutuhan sisi-server. Tersedia sendiri di Docker
+    # Desktop; ditulis eksplisit supaya perilakunya sama saat dijalankan di
+    # Docker Engine Linux — dan itu penting kalau BACKEND_ORIGIN diarahkan ke
+    # host.docker.internal karena backend tidak berjalan di Docker.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Tanpa batas ini, log container tumbuh tanpa akhir dan di server itu
+    # berakhir sebagai disk penuh — bukan kalau, hanya kapan.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # 127.0.0.1, bukan localhost: di dalam container "localhost" bisa
+      # diresolusi ke ::1 lebih dulu sementara server hanya mengikat IPv4.
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:${FRONTEND_PORT:-3000}/api/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - backend
+
+# Frontend meneruskan /api dan /uploads ke backend, jadi ia HARUS bisa
+# menjangkau backend dari dalam container — beda dari sebelumnya, ketika browser
+# yang memanggil backend langsung. Karena itu ia ikut bergabung ke jaringan
+# stack backend, dan di sanalah nama `backend` bisa diresolusi.
+#
+# Konsekuensi yang harus diketahui: jaringan ini harus sudah ada, artinya stack
+# backend dinyalakan lebih dulu. Kalau backend TIDAK berjalan di Docker, hapus
+# blok `networks` di service di atas dan arahkan BACKEND_ORIGIN ke
+# http://host.docker.internal:8080.
+networks:
+  backend:
+    external: true
+    name: ${BACKEND_NETWORK:-universev2-backend_default}
