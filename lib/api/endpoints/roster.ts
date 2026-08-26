@@ -173,11 +173,18 @@ export function getRosterAttendance(
   return api.get<Paged<ApiAttendanceRow>>("/rosters/attendance", q, signal);
 }
 
-/* GET /api/attendance/today */
+/* GET /api/attendance/today — SATU-SATUNYA endpoint absensi yang ber-amplop
+   paged (handler-nya memakai response.SuccessPaged), jadi `data` berbentuk
+   {items, pagination}, bukan array telanjang seperti /date dan /range.
+   "Hari ini" dihitung server (zona waktu server), bukan browser. */
 export function getAttendanceToday(
   signal?: AbortSignal
-): Promise<ApiAttendanceRow[]> {
-  return api.get<ApiAttendanceRow[]>("/attendance/today", undefined, signal);
+): Promise<Paged<ApiAttendanceRow>> {
+  return api.get<Paged<ApiAttendanceRow>>(
+    "/attendance/today",
+    undefined,
+    signal
+  );
 }
 
 /* GET /api/attendance/date — `date` default hari ini di sisi server. */

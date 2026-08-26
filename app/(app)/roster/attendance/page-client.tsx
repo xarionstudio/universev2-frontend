@@ -3,13 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Download, Search } from "lucide-react";
+import { CircleAlert, Download, Search } from "lucide-react";
 
-import { attData, type AttStatus } from "@/lib/data/attendance";
+import { rosterApi } from "@/lib/api";
+import type { ApiAttendanceRow } from "@/lib/api/endpoints/roster";
+import { type AttRow, type AttStatus } from "@/lib/data/attendance";
 import { useI18n } from "@/lib/i18n";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, Spinner } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
@@ -44,13 +46,91 @@ const stBadge: Record<AttStatus, BadgeVariant> = {
   off: "neutral",
 };
 
+/* Log absensi ditarik ulang tiap menit — irama yang sama dengan worker
+   fingerprint backend (FINGERPRINT_SYNC_INTERVAL=60), supaya scan yang baru
+   masuk muncul tanpa menunggu pengguna menekan refresh. */
+const REFRESH_MS = 60 * 1000;
+
+const ST_VALID = new Set<string>([
+  "hadir",
+  "terlambat",
+  "belum",
+  "unfit",
+  "off",
+]);
+
+const MON_ID = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+const MON_EN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/* Tanggal kalender LOKAL hari ini. BUKAN toISOString().slice(0,10): itu
+   kalender UTC, dan antara 00:00-08:00 WITA nilainya masih kemarin — papan
+   yang tampil (dan yang di-SyncAttendanceRange backend) jadi salah hari. */
+function localISODate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* "2026-08-26" -> "26 Agu" — format label tanggal yang sama dengan mock lama */
+function dayLabel(iso: string, en: boolean): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const MON = en ? MON_EN : MON_ID;
+  return `${d.getDate() < 10 ? "0" : ""}${d.getDate()} ${MON[d.getMonth()]}`;
+}
+
+/* Baris API -> baris tampilan. `date` dinormalkan ke YYYY-MM-DD: driver DB
+   bisa mengirim "2026-08-26T00:00:00Z" untuk kolom DATE. Status di luar lima
+   nilai yang dikenal (termasuk kolom NULL) diperlakukan "belum". */
+function toAttRow(r: ApiAttendanceRow, en: boolean): AttRow {
+  const iso = (r.date ?? "").slice(0, 10);
+  const st = (ST_VALID.has(r.st) ? r.st : "belum") as AttStatus;
+  return {
+    name: r.name || r.nik,
+    nik: r.nik,
+    dept: r.dept,
+    code: r.code,
+    in: r.in,
+    inM: r.inM,
+    out: r.out,
+    outM: r.outM,
+    st,
+    date: iso,
+    dLabel: dayLabel(iso, en),
+  };
+}
+
 function AttendanceInner() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
   const searchParams = useSearchParams();
 
-  const initialDate =
-    searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const initialDate = searchParams.get("date") || localISODate();
   const [from, setFrom] = React.useState(initialDate);
   const [to, setTo] = React.useState(initialDate);
   const [status, setStatus] = React.useState("");
@@ -65,13 +145,67 @@ function AttendanceInner() {
     );
   }, []);
 
-  React.useEffect(() => {
-    const id = setTimeout(updateFresh, 0);
-    return () => clearTimeout(id);
-  }, [updateFresh]);
+  /* Hidrasi dari GET /api/attendance/range — endpoint yang juga membangun
+     ulang papan absensi (SyncAttendanceRange) sebelum membaca, jadi status
+     belum/terlambat/off ikut terhitung dari roster + scan mesin fingerprint.
 
-  /* refresh dari topbar: perbarui stempel "data per" */
-  useRegisterRefresh(updateFresh);
+     Data dan error DITANDAI kunci rentangnya (from|to|reloadKey), bukan
+     di-reset lewat setState di badan effect (dilarang lint react-hooks):
+     saat rentang berganti, data lama otomatis tidak berlaku dan halaman
+     kembali ke keadaan memuat. Kegagalan SAAT data rentang ini sudah ada
+     (poll latar) didiamkan — data lama dipertahankan dan stempel "data per"
+     tidak maju, itu sinyal kebasiannya; kegagalan muat PERTAMA menampilkan
+     kotak error dengan tombol ulang. */
+  const [reloadKey, setReloadKey] = React.useState(0);
+  const dataKey = `${from}|${to}|${reloadKey}`;
+  const [data, setData] = React.useState<{
+    key: string;
+    rows: ApiAttendanceRow[];
+  } | null>(null);
+  const [errKey, setErrKey] = React.useState<string | null>(null);
+  /* Input date native melapor "" saat di-clear; backend menolak range tanpa
+     from/to (400). Selama salah satu kosong: jangan fetch — tampilkan
+     keadaan kosong, bukan kotak error server yang menyesatkan. */
+  const ready = from !== "" && to !== "";
+  React.useEffect(() => {
+    if (from === "" || to === "") return;
+    let alive = true;
+    let gotData = false;
+    let ac: AbortController | null = null;
+    const load = () => {
+      ac?.abort();
+      const c = new AbortController();
+      ac = c;
+      void rosterApi
+        .getAttendanceRange(from, to, c.signal)
+        .then((rows) => {
+          if (!alive) return;
+          gotData = true;
+          setData({ key: dataKey, rows });
+          setErrKey(null);
+          updateFresh();
+        })
+        .catch(() => {
+          if (!alive || c.signal.aborted) return;
+          if (!gotData) setErrKey(dataKey);
+        });
+    };
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => {
+      alive = false;
+      ac?.abort();
+      clearInterval(timer);
+    };
+  }, [from, to, dataKey, updateFresh]);
+
+  const current = data && data.key === dataKey ? data.rows : null;
+  const loadErr = errKey === dataKey;
+
+  const retry = React.useCallback(() => setReloadKey((k) => k + 1), []);
+
+  /* refresh dari topbar: tarik ulang dari server (stempel ikut maju) */
+  useRegisterRefresh(retry);
 
   const stLabel = (s: AttStatus) =>
     s === "hadir"
@@ -84,9 +218,28 @@ function AttendanceInner() {
             ? t.bUnfit
             : t.bOff;
 
-  const rows = attData(lang).filter((r) => {
-    if (from && (r.date ?? "") < from) return false;
-    if (to && (r.date ?? "") > to) return false;
+  const all = React.useMemo<AttRow[]>(
+    () => (current ?? []).map((r) => toAttRow(r, lang === "en")),
+    [current, lang]
+  );
+
+  /* Pilihan departemen diturunkan dari data, bukan daftar tetap — nilai dept
+     sungguhan milik master karyawan di server. */
+  const depts = React.useMemo(
+    () => Array.from(new Set(all.map((r) => r.dept).filter(Boolean))).sort(),
+    [all]
+  );
+
+  /* Dept yang sedang dipilih ikut ditampilkan walau tidak ada lagi di data —
+     tanpa ini select terlihat "tak berfilter" (selectedIndex -1) padahal
+     filternya masih membuang semua baris. */
+  const deptOptions = React.useMemo(
+    () => (dept && !depts.includes(dept) ? [...depts, dept].sort() : depts),
+    [depts, dept]
+  );
+
+  /* Rentang tanggal sudah disaring server; sisanya milik klien. */
+  const rows = all.filter((r) => {
     if (status && r.st !== status) return false;
     if (dept && r.dept !== dept) return false;
     const needle = q.trim().toLowerCase();
@@ -147,10 +300,9 @@ function AttendanceInner() {
               onChange={(e) => setDept(e.target.value)}
             >
               <option value="">{t.allDepts}</option>
-              <option>Operation</option>
-              <option>SDI</option>
-              <option>HRGA</option>
-              <option>Plant</option>
+              {deptOptions.map((d) => (
+                <option key={d}>{d}</option>
+              ))}
             </Select>
             <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
               <label
@@ -190,7 +342,25 @@ function AttendanceInner() {
           </ToolbarGroup>
         </Toolbar>
 
-        {rows.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.attLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !ready ? (
+          <StateBox
+            icon={<Search className="text-primary-bright" />}
+            title={t.noResTitle}
+            body={t.attEmptyB}
+          />
+        ) : current === null ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : rows.length ? (
           <Table>
             <TableHeader>
               <tr>

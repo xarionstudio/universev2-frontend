@@ -1039,6 +1039,7 @@ export const en: Dict = {
   bUnfit: "Unfit",
   bOff: "OFF / Leave",
   attEmptyB: "Try another date, department, or keyword.",
+  attLoadErrB: "Attendance logs could not be fetched from the server.",
   attSumA: "Showing",
   attSumB: "of",
   attSumLog: "attendance logs",

@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
 
-import { attDayRows, type AttRow } from "@/lib/data/attendance";
+import { miscApi, rosterApi } from "@/lib/api";
+import type { ApiDashboardSummary } from "@/lib/api/endpoints/misc";
+import type { ApiAttendanceRow } from "@/lib/api/endpoints/roster";
 import { ftwData, type FtwRecord } from "@/lib/data/ftw";
 import type { Unit } from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
@@ -40,6 +42,10 @@ import {
 
 import { WeatherCard } from "./_components/weather-card";
 
+/* Irama poll yang sama dengan halaman Attendance & layar TV (worker
+   fingerprint backend juga menyinkron tiap 60 detik). */
+const REFRESH_MS = 60 * 1000;
+
 type AttentionRow = {
   name: string;
   sub: string;
@@ -55,7 +61,7 @@ function attentionRows(
   en: boolean,
   breakUnits: Unit[],
   kurang: FtwRecord[],
-  belumAbsen: AttRow[]
+  belumAbsen: ApiAttendanceRow[]
 ): AttentionRow[] {
   /* semua baris diturunkan dari sumber terpusat — status unit, log tidur,
      dan log absensi yang sama dengan halaman modul & display TV */
@@ -84,7 +90,7 @@ function attentionRows(
     action: en ? "Open Fit To Work" : "Buka Fit To Work",
   }));
   const belumRows: AttentionRow[] = belumAbsen.slice(0, 2).map((r) => ({
-    name: r.name,
+    name: r.name || r.nik,
     sub: r.nik,
     dept: r.dept,
     issue: en
@@ -130,8 +136,23 @@ export default function DashboardPage() {
      Spare tidak dihitung di sini karena masih boleh bekerja setelah
      istirahat tambahan. */
   const kurang = ftwData(lang).filter((r) => r.st === "pulang");
-  const attToday = attDayRows(lang, false).filter((r) => r.st !== "off");
-  const belumAbsen = attToday.filter((r) => r.st === "belum");
+
+  /* Absensi dari backend, bukan mock lagi — angka kartu dari
+     GET /api/dashboard/summary (permission modul dashboard), baris
+     "belum absen" di tabel perhatian dari GET /api/attendance/today
+     (permission roster — bila akun tidak memilikinya, baris itu dilewati
+     diam-diam dan tabel tetap berisi sumber lain). Poll 60 detik, irama
+     yang sama dengan halaman Attendance & layar TV; kegagalan poll
+     didiamkan dan data lama dipertahankan. */
+  const [summary, setSummary] = React.useState<ApiDashboardSummary | null>(
+    null
+  );
+  const [attRows, setAttRows] = React.useState<ApiAttendanceRow[] | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  const att = summary?.attendance ?? null;
+  /* "dari N roster hari ini" = rostered yang diharapkan hadir (tanpa off) */
+  const rosterN = att ? att.total - att.off : null;
+  const belumAbsen = (attRows ?? []).filter((r) => r.st === "belum");
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -145,18 +166,49 @@ export default function DashboardPage() {
   }, []);
 
   React.useEffect(() => {
+    let alive = true;
+    let ac: AbortController | null = null;
+    const load = () => {
+      ac?.abort();
+      const c = new AbortController();
+      ac = c;
+      void miscApi
+        .getDashboardSummary(undefined, c.signal)
+        .then((sum) => {
+          if (!alive) return;
+          setSummary(sum);
+          updateFresh();
+        })
+        .catch(() => {});
+      void rosterApi
+        .getAttendanceToday(c.signal)
+        .then((res) => {
+          if (alive) setAttRows(res.items ?? []);
+        })
+        .catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => {
+      alive = false;
+      ac?.abort();
+      clearInterval(timer);
+    };
+  }, [reloadKey, updateFresh]);
+
+  React.useEffect(() => {
     const id = setTimeout(updateFresh, 0);
     return () => clearTimeout(id);
   }, [updateFresh]);
 
-  /* refresh dari topbar: skeleton singkat + stempel waktu baru */
+  /* refresh dari topbar: tarik ulang dari server + skeleton singkat */
   useRegisterRefresh(
     () =>
       new Promise<void>((done) => {
         setLoading(true);
+        setReloadKey((k) => k + 1);
         setTimeout(() => {
           setLoading(false);
-          updateFresh();
           done();
         }, 900);
       })
@@ -226,11 +278,11 @@ export default function DashboardPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value={String(belumAbsen.length)}
+          value={att === null ? "—" : String(att.belum)}
           label={t.statAbsent}
           detail={
             <>
-              {t.dAbsent1} <b>{attToday.length}</b> {t.dAbsent2}
+              {t.dAbsent1} <b>{rosterN ?? "—"}</b> {t.dAbsent2}
             </>
           }
         />
@@ -353,8 +405,11 @@ export default function DashboardPage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {pg.rows.map((r) => (
-                  <TableRow key={r.name}>
+                {/* Kunci nama saja bisa kembar dengan data hidup (dua
+                    karyawan senama, atau nama live == nama mock FTW) —
+                    pola kunci yang sama dengan halaman Attendance. */}
+                {pg.rows.map((r, i) => (
+                  <TableRow key={`${r.name}-${r.sub}-${i}`}>
                     <TableCell>
                       <NameCell name={r.name} sub={r.sub} />
                     </TableCell>

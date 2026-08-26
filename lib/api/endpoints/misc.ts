@@ -6,17 +6,36 @@ import type { ListQuery } from "../types";
 
 /* ── Dashboard ───────────────────────────────────────────────────────── */
 
-/* GET /api/dashboard/summary — permission modul `dashboard`.
+/* internal/service/dashboard_service.go — DashboardSummary. `attendance`
+   dihitung SETELAH backend membangun ulang papan absensi (SyncAttendanceBoard),
+   jadi angkanya sama dengan halaman Attendance dan Display TV. */
+export type ApiDashboardSummary = {
+  attendance: {
+    total: number;
+    hadir: number;
+    terlambat: number;
+    belum: number;
+    off: number;
+  };
+  ftw: {
+    total: number;
+    fit: number;
+    spare: number;
+    pulang: number;
+    belum: number;
+  };
+  fleet: { total: number; ready: number; breakdown: number; standby: number };
+  roster: { pendingApproval: number };
+  notifications: { unread: number };
+  employees: { totalActive: number };
+};
 
-   Handler-nya merakit fiber.Map dari enam repositori sekaligus, bukan sebuah
-   model tetap, jadi bentuknya tidak ikut berubah otomatis saat backend
-   berubah. Ketik ulang dengan tipe konkret saat halaman dashboard dipindah
-   dari mock — sumbernya internal/service/dashboard_service.go. */
+/* GET /api/dashboard/summary — permission modul `dashboard`. */
 export function getDashboardSummary(
   q?: { date?: string },
   signal?: AbortSignal
-): Promise<Record<string, unknown>> {
-  return api.get<Record<string, unknown>>("/dashboard/summary", q, signal);
+): Promise<ApiDashboardSummary> {
+  return api.get<ApiDashboardSummary>("/dashboard/summary", q, signal);
 }
 
 /* ── Display TV ──────────────────────────────────────────────────────── */
@@ -25,9 +44,31 @@ export function getDashboardSummary(
    dalam AuthMiddleware — layar kiosk tetap harus membawa token. Satu-satunya
    yang terbuka adalah heartbeat di endpoints/settings.ts. */
 
+/* internal/service/display_service.go — DisplayAttRow. `tone`/`label`
+   sudah dihitung backend ("unfit" tampil sebagai "Hadir"); klien tinggal
+   menyaring "off" dan mengurutkan. Endpoint-nya juga membangun ulang papan
+   absensi (SyncAttendanceBoard) sebelum membaca, jadi status belum/
+   terlambat/off selalu terhitung. */
+export type ApiDisplayAttRow = {
+  nik: string;
+  name: string;
+  pos: string;
+  dept: string;
+  shift: string;
+  in: string;
+  out: string;
+  inM: string;
+  outM: string;
+  st: string;
+  tone: "success" | "warning" | "danger" | "neutral" | "info";
+  label: string;
+};
+
 /* GET /api/display/attendance */
-export function getDisplayAttendance(signal?: AbortSignal): Promise<unknown[]> {
-  return api.get<unknown[]>("/display/attendance", undefined, signal);
+export function getDisplayAttendance(
+  signal?: AbortSignal
+): Promise<ApiDisplayAttRow[]> {
+  return api.get<ApiDisplayAttRow[]>("/display/attendance", undefined, signal);
 }
 
 /* GET /api/display/ftw */

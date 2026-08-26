@@ -1035,6 +1035,7 @@ export const id = {
   bUnfit: "Unfit",
   bOff: "OFF / Cuti",
   attEmptyB: "Coba tanggal, departemen, atau kata kunci lain.",
+  attLoadErrB: "Log absensi tidak bisa diambil dari server.",
   attSumA: "Menampilkan",
   attSumB: "dari",
   attSumLog: "log absensi",
