@@ -89,6 +89,15 @@ const nextConfig: NextConfig = {
        bawaan Next 10 MB, dan kegagalannya muncul sebagai galat ukuran yang
        tidak jelas asalnya. 25 MB memberi ruang tanpa membuatnya tanpa batas. */
     proxyClientMaxBodySize: 25 * 1024 * 1024,
+
+    /* Batas waktu proxy rewrite, dalam milidetik. Bawaan Next 30 detik —
+       tepat di ambang yang bisa dilampaui POST /api/fingerprint/sync: backend
+       menjalani mesin BERURUTAN dan tiap mesin offline memakan timeout penuh
+       3 detik (pkg/solutionx100c, Timeout 3s), jadi 10 mesin mati saja sudah
+       ±30 detik. Tanpa ini admin mendapat toast gagal padahal sync backend
+       jalan terus sampai selesai. 120 detik memberi ruang untuk puluhan mesin
+       tanpa membuat permintaan macet menggantung selamanya. */
+    proxyTimeout: 120_000,
   },
 
   /* Hanya relevan bila NEXT_PUBLIC_API_BASE_URL disetel absolut. Dengan base

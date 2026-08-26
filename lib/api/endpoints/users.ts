@@ -29,8 +29,8 @@ export type UpdateUserBody = {
 };
 
 /* GET /api/users — array polos, bukan objek berpaginasi. */
-export function listUsers(): Promise<ApiUser[]> {
-  return api.get<ApiUser[]>("/users/");
+export function listUsers(signal?: AbortSignal): Promise<ApiUser[]> {
+  return api.get<ApiUser[]>("/users/", undefined, signal);
 }
 
 /* POST /api/users */
@@ -61,11 +61,19 @@ export function deleteUser(id: string | number): Promise<void> {
   return api.del<void>(`/users/${id}`);
 }
 
+/* Ringkasan hasil import — handler ImportUsers; `errors` nil di Go menjadi
+   null, bukan []. */
+export type ImportUsersResult = {
+  imported: number;
+  skipped: number;
+  errors: string[] | null;
+};
+
 /* POST /api/users/import — berkas Excel, field form bernama `file`. */
-export function importUsers(file: File): Promise<unknown> {
+export function importUsers(file: File): Promise<ImportUsersResult> {
   const fd = new FormData();
   fd.append("file", file);
-  return api.post<unknown>("/users/import", fd);
+  return api.post<ImportUsersResult>("/users/import", fd);
 }
 
 /* GET /api/users/export — Excel, bukan JSON. */
@@ -77,12 +85,16 @@ export function exportUsers(): Promise<Blob> {
 
 export type RoleBody = {
   name: string;
+  /* Ikut tersimpan karena handler role mem-bind langsung model.Role
+     (json:"desc"). Catatan saat update: repo memakai gorm .Updates yang
+     melewatkan string kosong, jadi mengosongkan deskripsi tidak tersimpan. */
+  desc?: string;
   perms: ApiPermMap;
 };
 
 /* GET /api/roles */
-export function listRoles(): Promise<ApiRole[]> {
-  return api.get<ApiRole[]>("/roles/");
+export function listRoles(signal?: AbortSignal): Promise<ApiRole[]> {
+  return api.get<ApiRole[]>("/roles/", undefined, signal);
 }
 
 /* POST /api/roles */

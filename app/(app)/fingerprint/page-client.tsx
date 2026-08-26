@@ -4,16 +4,20 @@ import * as React from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleAlert,
   Eye,
   Fingerprint,
   Pencil,
   Plus,
   Radio,
+  RefreshCw,
   Search,
   Trash2,
   WifiOff,
 } from "lucide-react";
 
+import { errorMessage, isApiError, miscApi } from "@/lib/api";
+import { toFpMachine } from "@/lib/api/adapters";
 import {
   FP_DEFAULT_PORT,
   isIpv4,
@@ -99,7 +103,14 @@ const NET_ERROR: FpPingResult = {
    server (TCP 2 dtk + ICMP ~3,5 dtk) agar hasil sungguhan tetap sempat tiba. */
 const PING_CLIENT_TIMEOUT_MS = 9000;
 
-async function pingMachine(m: FpMachine): Promise<FpPingResult> {
+/* Sasaran satu uji koneksi. Lebih sempit dari FpMachine supaya tombol Ping di
+   dalam form bisa menguji alamat yang BELUM tersimpan: nilai form tidak punya
+   dbId backend, dan memang tidak boleh dicatat ke baris mana pun. */
+type PingTarget = Pick<FpMachine, "id" | "loc" | "ip" | "port"> & {
+  dbId?: number;
+};
+
+async function pingMachine(m: PingTarget): Promise<FpPingResult> {
   try {
     const res = await fetch("/api/fingerprint/ping", {
       method: "POST",
@@ -134,7 +145,7 @@ function clockNow(): string {
 const SONAR_DELAYS = ["0s", "0.63s", "1.26s"];
 
 type PingView = {
-  machine: FpMachine;
+  machine: PingTarget;
   result: FpPingResult | null;
   /* uji dari dalam form memakai nilai yang BELUM tersimpan — hasilnya tidak
      boleh dicatat ke baris mana pun, kolom "Ping terakhir" harus selalu
@@ -145,7 +156,13 @@ type PingView = {
 export default function FingerprintMachinesPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { fpAll, saveFpMachine, deleteFpMachine, recordFpPing } = useAppStore();
+  const {
+    fpAll,
+    setFpMachines,
+    upsertFpMachine,
+    deleteFpMachine,
+    recordFpPing,
+  } = useAppStore();
   /* layout (app) hanya menjaga "view"; aksi ubah dijaga di sini, sama seperti
      halaman User Management */
   const { can } = usePermissions();
@@ -153,6 +170,54 @@ export default function FingerprintMachinesPage() {
 
   const [q, setQ] = React.useState("");
   const [statusF, setStatusF] = React.useState("");
+
+  /* Hidrasi dari backend — pola yang sama dengan tab Halaman Auth di
+     Settings: setState hanya di dalam callback .then/.catch, dan `reloadKey`
+     menaikkan diri untuk memuat ulang (tombol retry, atau setelah sync yang
+     mengubah isOnline/lastSync di server). Daftarnya sendiri tinggal di
+     app-store supaya identitas mutasi (upsert/delete/ping) satu pintu. */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void miscApi
+      .listFingerprintDevices(ac.signal)
+      .then((rows) => {
+        setFpMachines((prev) =>
+          rows.map((r) => {
+            const next = toFpMachine(r);
+            /* lastPing hanya hidup di klien — jangan hangus tiap muat ulang */
+            const old = prev.find((p) => p.dbId === next.dbId);
+            return old ? { ...next, lastPing: old.lastPing } : next;
+          })
+        );
+        setLoaded(true);
+        /* muat ulang yang sukses (mis. pasca-sync) harus menghapus jejak
+           error dari percobaan sebelumnya */
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey, setFpMachines]);
+
+  function retry() {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }
+
+  /* Pesan validasi per-field dari backend (mis. kode kembar kena unique
+     constraint) lebih berguna daripada pesan umumnya — pola toastErr yang
+     sama dengan tab Halaman Auth. */
+  function toastErr(e: unknown) {
+    const fieldMsg =
+      isApiError(e) && e.fieldErrors.length
+        ? e.fieldErrors.map((f) => f.message).join(" ")
+        : null;
+    pushToast("error", t.apErrT, fieldMsg ?? errorMessage(e, t.fpLoadErrB));
+  }
 
   /* dialog tambah/edit */
   const [dlgOpen, setDlgOpen] = React.useState(false);
@@ -173,8 +238,13 @@ export default function FingerprintMachinesPage() {
   /* dialog hapus + pop-up hasil ping */
   const [delTarget, setDelTarget] = React.useState<FpMachine | null>(null);
   const [ping, setPing] = React.useState<PingView | null>(null);
-  /* id mesin yang sedang diuji — dipakai spinner per baris & anti klik ganda */
-  const [busy, setBusy] = React.useState<string[]>([]);
+  /* dbId mesin yang sedang di-ping — dipakai spinner per baris & anti klik
+     ganda. Kuncinya dbId, bukan kode: kode boleh diganti admin kapan saja. */
+  const [busy, setBusy] = React.useState<number[]>([]);
+  /* satu penanda untuk seluruh tulisan CRUD — tombol simpan/hapus dimatikan
+     selama menunggu server, seperti `busy` di tab Halaman Auth */
+  const [saving, setSaving] = React.useState(false);
+  const [syncBusy, setSyncBusy] = React.useState(false);
 
   /* setelah await, komponen bisa saja sudah dilepas (admin pindah halaman
      sementara ping berjalan) — setState di titik itu percuma */
@@ -221,13 +291,13 @@ export default function FingerprintMachinesPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const code = fCode.trim();
     const loc = fLoc.trim();
     const ip = fIp.trim();
     const port = Number(fPort);
-    const others = machines.filter((m) => m.id !== editing?.id);
+    const others = machines.filter((m) => m.dbId !== editing?.dbId);
 
     const next = {
       code: !code || others.some((m) => m.id === code),
@@ -241,39 +311,102 @@ export default function FingerprintMachinesPage() {
     setErr(next);
     if (next.code || next.loc || next.ip || next.dupe || next.port) return;
 
-    if (editing) {
-      saveFpMachine(editing.id, { id: code, loc, ip, port, active: fActive });
-      pushToast("success", t.fpToastEdit, `${code} — ${ip}:${port}`);
-    } else {
-      saveFpMachine(null, { id: code, loc, ip, port, active: fActive });
-      pushToast("success", t.fpToastAdd, `${code} — ${ip}:${port}`);
+    setSaving(true);
+    try {
+      if (editing) {
+        /* isActive dikirim eksplisit karena tipe helper mewajibkannya —
+           backend kini partial update ber-pointer (field yang dilewatkan
+           dipertahankan), jadi ini soal niat toggle yang selalu tersurat,
+           bukan mencegah nonaktif diam-diam. `name` ikut dikirim = kode,
+           sama seperti saat membuat: name dipakai worker sebagai label mesin
+           di baris absensi, jadi rename kode tanpa name membuat label absen
+           terus memakai nama lama. Aman — backend hanya menimpanya bila
+           non-kosong. */
+        const updated = await miscApi.updateFingerprintDevice(editing.dbId, {
+          code,
+          name: code,
+          ipAddress: ip,
+          port,
+          location: loc,
+          isActive: fActive,
+        });
+        upsertFpMachine(toFpMachine(updated));
+        pushToast("success", t.fpToastEdit, `${code} — ${ip}:${port}`);
+      } else {
+        /* backend mewajibkan `name`; UI tidak punya field-nya, jadi kode
+           mesin dipakai sebagai nama — konsisten dengan yang tampil di UI */
+        const created = await miscApi.createFingerprintDevice({
+          code,
+          name: code,
+          ipAddress: ip,
+          port,
+          location: loc,
+          isActive: fActive,
+        });
+        upsertFpMachine(toFpMachine(created));
+        pushToast("success", t.fpToastAdd, `${code} — ${ip}:${port}`);
+      }
+      setDlgOpen(false);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setSaving(false);
     }
-    setDlgOpen(false);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delTarget) return;
-    deleteFpMachine(delTarget.id);
-    pushToast("success", t.fpToastDel, `${delTarget.id} — ${delTarget.loc}`);
-    setDelTarget(null);
+    setSaving(true);
+    try {
+      await miscApi.deleteFingerprintDevice(delTarget.dbId);
+      deleteFpMachine(delTarget.dbId);
+      pushToast("success", t.fpToastDel, `${delTarget.id} — ${delTarget.loc}`);
+      setDelTarget(null);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* Tarik absen sekarang: bisa lama (mesin dijalani berurutan, yang offline
+     memakan timeout ~3 dtk per perangkat), jadi tombolnya dimatikan +
+     ber-spinner selama menunggu. Setelah selesai daftar dimuat ulang —
+     isOnline/lastSync di server baru saja berubah, dan kolom "Koneksi"
+     harus menceritakan hasil sync yang barusan, bukan yang sebelumnya. */
+  async function syncNow() {
+    setSyncBusy(true);
+    try {
+      const res = await miscApi.syncFingerprintNow();
+      if (!alive.current) return;
+      pushToast("success", t.fpSyncOkT, `${res.totalSynced} ${t.fpSyncOkD}`);
+      setReloadKey((k) => k + 1);
+    } catch (e2) {
+      pushToast("error", t.fpSyncErrT, errorMessage(e2, t.fpLoadErrB));
+    } finally {
+      if (alive.current) setSyncBusy(false);
+    }
   }
 
   /* Satu uji koneksi: catat hasilnya di mesin (kolom "Ping terakhir") dan
-     kembalikan supaya pemanggil bisa membuka pop-up atau menghitung ringkasan. */
+     kembalikan supaya pemanggil bisa membuka pop-up atau menghitung ringkasan.
+     Pencatatan butuh dbId — sasaran dari form (tanpa dbId) otomatis tidak
+     pernah tercatat, persis kontrak `record` di PingView. */
   const runPing = React.useCallback(
-    async (m: FpMachine, record: boolean): Promise<FpPingResult> => {
-      if (record)
-        setBusy((prev) => (prev.includes(m.id) ? prev : [...prev, m.id]));
+    async (m: PingTarget, record: boolean): Promise<FpPingResult> => {
+      const dbId = record ? m.dbId : undefined;
+      if (dbId !== undefined)
+        setBusy((prev) => (prev.includes(dbId) ? prev : [...prev, dbId]));
       const result = await pingMachine(m);
-      if (alive.current && record)
-        recordFpPing(m.id, { at: clockNow(), ok: result.ok, ms: result.ms });
-      if (record) setBusy((prev) => prev.filter((id) => id !== m.id));
+      if (alive.current && dbId !== undefined)
+        recordFpPing(dbId, { at: clockNow(), ok: result.ok, ms: result.ms });
+      if (dbId !== undefined) setBusy((prev) => prev.filter((x) => x !== dbId));
       return result;
     },
     [recordFpPing]
   );
 
-  async function pingOne(m: FpMachine, record = true) {
+  async function pingOne(m: PingTarget, record = true) {
     setPing({ machine: m, result: null, record });
     const result = await runPing(m, record);
     if (!alive.current) return;
@@ -307,10 +440,20 @@ export default function FingerprintMachinesPage() {
             {t.dspPreview}
           </Button>
           {canManage ? (
-            <Button onClick={openAdd}>
-              <Plus />
-              {t.fpAdd}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                disabled={syncBusy}
+                onClick={() => void syncNow()}
+              >
+                {syncBusy ? <Spinner /> : <RefreshCw />}
+                {t.fpSyncNow}
+              </Button>
+              <Button onClick={openAdd}>
+                <Plus />
+                {t.fpAdd}
+              </Button>
+            </>
           ) : null}
         </div>
       </PageTitle>
@@ -339,7 +482,19 @@ export default function FingerprintMachinesPage() {
           </ToolbarGroup>
         </Toolbar>
 
-        {pg.rows.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.fpLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : pg.rows.length ? (
           <Table>
             <TableHeader>
               <tr>
@@ -353,7 +508,7 @@ export default function FingerprintMachinesPage() {
             </TableHeader>
             <TableBody>
               {pg.rows.map((m) => (
-                <TableRow key={m.id}>
+                <TableRow key={m.dbId}>
                   <TableCell>
                     <NameCell name={m.id} sub={m.loc} />
                   </TableCell>
@@ -410,10 +565,10 @@ export default function FingerprintMachinesPage() {
                            tidak menemukan tombol ini (WCAG 2.5.3) */
                         aria-label={`${t.fpPing} ${m.id}`}
                         title={`${t.fpPingT} ${m.id}`}
-                        disabled={busy.includes(m.id)}
+                        disabled={busy.includes(m.dbId)}
                         onClick={() => pingOne(m)}
                       >
-                        {busy.includes(m.id) ? <Spinner /> : <Radio />}
+                        {busy.includes(m.dbId) ? <Spinner /> : <Radio />}
                         {t.fpPing}
                       </Button>
                       {canManage ? (
@@ -447,20 +602,24 @@ export default function FingerprintMachinesPage() {
           />
         )}
 
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
-            {t.fpSumB}
-          </FootSum>
-          <Pagination
-            page={pg.page}
-            pageCount={pg.pageCount}
-            onPage={pg.setPage}
-            per={pg.per}
-            perOptions={["10", "25", "50"]}
-            onPer={pg.setPer}
-          />
-        </PanelFoot>
+        {/* ringkasan "0 mesin" selama memuat/gagal hanya membingungkan —
+            kaki tabel ikut menunggu datanya */}
+        {loaded && !loadErr ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
+              {t.fpSumB}
+            </FootSum>
+            <Pagination
+              page={pg.page}
+              pageCount={pg.pageCount}
+              onPage={pg.setPage}
+              per={pg.per}
+              perOptions={["10", "25", "50"]}
+              onPer={pg.setPer}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
 
       <DNote title={t.fpNoteT}>{t.fpNoteB}</DNote>
@@ -575,9 +734,6 @@ export default function FingerprintMachinesPage() {
                     loc: fLoc.trim(),
                     ip: fIp.trim(),
                     port: Number(fPort),
-                    active: fActive,
-                    online: false,
-                    meta: "",
                   },
                   /* nilai form belum tersimpan — jangan dicatat ke baris mana pun */
                   false
@@ -588,7 +744,8 @@ export default function FingerprintMachinesPage() {
               {t.fpPing}
             </Button>
             {canManage ? (
-              <Button type="submit">
+              <Button type="submit" disabled={saving}>
+                {saving ? <Spinner className="size-4" /> : null}
                 {editing ? t.udbSaveEdit : t.fpAddDo}
               </Button>
             ) : null}
@@ -611,7 +768,11 @@ export default function FingerprintMachinesPage() {
           <Button variant="ghost" onClick={() => setDelTarget(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={delDo}>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void delDo()}
+          >
             {t.fpDelDo}
           </Button>
         </DialogActions>

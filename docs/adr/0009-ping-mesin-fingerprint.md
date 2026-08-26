@@ -1,6 +1,7 @@
 # 0009 — Master mesin fingerprint + uji koneksi lewat route handler
 
-- Status: Accepted (diamandemen [0010](0010-tanpa-streaming-ke-browser.md))
+- Status: Accepted (diamandemen [0010](0010-tanpa-streaming-ke-browser.md),
+  [0011](0011-integrasi-fingerprint-backend.md))
 - Tanggal: 2026-08-06
 
 ## Konteks
@@ -94,6 +95,10 @@ mentah maupun ICMP. Sampai ADR ini, aplikasi belum punya route handler apa pun
   pemeriksaan paralelnya — sudah dihapus. Uji koneksi kini dijalankan satu per
   satu dari baris mesin yang bersangkutan, sehingga tidak pernah ada belasan
   proses `ping` sekaligus dan pop-up hasilnya selalu merujuk satu alamat.
-- Data aplikasi masih di memori browser, jadi layar TV yang dibuka di perangkat
-  lain tetap memulai dari seed sampai backend tersambung — batas yang sama
-  dengan seluruh modul lain (ADR 0001).
+- ~~Data aplikasi masih di memori browser, jadi layar TV yang dibuka di
+  perangkat lain tetap memulai dari seed sampai backend tersambung — batas
+  yang sama dengan seluruh modul lain (ADR 0001).~~ **Diamandemen 0011:**
+  backend-nya sudah tersambung. Daftar mesin kini tinggal di tabel
+  `fingerprint_devices`; seed `initialFpMachines` dihapus, modul admin
+  menghidrasi dari `/api/fingerprint/devices`, dan layar TV membaca proyeksi
+  `/api/display/fingerprint` — di perangkat mana pun.

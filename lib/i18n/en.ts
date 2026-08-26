@@ -81,6 +81,9 @@ export const en: Dict = {
   regDept: "Department",
   regDeptPh: "Select department",
   regEmailPh: "Enter your email address",
+  regEmailLocalPh: "your.name",
+  regEmailLocalErr:
+    "Email — enter the name part only (no @); the @universe.com domain is appended automatically.",
   regPwPh: "Create a password",
   regPwConf: "Confirm password",
   regPwConfPh: "Repeat your password",
@@ -98,6 +101,10 @@ export const en: Dict = {
     "This email is already registered. Verify your information or contact an admin.",
   regRetry: "Try again",
   regErrForm: "Please review the form:",
+  /* same rules as the backend (internal/pkg/validate.go) */
+  regNikErr: "NIK must be exactly 9 digits.",
+  regNameErrMax: "Name must be at most 100 characters.",
+  regPwErrMax: "Password must be at most 72 characters.",
   greetMorning: "Good morning",
   greetNoon: "Good afternoon",
   greetAfternoon: "Good afternoon",
@@ -184,7 +191,8 @@ export const en: Dict = {
   phMedis: "Medical notes relevant to assignment…",
   helpMedis: "Visible to SDI & paramedics only.",
   efDzTitle: "Drag a photo here, or click to browse",
-  efDzHint: "JPG/PNG, max 2 MB — 1:1 ratio recommended",
+  /* the 5 MB cap follows backend validation (UploadPhoto handler) */
+  efDzHint: "JPG/PNG, max 5 MB — 1:1 ratio recommended",
   efDzReady: "— ready to upload",
   efUnsaved: "Unsaved changes",
   efTitleAdd: "Add Employee",
@@ -196,6 +204,28 @@ export const en: Dict = {
   toastSaveT: "Changes saved",
   toastSaveD: "updated.",
   toastAddT: "Employee added",
+  /* employees module backend integration (ADR 0014) */
+  empLoadErrB: "Employee data could not be fetched from the server.",
+  empToastExp: "Excel export downloaded",
+  efErrDateEmpty:
+    "The backend cannot save changes while a date field is still empty — fill in Join date, Contract expiry, and SIMPER validity on this form, then save again.",
+  kSimperExp: "SIMPER validity",
+  helpSimper:
+    "General SIMPER on the employee record — per-EGI details go in the competency list above.",
+  helpSimperExp: "When saving an edit, the backend rejects an empty date.",
+  efErrKompExp: "A validity date is required for every competency row.",
+  empImpNoneT: "Import: no rows added",
+  empImpPartT: "Import: some rows skipped",
+  empImpOkB: "rows imported",
+  empImpSkipB: "rows skipped",
+  empImpMore: "more errors",
+  efKompFailT: "Competencies not saved",
+  efKompFailD:
+    "The employee record was saved, but the competencies failed to write — open Edit and save again.",
+  efPhotoFailT: "Photo upload failed",
+  efPhotoFailD:
+    "The employee record was saved, but the photo was not uploaded — open Edit and upload it again.",
+  efPhotoTypeErr: "Photo must be JPG/PNG, max 5 MB.",
   toastFormErrT: "Check the form",
   toastFormErrD: "Some fields are invalid — see the messages under each field.",
   dirtyTitle: "Leave the form without saving?",
@@ -376,7 +406,7 @@ export const en: Dict = {
   fpPort: "Port",
   fpIpHelp: "The machine's IPv4 on the site network — e.g. 10.10.20.11.",
   fpPortHelp:
-    "TCP port of the attendance service. Defaults to 4370 (ZKTeco/Solution).",
+    "Attendance-sync port — 4370 = ZKTeco binary protocol (existing machines), 80 = SOAP HTTP /iWsService. Both are supported; the backend picks the protocol from this port.",
   fpErrCode: "Code is required and must not duplicate another machine.",
   fpErrLoc: "Location is required.",
   fpErrIp: "Not a valid IPv4 address — e.g. 10.10.20.11.",
@@ -423,9 +453,14 @@ export const en: Dict = {
   fpNoteT: "Ping runs from the application server",
   fpNoteB:
     "The connection test runs on the Next.js server, not in the browser — so the result reflects what the SERVER can reach on the site network. A machine on a VLAN the server cannot reach always shows as not connected even when it is powered on.",
-  fpNoteTvT: "The TV screen loads its own copy",
+  fpNoteTvT: "The TV screen reads the same backend",
   fpNoteTvB:
-    "App data still lives in browser memory, so a Fingerprint Monitoring screen opened in another tab or device starts from the built-in list. A newly registered machine shows up immediately on the screen opened via the kiosk preview button from this tab; field TVs will follow once a backend is connected.",
+    "The machine list lives in the backend, no longer in browser memory. The Fingerprint Monitoring screen — including one opened in another tab or device — fetches the same list from the server, so a newly registered machine shows up on field TVs without opening the screen from this tab.",
+  fpLoadErrB: "The machine list could not be fetched from the server.",
+  fpSyncNow: "Sync Attendance Now",
+  fpSyncOkT: "Sync finished",
+  fpSyncOkD: "attendance logs pulled from the machines.",
+  fpSyncErrT: "Sync failed",
   umSub:
     "Application login accounts — invite, link to an employee, and assign roles.",
   umRoleSub: "Per-module RBAC — menus without permission are not rendered.",
@@ -437,16 +472,19 @@ export const en: Dict = {
   umRoleListT: "Role list",
   umFAll: "All statuses",
   umFAllRoles: "All roles",
+  umLoadErrB: "User & role data could not be fetched from the server.",
   umToastImp: "Import processed",
   umToastImpD: "valid rows added, duplicates skipped.",
+  umRoleImpNA:
+    "Role import is not available yet — the backend does not provide an endpoint for it.",
   umToastExp: "CSV export downloaded",
   umUserAdd: "Add user",
   umUserEditT: "Edit user",
-  umUserSaveAdd: "Send invitation",
+  umUserSaveAdd: "Save user",
   umLinked: "Linked employee",
   umNoLink: "No link (external account)",
   umUserDlgB:
-    "New users receive an email with a set-password link — there is no default password.",
+    "The email is used to sign in and roles determine access. An initial password is only required when adding a new user.",
   umErrEmail: "Enter a valid email and pick at least one role.",
   umOf: "of",
   umActiveSum: "active",
@@ -454,13 +492,16 @@ export const en: Dict = {
   umOn: "Activate",
   umOffB:
     "The user cannot sign in until reactivated. Active sessions are terminated. Their data & history are kept.",
-  umToastInvite: "Invitation sent",
-  umToastInviteD: "the set-password link is valid for 24 hours.",
+  umToastUserAdd: "User added",
   umToastUserEdit: "User updated",
   umToastOff: "User deactivated",
   umToastOffD: "sessions terminated; can be reactivated any time.",
   umToastOn: "User activated",
   umToastOnD: "can sign in again.",
+  umUserDelT: "Delete user",
+  umUserDelB:
+    "The user is permanently removed from the database and can no longer sign in. This action cannot be undone.",
+  umToastUserDel: "User deleted",
   umRoleAdd: "Add role",
   umRoleEditT: "Edit role",
   umRoleSaveAdd: "Save role",
@@ -492,6 +533,7 @@ export const en: Dict = {
   umPwB:
     "The new password takes effect immediately. The old password is not required and can never be viewed — only a digest of it is stored.",
   umPwNew: "New password",
+  umPwInit: "Initial password",
   umPwConf: "Repeat new password",
   umPwHelp: "At least 8 characters, containing letters and numbers.",
   umPwShow: "Show password",
@@ -511,6 +553,9 @@ export const en: Dict = {
     "You cannot deactivate the last active Superadmin — it would lock everyone out.",
   umGuardLastSuperRole:
     "You cannot remove the last Superadmin role — it would lock everyone out.",
+  umGuardSelfDel: "You cannot delete your own account.",
+  umGuardLastSuperDel:
+    "You cannot delete the last active Superadmin — it would lock everyone out.",
   umReadOnly: "View-only mode",
   umReadOnlyB:
     "Your role has View permission on this module, so editing actions are hidden.",
@@ -703,6 +748,12 @@ export const en: Dict = {
   apLoadErrB: "Auth page data could not be fetched from the server.",
   apRetry: "Reload",
   apErrT: "Save failed",
+  apRoleTitle: "New registrant role",
+  apRoleHelp:
+    "The role automatically assigned to accounts created from the register page. The Superadmin role is not offered here.",
+  apRoleLabel: "Default role",
+  apRoleToastT: "Default role saved",
+  apRoleToastD: "the next registrants will get this role right away.",
   faSubB:
     "unit-to-operator allocation. Fit-to-work status is pulled straight from this morning's sleep logs.",
   faShiftPagi: "Day shift",
@@ -1010,7 +1061,7 @@ export const en: Dict = {
   pfPwCur: "Current password",
   pfPwNew: "New password",
   pfPwConf: "Confirm new password",
-  pfPwHelp: "At least 8 characters.",
+  pfPwHelp: "At least 8 characters, containing letters and numbers.",
   pfPwBtn: "Change password",
   pfPwErrCur: "Current password is required.",
   pfPwErrLen: "At least 8 characters.",

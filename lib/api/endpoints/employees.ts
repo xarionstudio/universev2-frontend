@@ -71,6 +71,23 @@ export function listEmployees(
   return api.get<Paged<ApiEmployee>>("/employees/", q, signal);
 }
 
+/* Seluruh karyawan, lintas halaman. perPage dipangkas backend ke 200
+   (pagination.MaxPerPage), jadi halaman berikutnya diambil berurutan sampai
+   meta menyatakan habis. Dipakai pemanggil yang menyaring di klien: halaman
+   list Karyawan (filter dept-nya multi-pilih, tidak bisa diekspresikan query
+   backend) dan dropdown "Karyawan tertaut" di menu User. */
+export async function listAllEmployees(
+  signal?: AbortSignal
+): Promise<ApiEmployee[]> {
+  const out: ApiEmployee[] = [];
+  for (let page = 1; ; page++) {
+    const res = await listEmployees({ page, perPage: 200 }, signal);
+    out.push(...res.items);
+    if (page >= res.pagination.totalPages || res.items.length === 0) break;
+  }
+  return out;
+}
+
 /* GET /api/employees/:nik */
 export function getEmployee(nik: string): Promise<ApiEmployee> {
   return api.get<ApiEmployee>(`/employees/${encodeURIComponent(nik)}`);

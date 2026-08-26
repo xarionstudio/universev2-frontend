@@ -17,8 +17,9 @@ import {
 
    Dua lapis, karena "mesin menyala" dan "layanan absensinya hidup" adalah dua
    pertanyaan berbeda:
-     1. TCP connect ke port mesin (4370 untuk ZKTeco/Solution) — inilah yang
-        benar-benar berarti "berhasil terhubung".
+     1. TCP connect ke port mesin (port tersimpan = port SOAP /iWsService
+        yang dipakai sync, bawaan 80) — inilah yang benar-benar berarti
+        "berhasil terhubung".
      2. Bila gagal, ICMP ping — membedakan "mesin mati / IP salah" dari
         "mesin hidup tapi layanannya belum jalan". */
 

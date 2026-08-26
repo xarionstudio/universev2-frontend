@@ -1,20 +1,29 @@
-/* Master mesin fingerprint — SATU sumber untuk modul admin (Mesin Fingerprint)
+/* Tipe & utilitas mesin fingerprint — dipakai modul admin (Mesin Fingerprint)
    dan layar TV Monitoring Fingerprint di grup Display.
 
-   Sebelumnya daftar mesin hanya ada sebagai `displayMachines` di
-   display-screens.ts: layar TV memegang datanya sendiri, jadi tidak ada tempat
-   mana pun untuk mendaftarkan alamat IP mesin. Daftar layar sekarang
-   DITURUNKAN dari berkas ini (lihat fpDisplayMachines), sehingga mesin yang
-   didaftarkan admin langsung tercermin di layar tanpa dua daftar yang bisa
-   berbeda. */
+   Daftar mesinnya sendiri kini tinggal di backend (tabel
+   fingerprint_devices): modul admin menghidrasinya dari
+   GET /api/fingerprint/devices, layar TV membaca proyeksinya dari
+   GET /api/display/fingerprint. Seed mock `initialFpMachines` yang dulu ada
+   di sini sudah dihapus bersama penyambungan itu (ADR 0011) — berkas ini
+   tersisa sebagai rumah tipe FpMachine + validasi yang dipakai bersama. */
 
-/* Port TCP bawaan mesin absensi ZKTeco/Solution — dipakai tombol Ping untuk
-   memastikan LAYANAN absensinya hidup, bukan sekadar host-nya menyala. */
-export const FP_DEFAULT_PORT = 4370;
+/* Port bawaan layanan SOAP mesin Solution X100C (HTTP /iWsService) — nilai
+   awal form 80, sama dengan default skema/seed backend. Sejak ADR 0015 worker
+   backend mendukung DUA protokol penarikan dan memilihnya dari port yang
+   terdaftar: 4370 = protokol biner ZKTeco (mesin existing), selain itu = SOAP
+   (solutionx100c membentuk http://ip:port/iWsService). Penarikan mana pun
+   tidak menghapus memori mesin. Tombol Ping menguji port ini untuk memastikan
+   LAYANAN absensinya hidup, bukan sekadar host menyala. */
+export const FP_DEFAULT_PORT = 80;
 
 export type FpMachine = {
   /* kode mesin, tampil besar di layar TV (mis. "FP-01") */
   id: string;
+  /* id numerik baris backend (fingerprint_devices.id) — identitas yang
+     dipakai PUT/DELETE. `id` di atas tetap kode yang tampil di UI dan boleh
+     diganti admin; nomor inilah yang tidak pernah berubah. */
+  dbId: number;
   loc: string;
   ip: string;
   port: number;
@@ -47,8 +56,10 @@ export function isPort(value: number): boolean {
   return Number.isInteger(value) && value >= 1 && value <= 65535;
 }
 
-/* Keterangan mesin yang baru didaftarkan. Bukan lewat i18n: layar TV berjalan
-   id-only (ADR 0003), sama seperti displayRuntext di display-screens.ts. */
+/* Keterangan mesin yang belum pernah sinkron. Bukan lewat i18n: layar TV
+   berjalan id-only (ADR 0003), sama seperti displayRuntext di
+   display-screens.ts; nilainya juga sama persis dengan yang dirakit backend
+   di GetDisplayFingerprint (display_service.go). */
 export const FP_META_NEW = "belum ada data scan";
 
 /* "312 scan" -> 312. Satu parser dipakai bersama oleh urutan kartu di layar
@@ -79,117 +90,6 @@ export type FpPingResult = {
     | "invalid-port"
     | "error";
 };
-
-export const initialFpMachines: FpMachine[] = [
-  {
-    id: "FP-01",
-    loc: "Kantor SDI",
-    ip: "10.10.20.11",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "312 scan",
-  },
-  {
-    id: "FP-02",
-    loc: "Gate utara",
-    ip: "10.10.20.12",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "284 scan",
-  },
-  {
-    id: "FP-03",
-    loc: "Gate selatan",
-    ip: "10.10.20.13",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "201 scan",
-  },
-  {
-    id: "FP-04",
-    loc: "Workshop Plant",
-    ip: "10.10.20.14",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "145 scan",
-  },
-  {
-    id: "FP-05",
-    loc: "Kantor HRGA",
-    ip: "10.10.20.15",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "98 scan",
-  },
-  {
-    id: "FP-06",
-    loc: "Pit utara",
-    ip: "10.10.20.16",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "64 scan",
-  },
-  {
-    id: "FP-07",
-    loc: "Gate selatan",
-    ip: "10.10.20.17",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: false,
-    meta: "terakhir aktif 04:52",
-  },
-  {
-    id: "FP-08",
-    loc: "Pit selatan",
-    ip: "10.10.20.18",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "52 scan",
-  },
-  {
-    id: "FP-09",
-    loc: "Warehouse",
-    ip: "10.10.20.19",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "31 scan",
-  },
-  {
-    id: "FP-10",
-    loc: "Kantin",
-    ip: "10.10.20.20",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "14 scan",
-  },
-  {
-    id: "FP-11",
-    loc: "Mess 31",
-    ip: "10.10.20.21",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: false,
-    meta: "terakhir aktif kemarin 21:14",
-  },
-  {
-    id: "FP-12",
-    loc: "Klinik",
-    ip: "10.10.20.22",
-    port: FP_DEFAULT_PORT,
-    active: true,
-    online: true,
-    meta: "7 scan",
-  },
-];
 
 /* Kode mesin berikutnya (FP-13, FP-14, …) — kode lama yang dihapus tidak
    dipakai ulang supaya riwayat scan di mesin tidak tertukar identitas. */

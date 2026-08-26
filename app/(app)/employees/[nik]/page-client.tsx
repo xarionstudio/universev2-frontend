@@ -5,20 +5,24 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Briefcase,
+  CircleAlert,
   Heart,
   House,
   IdCard,
   Pencil,
 } from "lucide-react";
 
+import { assetUrl, employeesApi, isApiError } from "@/lib/api";
+import { toEmployee, toKomp } from "@/lib/api/adapters";
 import type { Employee } from "@/lib/data/employees";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { initialsOf } from "@/components/ui/avatar";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, Spinner } from "@/components/ui/button";
 import { Panel, SectionTitle } from "@/components/ui/panel";
+import { StateBox } from "@/components/ui/state-box";
 
 function Kv({ children }: { children: React.ReactNode }) {
   return (
@@ -68,16 +72,79 @@ export default function EmployeeDetailPage({
 }) {
   const { nik } = React.use(params);
   const { t } = useI18n();
-  const { empAll } = useAppStore();
   const router = useRouter();
+  const { can } = usePermissions();
+  const canManage = can("employees", "manage");
 
-  const emp = empAll().find((r) => r.nik === nik);
-
+  /* Dimuat sendiri dari backend, BUKAN dari daftar di store: dengan begitu
+     refresh dan deep-link /employees/:nik tetap bekerja tanpa harus mampir
+     ke halaman list dulu. Kompetensi ikut ditarik dari endpoint-nya sendiri
+     supaya yang tampil selalu daftar tersimpan, bukan sisa preload. */
+  const [emp, setEmp] = React.useState<Employee | null>(null);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
   React.useEffect(() => {
-    if (!emp) router.replace("/employees");
-  }, [emp, router]);
+    let cancelled = false;
+    void Promise.all([
+      employeesApi.getEmployee(nik),
+      employeesApi.getCompetencies(nik),
+    ])
+      .then(([e, comps]) => {
+        if (cancelled) return;
+        setEmp({ ...toEmployee(e), komp: (comps ?? []).map(toKomp) });
+        setLoadErr(false);
+      })
+      .catch((e2) => {
+        if (cancelled) return;
+        /* NIK tidak dikenal (atau bukan 9 digit) — kembali ke daftar, sama
+           dengan perilaku lama saat record tidak ditemukan di seed */
+        if (isApiError(e2) && (e2.status === 404 || e2.isValidation)) {
+          router.replace("/employees");
+          return;
+        }
+        setLoadErr(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [nik, reloadKey, router]);
 
-  if (!emp) return null;
+  if (loadErr) {
+    return (
+      <Panel>
+        <StateBox
+          icon={<CircleAlert className="text-danger-text" />}
+          title={t.apLoadErrT}
+          body={t.empLoadErrB}
+        >
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/employees")}
+            >
+              <ArrowLeft />
+              {t.back}
+            </Button>
+            <Button
+              onClick={() => {
+                setLoadErr(false);
+                setReloadKey((k) => k + 1);
+              }}
+            >
+              {t.apRetry}
+            </Button>
+          </div>
+        </StateBox>
+      </Panel>
+    );
+  }
+
+  if (!emp)
+    return (
+      <div className="grid place-items-center py-16">
+        <Spinner className="size-6" />
+      </div>
+    );
 
   const komps = emp.komp ?? [];
   const statusMap: Record<Employee["status"], { v: BadgeVariant; l: string }> =
@@ -87,14 +154,26 @@ export default function EmployeeDetailPage({
       nonaktif: { v: "danger", l: t.stNonaktif },
     };
   const st = statusMap[emp.status];
+  const fotoSrc = assetUrl(emp.foto);
 
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <Panel>
         <div className="flex flex-wrap items-center gap-6">
-          <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
-            {initialsOf(emp.name)}
-          </div>
+          {fotoSrc ? (
+            /* foto dari /uploads backend — di luar kendali optimizer Next,
+               pola <img> yang sama dengan slideshow halaman auth */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fotoSrc}
+              alt={emp.name}
+              className="size-24 flex-none rounded-card object-cover shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]"
+            />
+          ) : (
+            <div className="grid size-24 flex-none place-items-center rounded-card bg-(image:--gradient-cta) text-[28px] font-bold text-on-cta shadow-[0_0_0_3px_var(--ring-avatar),0_0_24px_rgba(0,212,255,.3)]">
+              {initialsOf(emp.name)}
+            </div>
+          )}
           <div className="min-w-65 flex-1">
             <h1 className="text-2xl font-bold">{emp.name}</h1>
             <div className="mt-0.5 font-mono text-sm text-(--text-secondary)">
@@ -119,10 +198,12 @@ export default function EmployeeDetailPage({
               <ArrowLeft />
               {t.back}
             </Button>
-            <Button onClick={() => router.push(`/employees/${emp.nik}/edit`)}>
-              <Pencil />
-              {t.empChange}
-            </Button>
+            {canManage ? (
+              <Button onClick={() => router.push(`/employees/${emp.nik}/edit`)}>
+                <Pencil />
+                {t.empChange}
+              </Button>
+            ) : null}
           </div>
         </div>
       </Panel>

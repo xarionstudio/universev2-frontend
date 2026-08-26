@@ -6,7 +6,7 @@
    membingungkan. Dengan namespace, pemanggilnya terbaca sebagai
    `employeesApi.list(...)` dan asal datanya langsung jelas. */
 
-export { ApiError, errorMessage, isApiError } from "./error";
+export { ApiError, errorDetail, errorMessage, isApiError } from "./error";
 export {
   api,
   apiBaseUrl,

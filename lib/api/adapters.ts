@@ -9,6 +9,8 @@
    Saat modul-modulnya dipindah satu per satu ke API, berkas ini yang menipis,
    bukan yang membengkak. */
 
+import type { Employee, Komp } from "@/lib/data/employees";
+import { FP_META_NEW, type FpMachine } from "@/lib/data/fingerprint";
 import {
   umModules,
   type UmModule,
@@ -18,6 +20,8 @@ import {
 } from "@/lib/data/users";
 import { EMPTY_PERMS, type PermMap } from "@/lib/rbac";
 
+import type { ApiCompetency, ApiEmployee } from "./endpoints/employees";
+import type { ApiFingerprintDevice } from "./endpoints/misc";
 import type { ApiPermMap, ApiRole, ApiUser, PermLevel } from "./types";
 
 /* ── Permission ──────────────────────────────────────────────────────── */
@@ -62,25 +66,51 @@ export function toPermMap(perms: ApiPermMap | null | undefined): PermMap {
   }, {} as PermMap);
 }
 
+/* Kebalikan toPermMap — PermMap frontend menjadi peta yang DITULIS ke
+   backend (POST/PUT /api/roles). Modul yang punya fallback (`fingerprint`)
+   sengaja DIBUANG, bukan ikut dikirim: ia tidak punya baris sendiri di
+   role_permissions, dan seluruh route /api/fingerprint ditegakkan lewat
+   `settings`. Menyimpannya justru membuat nilai langsungnya menang saat
+   dibaca ulang, sehingga UI menampilkan akses yang tidak pernah ditegakkan
+   backend. */
+export function toApiPermMap(
+  perms: Record<UmModule, UmPerm> | Partial<Record<UmModule, UmPerm>>
+): ApiPermMap {
+  const out: ApiPermMap = {};
+  for (const m of umModules) {
+    if (MODULE_FALLBACK[m]) continue;
+    out[m] = asPerm(perms[m]);
+  }
+  return out;
+}
+
 /* ── User ────────────────────────────────────────────────────────────── */
 
 /* ApiUser -> UmUser.
 
-   `pwSalt`/`pwHash` sengaja TIDAK diisi: backend memberi tag json:"-" pada
-   keduanya, jadi digest password tidak pernah sampai ke klien. Kode UI yang
-   masih memeriksa `me.pwHash` karena itu akan selalu melihat undefined — dan
-   itu benar, karena verifikasi password sekarang milik server. */
+   Digest password (password_hash/password_salt) bertag json:"-" di backend,
+   jadi tidak pernah sampai ke klien — yang ikut hanya stempel `pwAt`.
+   Verifikasi & penggantian password sepenuhnya milik server. */
 export function toUmUser(u: ApiUser | null | undefined): UmUser | null {
   if (!u) return null;
   return {
     id: String(u.id),
     email: u.email,
     kar: u.kar || null,
-    nik: u.nik ?? null,
+    /* backend menyimpan NIK sebagai pointer non-nil, jadi akun tanpa
+       tautan karyawan kembali dengan "" — perlakukan sama dengan null */
+    nik: u.nik || null,
     roles: u.roles ?? [],
     on: u.on,
     pwAt: u.pwAt ?? undefined,
   };
+}
+
+export function toUmUsers(users: ApiUser[] | null | undefined): UmUser[] {
+  return (users ?? []).flatMap((u) => {
+    const m = toUmUser(u);
+    return m ? [m] : [];
+  });
 }
 
 /* ── Role ────────────────────────────────────────────────────────────── */
@@ -100,4 +130,101 @@ export function toUmRole(r: ApiRole): UmRole {
 
 export function toUmRoles(roles: ApiRole[] | null | undefined): UmRole[] {
   return (roles ?? []).map(toUmRole);
+}
+
+/* ── Karyawan ────────────────────────────────────────────────────────── */
+
+/* Kolom DATE backend pulang sebagai RFC3339 penuh ("2026-12-01T00:00:00Z")
+   atau "" saat NULL (lihat catatan di endpoints/employees.ts) — dipotong ke
+   "YYYY-MM-DD" karena seluruh UI lama menampilkan dan membandingkan bentuk
+   itu (input type=date, kompVariant, validasi exp > join). */
+function isoDateOnly(v: string | null | undefined): string {
+  return v ? v.slice(0, 10) : "";
+}
+
+const EMP_STATUSES: readonly Employee["status"][] = [
+  "aktif",
+  "cuti",
+  "nonaktif",
+];
+
+/* Kolom status ber-CHECK constraint di DB, jadi nilai lain semestinya tidak
+   pernah datang — fallback "aktif" hanya pagar supaya union tipe UI tidak
+   pernah menerima string liar. */
+function asEmpStatus(v: string): Employee["status"] {
+  return (EMP_STATUSES as readonly string[]).includes(v)
+    ? (v as Employee["status"])
+    : "aktif";
+}
+
+export function toKomp(k: ApiCompetency): Komp {
+  return { cls: k.cls, simper: k.simper, exp: isoDateOnly(k.exp) };
+}
+
+/* ApiEmployee -> Employee. `komp` selalu array (backend memakai omitempty,
+   jadi karyawan tanpa kompetensi datang tanpa field-nya sama sekali) supaya
+   baris hasil hidrasi tidak pernah jatuh ke kompMap mock lewat withKomp().
+   `foto` dibiarkan path relatif backend — bungkus dengan assetUrl() saat
+   dirender, sama seperti logo & slide auth. */
+export function toEmployee(e: ApiEmployee): Employee {
+  return {
+    name: e.name,
+    nik: e.nik,
+    dept: e.dept,
+    pos: e.pos,
+    simper: e.simper,
+    simperExp: isoDateOnly(e.simperExp),
+    status: asEmpStatus(e.status),
+    company: e.company,
+    equip: e.equip,
+    join: isoDateOnly(e.join),
+    exp: isoDateOnly(e.exp),
+    license: e.license,
+    mcu: e.mcu,
+    medis: e.medis,
+    blood: e.blood,
+    bpjs: e.bpjs,
+    mess: e.mess,
+    kamar: e.kamar,
+    hp: e.hp,
+    emg: e.emg,
+    foto: e.foto || undefined,
+    komp: (e.komp ?? []).map(toKomp),
+  };
+}
+
+export function toEmployees(
+  list: ApiEmployee[] | null | undefined
+): Employee[] {
+  return (list ?? []).map(toEmployee);
+}
+
+/* ── Mesin fingerprint ───────────────────────────────────────────────── */
+
+/* Stempel sinkron terakhir -> keterangan pendek. id-only, bukan i18n:
+   bentuknya meniru meta yang dirakit backend untuk layar TV
+   (display_service.go), dan kiosk memang berjalan id-only (ADR 0003). */
+function fpMeta(lastSync: string | null): string {
+  if (!lastSync) return FP_META_NEW;
+  const d = new Date(lastSync);
+  if (Number.isNaN(d.getTime())) return FP_META_NEW;
+  const two = (n: number) => (n < 10 ? "0" : "") + n;
+  return `terakhir sinkron ${two(d.getDate())}/${two(d.getMonth() + 1)} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+/* ApiFingerprintDevice -> FpMachine. `id` UI tetap KODE mesin (yang tampil
+   di tabel & layar TV); id numerik tabel backend disimpan di `dbId` — itulah
+   yang dipakai PUT/DELETE. `lastPing` sengaja tidak diisi: hasil uji koneksi
+   hanya hidup di state klien (lihat lib/data/fingerprint.ts). */
+export function toFpMachine(d: ApiFingerprintDevice): FpMachine {
+  return {
+    id: d.code,
+    dbId: d.id,
+    loc: d.location,
+    ip: d.ipAddress,
+    port: d.port,
+    active: d.isActive,
+    online: d.isOnline,
+    meta: fpMeta(d.lastSync),
+  };
 }

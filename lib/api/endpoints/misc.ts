@@ -51,11 +51,27 @@ export function getDisplayMonitor(
   return api.get<unknown[]>("/display/monitor", { monitor }, signal);
 }
 
-/* GET /api/display/fingerprint */
+/* internal/service/display_service.go — DisplayFpDevice. Bentuknya sengaja
+   dibuat backend sama persis dengan DisplayMachine di
+   lib/data/display-screens.ts: `id` adalah KODE mesin (mis. "FP-07"), bukan
+   id numerik tabel — kiosk tidak pernah menerima alamat jaringan (ADR 0009). */
+export type ApiDisplayFpDevice = {
+  id: string;
+  loc: string;
+  online: boolean;
+  meta: string;
+};
+
+/* GET /api/display/fingerprint — hanya mesin aktif, belum terurut;
+   pengurutan kartu milik klien (fpDisplayMachines). */
 export function getDisplayFingerprint(
   signal?: AbortSignal
-): Promise<unknown[]> {
-  return api.get<unknown[]>("/display/fingerprint", undefined, signal);
+): Promise<ApiDisplayFpDevice[]> {
+  return api.get<ApiDisplayFpDevice[]>(
+    "/display/fingerprint",
+    undefined,
+    signal
+  );
 }
 
 /* ── Notifikasi ──────────────────────────────────────────────────────── */
@@ -201,12 +217,18 @@ export function createFingerprintDevice(
   return api.post<ApiFingerprintDevice>("/fingerprint/devices", body);
 }
 
-/* PUT /api/fingerprint/devices/:id */
+/* PUT /api/fingerprint/devices/:id — mengembalikan baris hasil perubahan.
+
+   Handler-nya partial update ber-pointer (updateDeviceRequest di
+   fingerprint.go): field yang DILEWATKAN dipertahankan, string kosong/angka
+   nol pada field wajib juga diabaikan. isActive tetap diwajibkan di tipe body
+   ini sebagai pilihan desain — status aktif adalah toggle yang niatnya harus
+   selalu tersurat dari form, bukan karena melewatkannya berbahaya. */
 export function updateFingerprintDevice(
   id: string | number,
-  body: Partial<FingerprintDeviceBody>
-): Promise<void> {
-  return api.put<void>(`/fingerprint/devices/${id}`, body);
+  body: Partial<FingerprintDeviceBody> & { isActive: boolean }
+): Promise<ApiFingerprintDevice> {
+  return api.put<ApiFingerprintDevice>(`/fingerprint/devices/${id}`, body);
 }
 
 /* DELETE /api/fingerprint/devices/:id */
@@ -215,9 +237,11 @@ export function deleteFingerprintDevice(id: string | number): Promise<void> {
 }
 
 /* POST /api/fingerprint/sync — memicu worker menarik data sekarang.
-   Worker hanya berjalan bila FINGERPRINT_ENABLED=true di .env backend. */
-export function syncFingerprintNow(): Promise<unknown> {
-  return api.post<unknown>("/fingerprint/sync");
+   Worker hanya berjalan bila FINGERPRINT_ENABLED=true di .env backend.
+   Bisa lama: mesin dijalani berurutan dan yang offline menghabiskan timeout
+   ~3 detik per perangkat — pemanggil wajib menampilkan keadaan menunggu. */
+export function syncFingerprintNow(): Promise<{ totalSynced: number }> {
+  return api.post<{ totalSynced: number }>("/fingerprint/sync");
 }
 
 /* ── Cuaca ───────────────────────────────────────────────────────────── */

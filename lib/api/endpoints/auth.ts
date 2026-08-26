@@ -34,7 +34,8 @@ export function login(body: LoginBody): Promise<AuthPayload> {
 /* POST /api/auth/register
 
    Mengembalikan user yang dibuat, BUKAN token — pengguna tetap harus login
-   setelahnya. Akun baru selalu diberi role "3" (Viewer) oleh backend. */
+   setelahnya. Role akun baru mengikuti setting "Role pendaftar baru"
+   (Settings → Halaman Auth, bawaan Viewer) — bukan lagi hardcode "3". */
 export function register(body: RegisterBody): Promise<ApiUser> {
   return request<ApiUser>("/auth/register", {
     method: "POST",

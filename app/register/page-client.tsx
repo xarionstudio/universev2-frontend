@@ -17,9 +17,10 @@ import {
   X,
 } from "lucide-react";
 
-import { authApi, errorMessage } from "@/lib/api";
+import { authApi, errorDetail } from "@/lib/api";
 import { useAuthPageConfig } from "@/lib/auth-page-config";
 import { useI18n } from "@/lib/i18n";
+import { passwordIssues } from "@/lib/password";
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/layout/footer";
 import { useAppStore } from "@/components/providers/app-store";
@@ -38,6 +39,12 @@ import { Select } from "@/components/ui/select";
    State loading/sukses/gagal tampil sebagai kartu full-screen (unit-16). */
 
 type FormState = "idle" | "loading" | "success" | "error";
+
+/* Pendaftaran dikunci ke email perusahaan — pengguna hanya mengetik nama
+   emailnya; domain ini tampil permanen di field dan ditempel otomatis saat
+   submit. Selaras dengan guard RegisterEmailDomain di backend
+   (internal/service/auth_service.go). */
+const EMAIL_DOMAIN = "@universe.com";
 
 const ctaClass =
   "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -63,19 +70,39 @@ export default function RegisterPage() {
   const [showConf, setShowConf] = React.useState(false);
 
   /* Validasi di bawah tetap dijalankan lebih dulu supaya pengguna dapat
-     seluruh kesalahan formulir sekaligus tanpa menunggu jaringan. Backend
-     memvalidasi ulang semuanya (internal/service/auth_service.go) — yang di
-     sini murni kenyamanan, bukan pengganti. */
+     seluruh kesalahan formulir sekaligus tanpa menunggu jaringan. Aturannya
+     dijaga SAMA dengan backend (internal/service/auth_service.go +
+     internal/pkg/validate.go): nama maks 100, NIK persis 9 digit, password
+     min 8 mengandung huruf & angka (maks 72). Backend memvalidasi ulang
+     semuanya — yang di sini murni kenyamanan, bukan pengganti. */
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const list: string[] = [];
     if (!name.trim()) list.push(t.errNama);
+    else if (name.trim().length > 100) list.push(t.regNameErrMax);
     if (!pos) list.push(`${t.regPos} — ${t.regPosPh.toLowerCase()}.`);
-    if (!nik.trim()) list.push(`${t.regNik} — ${t.regNikPh.toLowerCase()}.`);
+    if (!/^\d{9}$/.test(nik.trim())) list.push(t.regNikErr);
     if (!dept) list.push(`${t.regDept} — ${t.regDeptPh.toLowerCase()}.`);
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) list.push(t.pfErrEmail);
-    if (pw.length < 8)
-      list.push(`${t.pwLabel} — ${t.pfPwErrLen.toLowerCase()}`);
+    /* Field email hanya menampung nama (local part) — domain dikunci
+       EMAIL_DOMAIN; backend menolak domain lain saat register. */
+    if (!/^[A-Za-z0-9._%+-]+$/.test(email.trim()))
+      list.push(t.regEmailLocalErr);
+    /* Kode isu dari lib/password — sumber aturan yang sama dengan halaman
+       Users, cermin dari IsPasswordStrong di backend. */
+    for (const issue of passwordIssues(pw)) {
+      list.push(
+        issue === "len"
+          ? t.umPwErrLen
+          : issue === "num"
+            ? t.umPwErrNum
+            : t.umPwErrLetter
+      );
+    }
+    /* Backend membatasi password 72 BYTE (auth_service.go), bukan 72
+       karakter — hitung byte agar password multibyte tidak lolos klien
+       lalu ditolak 422 server. maxLength=72 pada input tetap sebagai
+       pagar kenyamanan saja. */
+    if (new TextEncoder().encode(pw).length > 72) list.push(t.regPwErrMax);
     if (conf !== pw) list.push(t.pfPwErrConf);
     setErrs(list);
     if (list.length) return;
@@ -83,19 +110,22 @@ export default function RegisterPage() {
     setFailMsg(null);
 
     try {
-      /* Akun baru selalu dibuat dengan role Viewer oleh backend; tidak ada
-         token yang dikembalikan, jadi pengguna tetap harus login setelah ini. */
+      /* Role akun baru ditentukan setting "Role pendaftar baru" di backend
+         (Settings → Halaman Auth; bawaan Viewer). Tidak ada token yang
+         dikembalikan, jadi pengguna tetap harus login setelah ini. */
       await authApi.register({
         name: name.trim(),
         nik: nik.trim(),
-        email: email.trim(),
+        email: email.trim() + EMAIL_DOMAIN,
         password: pw,
         dept,
         pos,
       });
       setState("success");
     } catch (e2) {
-      setFailMsg(errorMessage(e2, t.regFailB));
+      /* errorDetail merangkai pesan per-field dari 422 ("NIK harus 9 digit",
+         "email sudah terdaftar") — bukan "Validation failed" yang generik. */
+      setFailMsg(errorDetail(e2, t.regFailB));
       setState("error");
     }
   }
@@ -319,6 +349,7 @@ export default function RegisterPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t.regNamePh}
                     autoComplete="name"
+                    maxLength={100}
                     className="h-12"
                   />
                 </div>
@@ -344,12 +375,15 @@ export default function RegisterPage() {
                   <label htmlFor="reg-nik" className="text-sm font-medium">
                     {t.regNik}
                   </label>
+                  {/* NIK backend wajib persis 9 digit — karakter non-angka
+                      disaring saat mengetik, panjang dikunci di 9 */}
                   <Input
                     id="reg-nik"
                     value={nik}
-                    onChange={(e) => setNik(e.target.value)}
+                    onChange={(e) => setNik(e.target.value.replace(/\D/g, ""))}
                     placeholder={t.regNikPh}
                     inputMode="numeric"
+                    maxLength={9}
                     className="h-12"
                   />
                 </div>
@@ -380,17 +414,28 @@ export default function RegisterPage() {
                   <Mail className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
                   <Input
                     id="reg-email"
-                    type="email"
+                    type="text"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.regEmailPh}
+                    onChange={(e) => {
+                      /* Buang domain yang ikut terketik/tertempel
+                         ("nama@universe.com" → "nama"); sisa karakter tak
+                         valid ditolak validasi submit. */
+                      const v = e.target.value;
+                      const at = v.indexOf("@");
+                      setEmail((at === -1 ? v : v.slice(0, at)).trim());
+                    }}
+                    placeholder={t.regEmailLocalPh}
                     autoComplete="email"
-                    className="h-12 pl-12"
+                    className="h-12 pr-34 pl-12"
                   />
+                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-(--text-secondary)">
+                    {EMAIL_DOMAIN}
+                  </span>
                 </div>
               </div>
 
-              {/* password + konfirmasi */}
+              {/* password + konfirmasi — syarat tampil PROAKTIF sebagai
+                  helper, bukan baru muncul setelah submit gagal */}
               <PwField
                 id="reg-pw"
                 label={t.pwLabel}
@@ -400,6 +445,8 @@ export default function RegisterPage() {
                 show={showPw}
                 onToggle={() => setShowPw((v) => !v)}
                 toggleLabel={t.pwToggle}
+                helper={t.umPwHelp}
+                maxLength={72}
               />
               <PwField
                 id="reg-conf"
@@ -410,6 +457,7 @@ export default function RegisterPage() {
                 show={showConf}
                 onToggle={() => setShowConf((v) => !v)}
                 toggleLabel={t.pwToggle}
+                maxLength={72}
               />
 
               <button type="submit" className={cn(ctaClass, "mt-2")}>
@@ -442,7 +490,8 @@ export default function RegisterPage() {
   );
 }
 
-/* field password dengan ikon gembok + toggle lihat */
+/* field password dengan ikon gembok + toggle lihat; `helper` opsional untuk
+   menampilkan syarat password di bawah kontrol (gaya helper kit Field) */
 function PwField({
   id,
   label,
@@ -452,6 +501,8 @@ function PwField({
   show,
   onToggle,
   toggleLabel,
+  helper,
+  maxLength,
 }: {
   id: string;
   label: string;
@@ -461,6 +512,8 @@ function PwField({
   show: boolean;
   onToggle: () => void;
   toggleLabel: string;
+  helper?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -476,6 +529,8 @@ function PwField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           autoComplete="new-password"
+          maxLength={maxLength}
+          aria-describedby={helper ? `${id}-help` : undefined}
           className="h-12 pr-13 pl-12"
         />
         <button
@@ -492,6 +547,11 @@ function PwField({
           )}
         </button>
       </div>
+      {helper ? (
+        <span id={`${id}-help`} className="text-xs text-(--text-tertiary)">
+          {helper}
+        </span>
+      ) : null}
     </div>
   );
 }

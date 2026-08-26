@@ -76,3 +76,18 @@ export function errorMessage(e: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/* Seperti errorMessage, tetapi mendahulukan pesan per-field dari 422.
+
+   Message utama respons validasi hanyalah "Validation failed" — alasan yang
+   sebenarnya ("NIK harus 9 digit", "email sudah terdaftar") dikirim backend di
+   errors[] per field. Pola gabung-pesannya sama dengan toastErr yang sudah
+   dipakai halaman-halaman Settings; dijadikan util di sini supaya kartu gagal
+   register (dan pemakai berikutnya) tidak menyalinnya lagi. errorMessage tetap
+   ada apa adanya untuk pemanggil yang memang mau message top-level saja. */
+export function errorDetail(e: unknown, fallback: string): string {
+  if (isApiError(e) && e.fieldErrors.length) {
+    return e.fieldErrors.map((f) => f.message).join(" ");
+  }
+  return errorMessage(e, fallback);
+}

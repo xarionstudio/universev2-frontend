@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  CircleAlert,
   Download,
   Eye,
   Filter,
@@ -11,13 +12,17 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
 } from "lucide-react";
 
+import { employeesApi, errorDetail } from "@/lib/api";
+import { toEmployees } from "@/lib/api/adapters";
 import type { Employee, Komp } from "@/lib/data/employees";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -54,6 +59,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
+import { downloadBlob } from "../users/_lib/csv";
+
 const DEPTS = ["Operation", "SDI", "HRGA", "Plant"] as const;
 
 function kompVariant(exp: string): BadgeVariant {
@@ -68,8 +75,13 @@ function kompVariant(exp: string): BadgeVariant {
 export default function EmployeesPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { empAll, deleteEmployee } = useAppStore();
+  const { emps, setEmps, removeEmp } = useAppStore();
   const router = useRouter();
+  /* layout (app) hanya menjaga "view"; aksi ubah dijaga di sini, sama seperti
+     halaman Mesin Fingerprint & User Management */
+  const { can } = usePermissions();
+  const canManage = can("employees", "manage");
+  const impRef = React.useRef<HTMLInputElement>(null);
 
   const [q, setQ] = React.useState("");
   const [fOpen, setFOpen] = React.useState(false);
@@ -84,9 +96,49 @@ export default function EmployeesPage() {
   } | null>(null);
   const selAllRef = React.useRef<HTMLInputElement>(null);
 
+  /* Hidrasi dari backend — pola halaman Mesin Fingerprint: setState hanya di
+     callback .then/.catch, `reloadKey` menaikkan diri untuk memuat ulang
+     (tombol retry, atau setelah import yang menambah baris di server).
+     Penyaringan tetap di klien: filter departemen di sini multi-pilih dan
+     tidak bisa diekspresikan query backend (`dept` tunggal), jadi seluruh
+     daftar ditarik lalu disaring seperti sebelumnya. */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void employeesApi
+      .listAllEmployees(ac.signal)
+      .then((rows) => {
+        setEmps(toEmployees(rows));
+        setLoaded(true);
+        /* muat ulang yang sukses harus menghapus jejak error sebelumnya */
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey, setEmps]);
+
+  function retry() {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }
+
+  /* Pesan per-field dari 422 lebih berguna daripada pesan umumnya —
+     errorDetail menggabungkannya, pola halaman User Management. */
+  function toastErr(e: unknown) {
+    pushToast("error", t.apErrT, errorDetail(e, t.empLoadErrB));
+  }
+
+  /* satu penanda untuk tulisan CRUD — tombol hapus dimatikan selama menunggu
+     server, seperti `saving` di halaman Mesin Fingerprint */
+  const [saving, setSaving] = React.useState(false);
+
   const fN = DEPTS.filter((d) => fDepts[d]).length;
 
-  const filtered = empAll().filter((r) => {
+  const filtered = emps.filter((r) => {
     const needle = q.trim().toLowerCase();
     const okQ =
       !needle ||
@@ -126,12 +178,72 @@ export default function EmployeesPage() {
     });
   }
 
-  function exportNow() {
-    pushToast(
-      "info",
-      t.toastExportT,
-      `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`
-    );
+  /* Export Excel dirakit backend (GET /api/employees/export). Sengaja tanpa
+     query: filter dept di UI multi-pilih dan tidak bisa dibawa ke backend,
+     jadi yang diekspor selalu seluruh data supaya isinya tidak diam-diam
+     berbeda dengan yang tampak tersaring di layar. */
+  async function exportNow() {
+    try {
+      const blob = await employeesApi.exportEmployees();
+      const name = `karyawan_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      downloadBlob(name, blob);
+      pushToast("success", t.empToastExp, name);
+    } catch (e2) {
+      toastErr(e2);
+    }
+  }
+
+  /* Import Excel — backend hanya menerima .xlsx/.xls (field form `file`),
+     jadi `accept` di input mengikuti persis. Handler memulangkan hasil PER
+     BARIS (imported/skipped/errors): baris ber-NIK invalid/kembar atau
+     bertanggal salah dilewati server, dan alasannya harus sampai ke
+     pengguna — import yang 0 baris masuk bukan sukses. Setelah ada baris
+     yang masuk, daftar dimuat ulang, bukan ditebak. */
+  function importChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    /* reset dulu supaya file yang sama bisa dipilih ulang setelah gagal */
+    e.target.value = "";
+    if (!file) return;
+    void (async () => {
+      try {
+        const res = (await employeesApi.importEmployees(file)) as {
+          imported: number;
+          skipped: number;
+          errors?: string[] | null;
+        };
+        /* tiga alasan pertama cukup untuk tahu polanya; sisanya diringkas */
+        const rowErrs = res.errors ?? [];
+        const reasons =
+          rowErrs.slice(0, 3).join(" · ") +
+          (rowErrs.length > 3
+            ? ` · +${rowErrs.length - 3} ${t.empImpMore}`
+            : "");
+        if (res.imported === 0) {
+          pushToast(
+            "error",
+            t.empImpNoneT,
+            `${res.skipped} ${t.empImpSkipB}${reasons ? ` — ${reasons}` : ""}`
+          );
+          return;
+        }
+        if (res.skipped > 0) {
+          /* variant error dipakai supaya toast-nya tidak menutup sendiri
+             sebelum alasan per barisnya sempat terbaca */
+          pushToast(
+            "error",
+            t.empImpPartT,
+            `${res.imported} ${t.empImpOkB}, ${res.skipped} ${t.empImpSkipB}${
+              reasons ? ` — ${reasons}` : ""
+            }`
+          );
+        } else {
+          pushToast("success", t.umToastImp, `${res.imported} ${t.empImpOkB}.`);
+        }
+        setReloadKey((k) => k + 1);
+      } catch (e2) {
+        toastErr(e2);
+      }
+    })();
   }
 
   function resetFilters() {
@@ -141,11 +253,19 @@ export default function EmployeesPage() {
     setPage(1);
   }
 
-  function delDo() {
+  async function delDo() {
     if (!delAsk) return;
-    deleteEmployee(delAsk.nik);
-    pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
-    setDelAsk(null);
+    setSaving(true);
+    try {
+      await employeesApi.deleteEmployee(delAsk.nik);
+      removeEmp(delAsk.nik);
+      pushToast("success", t.toastDelT, `${delAsk.name} ${t.toastDelD}`);
+      setDelAsk(null);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function statusBadge(r: Employee) {
@@ -165,10 +285,12 @@ export default function EmployeesPage() {
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navEmployees} sub={t.empSub}>
-        <Button onClick={() => router.push("/employees/new")}>
-          <Plus />
-          {t.empAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={() => router.push("/employees/new")}>
+            <Plus />
+            {t.empAdd}
+          </Button>
+        ) : null}
       </PageTitle>
 
       <Panel>
@@ -233,14 +355,43 @@ export default function EmployeesPage() {
                 ))}
               </DropMenu>
             </DropMenuWrap>
-            <Button variant="secondary" onClick={exportNow}>
+            {canManage ? (
+              <Button
+                variant="secondary"
+                onClick={() => impRef.current?.click()}
+              >
+                <Upload />
+                Import
+              </Button>
+            ) : null}
+            {/* Export tetap tersedia untuk permission Lihat — hanya membaca */}
+            <Button variant="secondary" onClick={() => void exportNow()}>
               <Download />
               {t.export}
             </Button>
+            <input
+              ref={impRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={importChange}
+            />
           </ToolbarGroup>
         </Toolbar>
 
-        {shown.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.empLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : shown.length ? (
           <Table>
             <TableHeader>
               <tr>
@@ -314,23 +465,27 @@ export default function EmployeesPage() {
                         >
                           <Eye />
                         </IconButton>
-                        <IconButton
-                          aria-label={t.empChange}
-                          onClick={() =>
-                            router.push(`/employees/${r.nik}/edit`)
-                          }
-                        >
-                          <Pencil />
-                        </IconButton>
-                        <IconButton
-                          danger
-                          aria-label={t.empDel}
-                          onClick={() =>
-                            setDelAsk({ nik: r.nik, name: r.name })
-                          }
-                        >
-                          <Trash2 />
-                        </IconButton>
+                        {canManage ? (
+                          <>
+                            <IconButton
+                              aria-label={t.empChange}
+                              onClick={() =>
+                                router.push(`/employees/${r.nik}/edit`)
+                              }
+                            >
+                              <Pencil />
+                            </IconButton>
+                            <IconButton
+                              danger
+                              aria-label={t.empDel}
+                              onClick={() =>
+                                setDelAsk({ nik: r.nik, name: r.name })
+                              }
+                            >
+                              <Trash2 />
+                            </IconButton>
+                          </>
+                        ) : null}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -354,23 +509,27 @@ export default function EmployeesPage() {
           </StateBox>
         )}
 
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
-            {t.empSumB}
-          </FootSum>
-          <Pagination
-            page={cur}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["5", "10", "25"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
+        {/* ringkasan "0 karyawan" selama memuat/gagal hanya membingungkan —
+            kaki tabel ikut menunggu datanya */}
+        {loaded && !loadErr ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
+              {t.empSumB}
+            </FootSum>
+            <Pagination
+              page={cur}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              perOptions={["5", "10", "25"]}
+              onPer={(v) => {
+                setPer(v);
+                setPage(1);
+              }}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
 
       <Dialog
@@ -387,7 +546,12 @@ export default function EmployeesPage() {
           <Button variant="ghost" onClick={() => setDelAsk(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={delDo}>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void delDo()}
+          >
+            {saving ? <Spinner className="size-4" /> : null}
             {t.empDelDo}
           </Button>
         </DialogActions>

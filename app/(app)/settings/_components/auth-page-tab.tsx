@@ -10,10 +10,12 @@ import {
   Pencil,
   Plus,
   Trash2,
+  UserCog,
 } from "lucide-react";
 
-import { errorMessage, isApiError, settingsApi } from "@/lib/api";
+import { errorDetail, settingsApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { usePermissions } from "@/components/providers/permissions";
 import { AuthSlideshow, authSlideSrc } from "@/components/ui/auth-slideshow";
 import { Badge } from "@/components/ui/badge";
 import { Button, IconButton, Spinner } from "@/components/ui/button";
@@ -34,6 +36,7 @@ import {
   Toolbar,
   ToolbarTitle,
 } from "@/components/ui/panel";
+import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import {
   Table,
@@ -49,10 +52,13 @@ type ApiAuthSlide = settingsApi.ApiAuthSlide;
 type ApiAuthOption = settingsApi.ApiAuthOption;
 type AuthOptionKind = settingsApi.AuthOptionKind;
 
-/* Tab "Halaman Auth" — modul superadmin untuk dua hal yang dikonsumsi publik
-   lewat GET /api/auth/page-config:
-   1. Gambar slideshow panel kiri halaman login/register (rotasi 5 detik).
-   2. Opsi dropdown Posisi & Departemen pada formulir registrasi.
+/* Tab "Halaman Auth" — modul superadmin untuk hal-hal yang dikonsumsi alur
+   auth publik:
+   1. Gambar slideshow panel kiri halaman login/register (rotasi 5 detik) —
+      lewat GET /api/auth/page-config.
+   2. Opsi dropdown Posisi & Departemen pada formulir registrasi — idem.
+   3. Role default pendaftar baru — dipakai POST /api/auth/register saat
+      membuat akun (dulu hardcode Viewer). Superadmin tidak pernah ditawarkan.
 
    Berbeda dari tab lain yang masih mock-backed (app-store), tab ini menulis
    langsung ke backend — halaman register membaca datanya sebelum login, jadi
@@ -61,6 +67,10 @@ type AuthOptionKind = settingsApi.AuthOptionKind;
 export function AuthPageTab() {
   const { t } = useI18n();
   const { pushToast } = useToast();
+  /* Route /settings sudah menuntut `view`; kontrol role default di bawah
+     hanya aktif untuk `manage` — penegakan aslinya tetap di backend. */
+  const { can } = usePermissions();
+  const canManage = can("settings", "manage");
 
   /* null = masih memuat */
   const [slides, setSlides] = React.useState<ApiAuthSlide[] | null>(null);
@@ -96,22 +106,66 @@ export function AuthPageTab() {
     return () => ac.abort();
   }, [reloadKey]);
 
+  /* ── role default pendaftar ──
+     Dimuat TERPISAH dari Promise.all di atas: endpoint-nya lebih baru, dan
+     kegagalannya tidak boleh ikut menjatuhkan pengelolaan slide/opsi yang
+     sudah jalan. Gagal → StateBox kecil di panelnya sendiri. */
+  const [roleCfg, setRoleCfg] =
+    React.useState<settingsApi.ApiRegisterRoleConfig | null>(null);
+  const [roleSel, setRoleSel] = React.useState("");
+  const [roleErr, setRoleErr] = React.useState(false);
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void settingsApi
+      .getRegisterRole(ac.signal)
+      .then((cfg) => {
+        setRoleCfg(cfg);
+        setRoleSel(String(cfg.defaultRoleId));
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setRoleErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey]);
+
   function retry() {
     setLoadErr(false);
     setSlides(null);
     setOpts(null);
+    setRoleErr(false);
+    setRoleCfg(null);
     setReloadKey((k) => k + 1);
+  }
+
+  async function saveRole(e: React.FormEvent) {
+    e.preventDefault();
+    if (!roleCfg || !roleSel) return;
+    /* Kirim id APA ADANYA dari respons GET (bukan hasil parse ulang) supaya
+       tipenya — string atau angka — selalu sama dengan yang backend berikan. */
+    const picked = roleCfg.roles.find((r) => String(r.id) === roleSel);
+    if (!picked) return;
+    setBusy(true);
+    try {
+      await settingsApi.updateRegisterRole(picked.id);
+      setRoleCfg({ ...roleCfg, defaultRoleId: picked.id });
+      pushToast(
+        "success",
+        t.apRoleToastT,
+        `${picked.name} — ${t.apRoleToastD}`
+      );
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setBusy(false);
+    }
   }
 
   /* Pesan validasi per-field (mis. "nama sudah ada" dari unique constraint)
      dikirim backend di errors[], bukan message utama ("Validation failed") —
-     tampilkan yang spesifik bila ada. */
+     errorDetail (lib/api/error.ts) yang merangkainya jadi satu kalimat. */
   function toastErr(e: unknown) {
-    const fieldMsg =
-      isApiError(e) && e.fieldErrors.length
-        ? e.fieldErrors.map((f) => f.message).join(" ")
-        : null;
-    pushToast("error", t.apErrT, fieldMsg ?? errorMessage(e, t.apLoadErrB));
+    pushToast("error", t.apErrT, errorDetail(e, t.apLoadErrB));
   }
 
   /* ── dialog slide: tambah / edit / hapus ── */
@@ -450,6 +504,69 @@ export function AuthPageTab() {
             onDelete={setDelOpt}
           />
         </div>
+      </Panel>
+
+      {/* ── role default pendaftar baru ── */}
+      <Panel>
+        <SectionTitle>
+          <UserCog />
+          {t.apRoleTitle}
+        </SectionTitle>
+        <p className="mb-5 text-sm text-(--text-secondary)">{t.apRoleHelp}</p>
+        {roleErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.apLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : roleCfg === null ? (
+          <div className="grid place-items-center py-6">
+            <Spinner className="size-5" />
+          </div>
+        ) : (
+          <form
+            onSubmit={saveRole}
+            className="flex items-start gap-3 max-md:flex-col"
+          >
+            <Field
+              label={t.apRoleLabel}
+              htmlFor="ap-role"
+              className="w-full max-w-90"
+              helper={
+                roleCfg.roles.find((r) => String(r.id) === roleSel)?.description
+              }
+            >
+              <Select
+                id="ap-role"
+                value={roleSel}
+                disabled={!canManage || busy}
+                onChange={(e) => setRoleSel(e.target.value)}
+              >
+                {roleCfg.roles.map((r) => (
+                  <option key={String(r.id)} value={String(r.id)}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {/* mt-7.5 menyejajarkan tombol dengan kontrol di bawah label */}
+            <Button
+              type="submit"
+              className="mt-7.5 max-md:mt-0"
+              disabled={
+                !canManage ||
+                busy ||
+                !roleSel ||
+                roleSel === String(roleCfg.defaultRoleId)
+              }
+            >
+              {busy ? <Spinner className="size-4" /> : null}
+              {t.stSave}
+            </Button>
+          </form>
+        )}
       </Panel>
 
       {/* dialog tambah gambar */}

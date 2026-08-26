@@ -1,6 +1,6 @@
 import { attDayRows } from "@/lib/data/attendance";
 import { employees } from "@/lib/data/employees";
-import { fpScanCount, type FpMachine } from "@/lib/data/fingerprint";
+import { fpScanCount } from "@/lib/data/fingerprint";
 import { ftwData, ftwHistoryFor, type FtwStatus } from "@/lib/data/ftw";
 import { unitsDb } from "@/lib/data/units-db";
 
@@ -172,10 +172,11 @@ export function fleetDisplayCards(
 }
 
 /* ===== Fingerprint — kesehatan mesin (offline selalu teratas) =====
-   DITURUNKAN dari master mesin (fingerprint.ts) yang dikelola modul admin
-   Mesin Fingerprint — sumber yang sama dengan halaman admin. Layar
-   ini dulu memegang daftarnya sendiri, sehingga IP mesin tidak punya tempat
-   untuk didaftarkan dan dua daftar bisa berbeda tanpa ketahuan. */
+   Datanya kini dari GET /api/display/fingerprint (ApiDisplayFpDevice di
+   lib/api/endpoints/misc.ts) — proyeksi tabel mesin yang sama dengan yang
+   dikelola modul admin Mesin Fingerprint, sudah terfilter aktif dan tanpa
+   IP/port (kiosk tidak pernah menerima alamat jaringan, ADR 0009).
+   Yang tersisa di klien tinggal pengurutan kartu. */
 export type DisplayMachine = {
   id: string;
   loc: string;
@@ -183,18 +184,13 @@ export type DisplayMachine = {
   meta: string;
 };
 
-export function fpDisplayMachines(list: FpMachine[]): DisplayMachine[] {
-  return (
-    list
-      .filter((m) => m.active)
-      .map((m) => ({ id: m.id, loc: m.loc, online: m.online, meta: m.meta }))
-      /* offline dulu, lalu tersibuk, lalu kode — urutan boolean saja membuat
-       posisi kartu ikut berubah setiap daftar mesin disunting */
-      .sort(
-        (a, b) =>
-          Number(a.online) - Number(b.online) ||
-          fpScanCount(b.meta) - fpScanCount(a.meta) ||
-          a.id.localeCompare(b.id)
-      )
+export function fpDisplayMachines(list: DisplayMachine[]): DisplayMachine[] {
+  /* offline dulu, lalu tersibuk, lalu kode — urutan boolean saja membuat
+     posisi kartu ikut berubah setiap daftar mesin disunting */
+  return [...list].sort(
+    (a, b) =>
+      Number(a.online) - Number(b.online) ||
+      fpScanCount(b.meta) - fpScanCount(a.meta) ||
+      a.id.localeCompare(b.id)
   );
 }

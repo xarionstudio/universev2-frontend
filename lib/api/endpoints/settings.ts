@@ -232,6 +232,43 @@ export function deleteAuthOption(id: string | number): Promise<void> {
   return api.del<void>(`/settings/auth-options/${id}`);
 }
 
+/* ── Role default pendaftar baru ─────────────────────────────────────── */
+
+/* Kontrak dengan backend: `roles` sudah disaring server — role terkunci
+   (Superadmin) tidak pernah ikut, jadi UI tinggal menampilkan apa adanya.
+   `id` bertipe longgar karena roles di backend dirujuk sebagai string
+   ("3" pada user.Roles) padahal primary key-nya numerik — samakan lewat
+   String() saat membandingkan. */
+export type ApiRegisterRoleOption = {
+  id: string | number;
+  name: string;
+  description?: string;
+};
+
+export type ApiRegisterRoleConfig = {
+  defaultRoleId: string | number;
+  roles: ApiRegisterRoleOption[];
+};
+
+/* GET /api/settings/registration — role yang otomatis diberikan ke akun
+   baru dari POST /api/auth/register, plus daftar role yang boleh dipilih. */
+export function getRegisterRole(
+  signal?: AbortSignal
+): Promise<ApiRegisterRoleConfig> {
+  return api.get<ApiRegisterRoleConfig>(
+    "/settings/registration",
+    undefined,
+    signal
+  );
+}
+
+/* PUT /api/settings/registration — body { defaultRoleId } saja. */
+export function updateRegisterRole(
+  defaultRoleId: string | number
+): Promise<void> {
+  return api.put<void>("/settings/registration", { defaultRoleId });
+}
+
 /* ── Business rules ──────────────────────────────────────────────────── */
 
 /* GET /api/settings/business-rules */

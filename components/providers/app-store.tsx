@@ -7,12 +7,7 @@ import {
   withKomp,
   type Employee,
 } from "@/lib/data/employees";
-import {
-  FP_DEFAULT_PORT,
-  FP_META_NEW,
-  initialFpMachines,
-  type FpMachine,
-} from "@/lib/data/fingerprint";
+import { type FpMachine } from "@/lib/data/fingerprint";
 import { initialFleets, type Fleet } from "@/lib/data/fleet";
 import { isoAddDays, seedFaAlloc, type FaAlloc } from "@/lib/data/fleet-alloc";
 import { mdInit, type MdCat, type MdEntry } from "@/lib/data/master-data";
@@ -29,19 +24,20 @@ import {
 } from "@/lib/data/settings-data";
 import { initialUnits, type Unit } from "@/lib/data/unit-status";
 import { unitsDb as udbBase, type UnitDb } from "@/lib/data/units-db";
-import {
-  initialUmRoles,
-  initialUmUsers,
-  type UmRole,
-  type UmUser,
-} from "@/lib/data/users";
+import { type UmRole, type UmUser } from "@/lib/data/users";
 
-/* Master karyawan = persona desain (bertangan, berdata lengkap: medis, mess,
-   kontak — dipakai halaman detail & form) + operator lapangan dari file
+/* Master karyawan MOCK = persona desain + operator lapangan dari file
    setting operator. Digabung di sini, BUKAN di employees.ts, karena
    operators.ts sudah mengimpor tipe dari employees.ts; menggabungnya di sana
-   akan membuat impor melingkar. */
-const empBase: Employee[] = [...empDesign, ...operatorSeed];
+   akan membuat impor melingkar.
+
+   Sejak ADR 0014 gabungan ini TIDAK lagi menjadi sumber halaman Karyawan
+   maupun dropdown tautan di menu User — keduanya membaca `emps` hasil hidrasi
+   backend. empAll() dipertahankan hanya untuk modul yang MASIH mock dan
+   bergantung pada NIK seed lama (alokasi fleet, display fleet, prestasi,
+   fit-to-work, revisi roster, weather); mutasinya dihapus karena tidak ada
+   lagi halaman yang menulis ke sana. */
+const empBase: Employee[] = withKomp([...empDesign, ...operatorSeed]);
 
 export { type FaAlloc } from "@/lib/data/fleet-alloc";
 
@@ -66,16 +62,17 @@ type AppStore = {
   /* notifikasi in-app */
   notifs: Notif[];
   setNotifs: React.Dispatch<React.SetStateAction<Notif[]>>;
-  /* karyawan — master + mutasi lokal */
-  empOverrides: Record<string, Partial<Employee>>;
-  empAdded: Employee[];
-  empDeleted: Record<string, boolean>;
+  /* karyawan seed lama — hanya untuk modul yang MASIH mock (lihat catatan
+     empBase di atas); halaman Karyawan tidak membacanya lagi */
   empAll: () => Employee[];
-  saveEmployee: (
-    nik: string | null,
-    data: Partial<Employee> & { nik: string }
-  ) => void;
-  deleteEmployee: (nik: string) => void;
+  /* master karyawan dari backend — BUKAN seed: kosong sampai halaman
+     Karyawan/Users menghidrasinya dari GET /api/employees (ADR 0014).
+     Identitas barisnya NIK, mengikuti route backend. */
+  emps: Employee[];
+  setEmps: React.Dispatch<React.SetStateAction<Employee[]>>;
+  /* sisipkan/ganti satu baris hasil respons API — dipakai form tambah/edit */
+  upsertEmp: (e: Employee) => void;
+  removeEmp: (nik: string) => void;
   /* antrean approval revisi */
   apRows: ApRow[];
   setApRows: React.Dispatch<React.SetStateAction<ApRow[]>>;
@@ -114,18 +111,21 @@ type AppStore = {
   setDspFleet: React.Dispatch<React.SetStateAction<Display[]>>;
   dspMonitor: Display[];
   setDspMonitor: React.Dispatch<React.SetStateAction<Display[]>>;
-  /* mesin fingerprint — dipakai modul admin DAN layar Monitoring Fingerprint,
-     jadi keduanya tidak pernah menampilkan daftar mesin yang berbeda */
+  /* mesin fingerprint — BUKAN lagi seed: kosong sampai halaman admin
+     menghidrasinya dari GET /api/fingerprint/devices. Layar TV Monitoring
+     Fingerprint tidak membaca state ini lagi — ia mengambil proyeksinya
+     sendiri dari GET /api/display/fingerprint (ADR 0011). */
   fpMachines: FpMachine[];
   setFpMachines: React.Dispatch<React.SetStateAction<FpMachine[]>>;
   fpAll: () => FpMachine[];
-  saveFpMachine: (
-    id: string | null,
-    data: Partial<FpMachine> & { id: string }
-  ) => void;
-  deleteFpMachine: (id: string) => void;
-  recordFpPing: (id: string, lastPing: FpMachine["lastPing"]) => void;
-  /* user management (akun login + role RBAC) */
+  /* sisipkan/ganti satu baris hasil respons API — identitasnya dbId backend */
+  upsertFpMachine: (m: FpMachine) => void;
+  deleteFpMachine: (dbId: number) => void;
+  recordFpPing: (dbId: number, lastPing: FpMachine["lastPing"]) => void;
+  /* user management (akun login + role RBAC) — BUKAN lagi seed: kosong
+     sampai halaman Users/Roles menghidrasinya dari GET /api/users dan
+     GET /api/roles (ADR 0013). Sesi login TIDAK membaca state ini — ia
+     membawa user + permission-nya sendiri lewat SessionProvider. */
   umUsers: UmUser[];
   setUmUsers: React.Dispatch<React.SetStateAction<UmUser[]>>;
   umRoles: UmRole[];
@@ -138,13 +138,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = React.useState("First Angel Paustine");
   const [userEmail, setUserEmail] = React.useState("angel@unggul.co.id");
   const [notifs, setNotifs] = React.useState<Notif[]>(initialNotifs);
-  const [empOverrides, setEmpOverrides] = React.useState<
-    Record<string, Partial<Employee>>
-  >({});
-  const [empAdded, setEmpAdded] = React.useState<Employee[]>([]);
-  const [empDeleted, setEmpDeleted] = React.useState<Record<string, boolean>>(
-    {}
-  );
+  /* kosong sampai dihidrasi dari backend — lihat catatan di tipe AppStore */
+  const [emps, setEmps] = React.useState<Employee[]>([]);
   const [apRows, setApRows] = React.useState<ApRow[]>(apInitialRows);
   const [units, setUnits] = React.useState<Unit[]>(initialUnits);
   const [udbAdded, setUdbAdded] = React.useState<UnitDb[]>([]);
@@ -193,36 +188,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [dspFleet, setDspFleet] = React.useState<Display[]>(initialDspFleet);
   const [dspMonitor, setDspMonitor] =
     React.useState<Display[]>(initialDspMonitor);
-  const [fpMachines, setFpMachines] =
-    React.useState<FpMachine[]>(initialFpMachines);
-  const [umUsers, setUmUsers] = React.useState<UmUser[]>(initialUmUsers);
-  const [umRoles, setUmRoles] = React.useState<UmRole[]>(initialUmRoles);
+  /* kosong sampai dihidrasi dari backend — lihat catatan di tipe AppStore */
+  const [fpMachines, setFpMachines] = React.useState<FpMachine[]>([]);
+  /* kosong sampai dihidrasi dari backend — lihat catatan di tipe AppStore */
+  const [umUsers, setUmUsers] = React.useState<UmUser[]>([]);
+  const [umRoles, setUmRoles] = React.useState<UmRole[]>([]);
 
-  const empAll = React.useCallback(() => {
-    const base = empBase.map((r) => ({ ...r, ...(empOverrides[r.nik] || {}) }));
-    return withKomp(base.concat(empAdded).filter((r) => !empDeleted[r.nik]));
-  }, [empOverrides, empAdded, empDeleted]);
+  /* Seed statis untuk modul yang masih mock — tanpa override/mutasi lagi.
+     Tetap berbentuk fungsi supaya kesepuluh pemanggil lamanya tidak berubah. */
+  const empAll = React.useCallback(() => empBase, []);
 
-  const saveEmployee = React.useCallback(
-    (nik: string | null, data: Partial<Employee> & { nik: string }) => {
-      if (nik && empBase.some((r) => r.nik === nik)) {
-        setEmpOverrides((prev) => ({
-          ...prev,
-          [nik]: { ...prev[nik], ...data },
-        }));
-      } else if (nik) {
-        setEmpAdded((prev) =>
-          prev.map((r) => (r.nik === nik ? { ...r, ...data } : r))
-        );
-      } else {
-        setEmpAdded((prev) => [...prev, data as Employee]);
-      }
-    },
-    []
-  );
+  /* Baris `emps` berasal dari respons API (list/create/get) — kebenarannya
+     milik backend, state ini hanya salinan hasil hidrasi + respons CRUD
+     terakhir, pola yang sama dengan fpMachines. */
+  const upsertEmp = React.useCallback((e: Employee) => {
+    setEmps((prev) =>
+      prev.some((x) => x.nik === e.nik)
+        ? prev.map((x) => (x.nik === e.nik ? e : x))
+        : [...prev, e]
+    );
+  }, []);
 
-  const deleteEmployee = React.useCallback((nik: string) => {
-    setEmpDeleted((prev) => ({ ...prev, [nik]: true }));
+  const removeEmp = React.useCallback((nik: string) => {
+    setEmps((prev) => prev.filter((e) => e.nik !== nik));
   }, []);
 
   const udbAll = React.useCallback(() => {
@@ -268,52 +256,37 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   /* Daftar mesin fingerprint dalam urutan tetap. Tidak ada pemisahan
-     base/override seperti karyawan & unit: seed-nya tidak dibaca modul lain,
-     jadi seluruh daftar memang tinggal di state. */
+     base/override seperti karyawan & unit: kebenarannya milik backend, state
+     ini hanya salinan hasil hidrasi + respons CRUD terakhir. */
   const fpAll = React.useCallback(
     () => [...fpMachines].sort((a, b) => a.id.localeCompare(b.id)),
     [fpMachines]
   );
 
-  /* id === null -> tambah; id !== null -> ubah baris itu (kode mesin boleh
-     ikut berganti, karena identitas baris adalah `id` LAMA yang dikirim). */
-  const saveFpMachine = React.useCallback(
-    (id: string | null, data: Partial<FpMachine> & { id: string }) => {
-      if (id) {
-        setFpMachines((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, ...data } : m))
-        );
-      } else {
-        setFpMachines((prev) => [
-          ...prev,
-          {
-            loc: "",
-            ip: "",
-            port: FP_DEFAULT_PORT,
-            active: true,
-            /* mesin baru dianggap offline sampai heartbeat pertama —
-               menandainya online tanpa bukti akan membohongi layar TV */
-            online: false,
-            meta: FP_META_NEW,
-            ...data,
-          },
-        ]);
-      }
-    },
-    []
-  );
+  /* Baris berasal dari respons API (create/update), jadi tidak ada lagi
+     nilai bawaan yang dikarang di sini. `lastPing` satu-satunya field yang
+     hidup di klien — dipertahankan saat barisnya diganti hasil server. */
+  const upsertFpMachine = React.useCallback((m: FpMachine) => {
+    setFpMachines((prev) =>
+      prev.some((x) => x.dbId === m.dbId)
+        ? prev.map((x) =>
+            x.dbId === m.dbId ? { ...m, lastPing: x.lastPing } : x
+          )
+        : [...prev, m]
+    );
+  }, []);
 
-  const deleteFpMachine = React.useCallback((id: string) => {
-    setFpMachines((prev) => prev.filter((m) => m.id !== id));
+  const deleteFpMachine = React.useCallback((dbId: number) => {
+    setFpMachines((prev) => prev.filter((m) => m.dbId !== dbId));
   }, []);
 
   /* Hasil uji koneksi TIDAK menyentuh `online`: itu heartbeat mesin ke
      aplikasi, sedangkan ini jangkauan server ke mesin. Lihat catatan di
      lib/data/fingerprint.ts. */
   const recordFpPing = React.useCallback(
-    (id: string, lastPing: FpMachine["lastPing"]) => {
+    (dbId: number, lastPing: FpMachine["lastPing"]) => {
       setFpMachines((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, lastPing } : m))
+        prev.map((m) => (m.dbId === dbId ? { ...m, lastPing } : m))
       );
     },
     []
@@ -326,12 +299,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setUserEmail,
     notifs,
     setNotifs,
-    empOverrides,
-    empAdded,
-    empDeleted,
     empAll,
-    saveEmployee,
-    deleteEmployee,
+    emps,
+    setEmps,
+    upsertEmp,
+    removeEmp,
     apRows,
     setApRows,
     units,
@@ -363,7 +335,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     fpMachines,
     setFpMachines,
     fpAll,
-    saveFpMachine,
+    upsertFpMachine,
     deleteFpMachine,
     recordFpPing,
     umUsers,

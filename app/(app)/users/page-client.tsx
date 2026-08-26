@@ -4,28 +4,32 @@ import * as React from "react";
 import {
   Ban,
   CheckCircle2,
+  CircleAlert,
   Download,
   KeyRound,
   Pencil,
   Plus,
   Search,
+  Trash2,
   Upload,
   UserPlus,
 } from "lucide-react";
 
+import { employeesApi, errorDetail, usersApi } from "@/lib/api";
+import {
+  toEmployees,
+  toUmRoles,
+  toUmUser,
+  toUmUsers,
+} from "@/lib/api/adapters";
 import type { UmUser } from "@/lib/data/users";
 import { useI18n } from "@/lib/i18n";
-import {
-  hashPassword,
-  newSalt,
-  passwordIssues,
-  type PwIssue,
-} from "@/lib/password";
+import { passwordIssues, type PwIssue } from "@/lib/password";
 import { effectivePerms, can as rbacCan } from "@/lib/rbac";
 import { useAppStore } from "@/components/providers/app-store";
 import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -60,18 +64,75 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-import { downloadCsv } from "./_lib/csv";
+import { downloadBlob } from "./_lib/csv";
 
 export default function UsersPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { umUsers, setUmUsers, umRoles, empAll } = useAppStore();
+  const { umUsers, setUmUsers, umRoles, setUmRoles, emps, setEmps } =
+    useAppStore();
   const { user: me, can } = usePermissions();
   const impRef = React.useRef<HTMLInputElement>(null);
 
   /* Modul "users": Kelola = boleh ubah, Lihat = hanya baca.
      Halaman ini hanya bisa dibuka kalau minimal punya Lihat (dijaga layout). */
   const canManage = can("users", "manage");
+
+  /* Hidrasi dari backend — pola halaman Mesin Fingerprint: setState hanya di
+     callback .then/.catch, `reloadKey` menaikkan diri untuk memuat ulang
+     (tombol retry, atau setelah import yang menambah baris di server).
+     Role ikut ditarik di sini juga: kolom Roles, filter, dan pagar Superadmin
+     membutuhkannya, dan halaman Roles belum tentu pernah dibuka. */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void Promise.all([
+      usersApi.listUsers(ac.signal),
+      usersApi.listRoles(ac.signal),
+    ])
+      .then(([users, roles]) => {
+        setUmUsers(toUmUsers(users));
+        setUmRoles(toUmRoles(roles));
+        setLoaded(true);
+        /* muat ulang yang sukses harus menghapus jejak error sebelumnya */
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey, setUmUsers, setUmRoles]);
+
+  function retry() {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }
+
+  /* Dropdown "Karyawan tertaut" membaca master karyawan hasil hidrasi backend
+     (NIK 9 digit asli dari DB, ADR 0014) — dimuat SEKALI saat halaman dibuka,
+     terpisah dari Promise.all di atas dan sengaja non-fatal: daftar user harus
+     tetap bisa dikelola walau akun ini tidak punya permission employees:view
+     (403) atau daftar karyawannya sedang tidak bisa diambil. Saat gagal,
+     dropdown hanya menawarkan "tanpa tautan" + nilai lama user yang diedit. */
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void employeesApi
+      .listAllEmployees(ac.signal)
+      .then((rows) => setEmps(toEmployees(rows)))
+      .catch(() => {
+        /* non-fatal — lihat catatan di atas */
+      });
+    return () => ac.abort();
+  }, [setEmps]);
+
+  /* Pesan per-field dari 422 (mis. NIK bukan 9 digit, email kembar) lebih
+     berguna daripada pesan umumnya — errorDetail menggabungkannya, pola yang
+     sama dengan halaman register & Mesin Fingerprint. */
+  function toastErr(e: unknown) {
+    pushToast("error", t.apErrT, errorDetail(e, t.umLoadErrB));
+  }
 
   const [q, setQ] = React.useState("");
   const [statusF, setStatusF] = React.useState("all");
@@ -85,9 +146,17 @@ export default function UsersPage() {
   const [fRoles, setFRoles] = React.useState<Record<string, boolean>>({});
   const [fActive, setFActive] = React.useState(true);
   const [err, setErr] = React.useState(false);
+  /* password awal — hanya diminta saat menambah (backend mewajibkannya) */
+  const [fPw, setFPw] = React.useState("");
+  const [fPwErr, setFPwErr] = React.useState<PwIssue | null>(null);
 
-  /* dialog nonaktifkan */
+  /* satu penanda untuk seluruh tulisan CRUD — tombol simpan/hapus dimatikan
+     selama menunggu server, seperti `saving` di halaman Mesin Fingerprint */
+  const [saving, setSaving] = React.useState(false);
+
+  /* dialog nonaktifkan + hapus */
   const [offTarget, setOffTarget] = React.useState<UmUser | null>(null);
+  const [delTarget, setDelTarget] = React.useState<UmUser | null>(null);
 
   /* dialog atur ulang password */
   const [pwTarget, setPwTarget] = React.useState<UmUser | null>(null);
@@ -97,7 +166,7 @@ export default function UsersPage() {
   const [pwBusy, setPwBusy] = React.useState(false);
 
   const roleName = (id: string) => umRoles.find((r) => r.id === id)?.name ?? id;
-  const karOpts = empAll().map((e) => `${e.name} — ${e.nik}`);
+  const karOpts = emps.map((e) => `${e.name} — ${e.nik}`);
 
   /* ---- Pagar pengaman RBAC ----
      Mencegah admin mengunci dirinya sendiri atau menghapus Superadmin
@@ -156,6 +225,8 @@ export default function UsersPage() {
     setFKar("");
     setFRoles({});
     setFActive(true);
+    setFPw("");
+    setFPwErr(null);
     setErr(false);
     setDlgOpen(true);
   }
@@ -163,14 +234,19 @@ export default function UsersPage() {
   function openEdit(u: UmUser) {
     setEditing(u);
     setFEmail(u.email);
-    setFKar(u.kar ? `${u.kar} — ${u.nik}` : "");
+    /* prefill hanya bila pasangan nama+NIK lengkap — kar tanpa NIK (akun
+       eksternal yang tetap bernama di backend) jatuh ke "tanpa tautan"
+       supaya NIK "null" tidak pernah ikut terkirim */
+    setFKar(u.kar && u.nik ? `${u.kar} — ${u.nik}` : "");
     setFRoles(Object.fromEntries(u.roles.map((r) => [r, true])));
     setFActive(u.on);
+    setFPw("");
+    setFPwErr(null);
     setErr(false);
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const roles = Object.keys(fRoles).filter((r) => fRoles[r]);
     const email = fEmail.trim();
@@ -178,26 +254,95 @@ export default function UsersPage() {
       setErr(true);
       return;
     }
+    if (!editing) {
+      const issues = passwordIssues(fPw);
+      if (issues.length) {
+        setFPwErr(issues[0]);
+        return;
+      }
+      setFPwErr(null);
+    }
     const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
-    const data = { email, kar, nik, roles, on: fActive };
+
     if (editing) {
       const blocked = guard(editing, roles, fActive);
       if (blocked) {
         pushToast("error", t.umUserEditT, blocked);
         return;
       }
-      setUmUsers((prev) =>
-        prev.map((u) => (u.id === editing.id ? { ...u, ...data } : u))
-      );
-      pushToast("success", t.umToastUserEdit, email);
+      /* Tanpa tautan karyawan, nama & NIK lama dipertahankan: backend
+         mewajibkan `name` non-kosong dan mengabaikan NIK kosong, jadi
+         "melepas tautan" memang tidak menghapus keduanya di server. */
+      const nextKar = kar ?? editing.kar;
+      const nextNik = nik ?? editing.nik;
+      setSaving(true);
+      try {
+        await usersApi.updateUser(editing.id, {
+          name: nextKar ?? editing.email,
+          email,
+          nik: nik ?? "",
+          roles,
+        });
+        /* PUT sudah tersimpan di server — pantulkan dulu ke state supaya
+           tabel tidak basi bila langkah status di bawah gagal */
+        setUmUsers((prev) =>
+          prev.map((u) =>
+            u.id === editing.id
+              ? { ...u, email, kar: nextKar, nik: nextNik, roles }
+              : u
+          )
+        );
+        /* status aktif bukan bagian PUT — endpoint-nya terpisah, dan hanya
+           dipanggil bila memang berubah supaya niatnya selalu tersurat */
+        if (fActive !== editing.on) {
+          await usersApi.toggleUserStatus(editing.id, fActive);
+          setUmUsers((prev) =>
+            prev.map((u) => (u.id === editing.id ? { ...u, on: fActive } : u))
+          );
+        }
+        pushToast("success", t.umToastUserEdit, email);
+        setDlgOpen(false);
+      } catch (e2) {
+        toastErr(e2);
+      } finally {
+        setSaving(false);
+      }
     } else {
-      setUmUsers((prev) => [...prev, { id: `u${prev.length + 1}`, ...data }]);
-      pushToast("success", t.umToastInvite, `${email} — ${t.umToastInviteD}`);
+      setSaving(true);
+      try {
+        /* backend mewajibkan `name`; akun tanpa karyawan tertaut memakai
+           bagian lokal email sebagai nama — pola yang sama dengan akun
+           eksternal pada seed (mis. akun klinik) */
+        const created = await usersApi.createUser({
+          name: kar ?? email.split("@")[0],
+          email,
+          nik: nik ?? "",
+          password: fPw,
+          roles,
+        });
+        const mapped = toUmUser(created);
+        if (mapped) setUmUsers((prev) => [...prev, mapped]);
+        pushToast("success", t.umToastUserAdd, email);
+        setDlgOpen(false);
+        /* backend selalu membuat user aktif — checkbox nonaktif dieksekusi
+           sebagai langkah kedua lewat endpoint status */
+        if (!fActive) {
+          await usersApi.toggleUserStatus(created.id, false);
+          setUmUsers((prev) =>
+            prev.map((u) =>
+              u.id === String(created.id) ? { ...u, on: false } : u
+            )
+          );
+        }
+      } catch (e2) {
+        toastErr(e2);
+      } finally {
+        setSaving(false);
+      }
     }
-    setDlgOpen(false);
   }
 
-  function offDo() {
+  async function offDo() {
     if (!offTarget) return;
     const blocked = guard(offTarget, offTarget.roles, false);
     if (blocked) {
@@ -205,16 +350,70 @@ export default function UsersPage() {
       setOffTarget(null);
       return;
     }
-    setUmUsers((prev) =>
-      prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
-    );
-    pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
-    setOffTarget(null);
+    setSaving(true);
+    try {
+      await usersApi.toggleUserStatus(offTarget.id, false);
+      setUmUsers((prev) =>
+        prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
+      );
+      pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
+      setOffTarget(null);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDo(u: UmUser) {
+    try {
+      await usersApi.toggleUserStatus(u.id, true);
+      setUmUsers((prev) =>
+        prev.map((x) => (x.id === u.id ? { ...x, on: true } : x))
+      );
+      pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`);
+    } catch (e2) {
+      toastErr(e2);
+    }
+  }
+
+  /* ---- Hapus user ----
+     Pagar yang sama dengan nonaktif, ditambah larangan hapus diri sendiri:
+     akun yang hilang tidak bisa "diaktifkan lagi kapan pun". */
+  function delGuard(u: UmUser): string | null {
+    if (me?.id === u.id) return t.umGuardSelfDel;
+    if (isLastActiveSuper(u)) return t.umGuardLastSuperDel;
+    return null;
+  }
+
+  function askDel(u: UmUser) {
+    const blocked = delGuard(u);
+    if (blocked) {
+      pushToast("error", t.umUserDelT, blocked);
+      return;
+    }
+    setDelTarget(u);
+  }
+
+  async function delDo() {
+    if (!delTarget) return;
+    setSaving(true);
+    try {
+      await usersApi.deleteUser(delTarget.id);
+      setUmUsers((prev) => prev.filter((u) => u.id !== delTarget.id));
+      pushToast("success", t.umToastUserDel, delTarget.email);
+      setDelTarget(null);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setSaving(false);
+    }
   }
 
   /* ---- Atur ulang password (khusus permission Kelola) ----
-     Tidak meminta password lama: admin memang tidak seharusnya tahu password
-     user. Yang disimpan hanya salt + digest, tidak pernah teks aslinya. */
+     Tidak ada endpoint reset password tersendiri — PUT /api/users/:id
+     menerima `password` opsional, jadi field lain dikirim balik apa adanya.
+     Password tidak pernah di-hash di klien: hashing milik server. */
   function openPw(u: UmUser) {
     setPwTarget(u);
     setPwNew("");
@@ -236,63 +435,70 @@ export default function UsersPage() {
     }
     setPwErr(null);
     setPwBusy(true);
-    const salt = newSalt();
-    const hash = await hashPassword(pwNew, salt);
-    setUmUsers((prev) =>
-      prev.map((u) =>
-        u.id === pwTarget.id
-          ? { ...u, pwSalt: salt, pwHash: hash, pwAt: new Date().toISOString() }
-          : u
-      )
-    );
-    setPwBusy(false);
-    setPwTarget(null);
-    setPwNew("");
-    setPwConf("");
-    pushToast("success", t.umPwToastT, `${pwTarget.email} — ${t.umPwToastD}`);
+    try {
+      await usersApi.updateUser(pwTarget.id, {
+        /* backend menolak name kosong — akun tanpa nama memakai email-nya */
+        name: pwTarget.kar ?? pwTarget.email,
+        email: pwTarget.email,
+        nik: pwTarget.nik ?? "",
+        roles: pwTarget.roles,
+        password: pwNew,
+      });
+      setUmUsers((prev) =>
+        prev.map((u) =>
+          u.id === pwTarget.id ? { ...u, pwAt: new Date().toISOString() } : u
+        )
+      );
+      setPwTarget(null);
+      setPwNew("");
+      setPwConf("");
+      pushToast("success", t.umPwToastT, `${pwTarget.email} — ${t.umPwToastD}`);
+    } catch (e2) {
+      toastErr(e2);
+    } finally {
+      setPwBusy(false);
+    }
   }
 
-  const pwErrText =
-    pwErr === "len"
+  const pwIssueText = (issue: PwIssue | "conf" | null): string | undefined =>
+    issue === "len"
       ? t.umPwErrLen
-      : pwErr === "num"
+      : issue === "num"
         ? t.umPwErrNum
-        : pwErr === "letter"
+        : issue === "letter"
           ? t.umPwErrLetter
-          : pwErr === "conf"
+          : issue === "conf"
             ? t.umPwErrConf
             : undefined;
 
-  function onDo(u: UmUser) {
-    setUmUsers((prev) =>
-      prev.map((x) => (x.id === u.id ? { ...x, on: true } : x))
-    );
-    pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`);
-  }
-
-  function exportCsv() {
-    const head = "email;karyawan;nik;roles;status";
-    const body = umUsers
-      .map((u) =>
-        [
-          u.email,
-          u.kar ?? "",
-          u.nik ?? "",
-          u.roles.map(roleName).join(","),
-          u.on ? "aktif" : "nonaktif",
-        ].join(";")
-      )
-      .join("\n");
-    const name = `users_${new Date().toISOString().slice(0, 10)}.csv`;
-    downloadCsv(name, `${head}\n${body}`);
-    pushToast("success", t.umToastExp, name);
+  /* Export CSV dirakit backend (GET /api/users/export) — tersedia juga untuk
+     permission Lihat karena hanya membaca. */
+  async function exportCsv() {
+    try {
+      const blob = await usersApi.exportUsers();
+      const name = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadBlob(name, blob);
+      pushToast("success", t.umToastExp, name);
+    } catch (e2) {
+      toastErr(e2);
+    }
   }
 
   function importChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    pushToast("success", t.umToastImp, `${file.name} — 3 ${t.umToastImpD}`);
+    /* reset dulu supaya file yang sama bisa dipilih ulang setelah gagal */
     e.target.value = "";
+    if (!file) return;
+    void (async () => {
+      try {
+        const res = await usersApi.importUsers(file);
+        pushToast("success", t.umToastImp, `${res.imported} ${t.umToastImpD}`);
+        /* baris baru lahir di server — daftar dimuat ulang, bukan ditebak */
+        setReloadKey((k) => k + 1);
+      } catch (e2) {
+        toastErr(e2);
+      }
+    })();
   }
 
   return (
@@ -352,21 +558,33 @@ export default function UsersPage() {
               </Button>
             ) : null}
             {/* Export tetap tersedia untuk permission Lihat — hanya membaca */}
-            <Button variant="secondary" onClick={exportCsv}>
+            <Button variant="secondary" onClick={() => void exportCsv()}>
               <Download />
               Export
             </Button>
             <input
               ref={impRef}
               type="file"
-              accept=".csv,.xlsx"
+              accept=".xlsx,.xls"
               className="hidden"
               onChange={importChange}
             />
           </ToolbarGroup>
         </Toolbar>
 
-        {rows.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.umLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : rows.length ? (
           <Table>
             <TableHeader>
               <tr>
@@ -377,7 +595,7 @@ export default function UsersPage() {
                 <TableHead className="max-xl:hidden">{t.umPwCol}</TableHead>
                 <TableHead>{t.thStatus}</TableHead>
                 {canManage ? (
-                  <TableHead className="w-35">{t.thAct}</TableHead>
+                  <TableHead className="w-45">{t.thAct}</TableHead>
                 ) : null}
               </tr>
             </TableHeader>
@@ -409,22 +627,19 @@ export default function UsersPage() {
                       ))}
                     </div>
                   </TableCell>
-                  {/* status password — nilainya sendiri tidak pernah ditampilkan */}
+                  {/* stempel ganti password terakhir (pwAt backend) — nilai
+                      password sendiri tidak pernah sampai ke klien */}
                   <TableCell className="max-xl:hidden">
-                    {u.pwHash ? (
+                    {u.pwAt ? (
                       <span
                         className="text-(--text-secondary)"
-                        title={
-                          u.pwAt ? new Date(u.pwAt).toLocaleString() : undefined
-                        }
+                        title={new Date(u.pwAt).toLocaleString()}
                       >
                         {t.umPwSet}
-                        {u.pwAt ? (
-                          <span className="text-(--text-tertiary)">
-                            {" · "}
-                            {new Date(u.pwAt).toLocaleDateString()}
-                          </span>
-                        ) : null}
+                        <span className="text-(--text-tertiary)">
+                          {" · "}
+                          {new Date(u.pwAt).toLocaleDateString()}
+                        </span>
                       </span>
                     ) : (
                       <span className="text-(--text-tertiary)">
@@ -464,11 +679,19 @@ export default function UsersPage() {
                         ) : (
                           <IconButton
                             aria-label={t.umOn}
-                            onClick={() => onDo(u)}
+                            onClick={() => void onDo(u)}
                           >
                             <CheckCircle2 />
                           </IconButton>
                         )}
+                        <IconButton
+                          danger
+                          aria-label={`${t.umUserDelT} — ${u.email}`}
+                          title={t.umUserDelT}
+                          onClick={() => askDel(u)}
+                        >
+                          <Trash2 />
+                        </IconButton>
                       </div>
                     </TableCell>
                   ) : null}
@@ -483,20 +706,24 @@ export default function UsersPage() {
             body={t.empEmptyB}
           />
         )}
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b> user ·{" "}
-            <b>{activeN}</b> {t.umActiveSum}
-          </FootSum>
-          <Pagination
-            page={pg.page}
-            pageCount={pg.pageCount}
-            onPage={pg.setPage}
-            per={pg.per}
-            perOptions={["10", "25", "50"]}
-            onPer={pg.setPer}
-          />
-        </PanelFoot>
+        {/* ringkasan "0 user" selama memuat/gagal hanya membingungkan —
+            kaki tabel ikut menunggu datanya */}
+        {loaded && !loadErr ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b> user ·{" "}
+              <b>{activeN}</b> {t.umActiveSum}
+            </FootSum>
+            <Pagination
+              page={pg.page}
+              pageCount={pg.pageCount}
+              onPage={pg.setPage}
+              per={pg.per}
+              perOptions={["10", "25", "50"]}
+              onPer={pg.setPer}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
 
       {/* dialog tambah/edit user */}
@@ -537,6 +764,12 @@ export default function UsersPage() {
               onChange={(e) => setFKar(e.target.value)}
             >
               <option value="">{t.umNoLink}</option>
+              {/* tautan lama user yang karyawannya tidak ada di daftar (mis.
+                  daftar gagal dimuat, atau karyawannya sudah dihapus) tetap
+                  ditawarkan supaya nilai tersimpannya tidak diam-diam lepas */}
+              {fKar && !karOpts.includes(fKar) ? (
+                <option value={fKar}>{fKar}</option>
+              ) : null}
               {karOpts.map((k) => (
                 <option key={k} value={k}>
                   {k}
@@ -544,6 +777,25 @@ export default function UsersPage() {
               ))}
             </Select>
           </Field>
+          {!editing ? (
+            <Field
+              className="mt-4"
+              label={t.umPwInit}
+              htmlFor="um-pw"
+              required
+              helper={t.umPwHelp}
+              error={fPwErr !== null}
+              errorMessage={pwIssueText(fPwErr)}
+            >
+              <PasswordInput
+                id="um-pw"
+                value={fPw}
+                onChange={setFPw}
+                autoComplete="new-password"
+                toggleLabel={t.umPwShow}
+              />
+            </Field>
+          ) : null}
           <Field className="mt-4" label="Roles" required>
             <div className="grid grid-cols-2 gap-2">
               {umRoles.map((r) => (
@@ -578,7 +830,8 @@ export default function UsersPage() {
             >
               {t.btnCancel}
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner className="size-4" /> : null}
               {editing ? t.udbSaveEdit : t.umUserSaveAdd}
             </Button>
           </DialogActions>
@@ -607,7 +860,7 @@ export default function UsersPage() {
             required
             helper={t.umPwHelp}
             error={pwErr !== null && pwErr !== "conf"}
-            errorMessage={pwErrText}
+            errorMessage={pwIssueText(pwErr)}
           >
             <PasswordInput
               id="um-pw-new"
@@ -642,6 +895,7 @@ export default function UsersPage() {
               {t.btnCancel}
             </Button>
             <Button type="submit" disabled={pwBusy}>
+              {pwBusy ? <Spinner className="size-4" /> : null}
               {t.umPwSave}
             </Button>
           </DialogActions>
@@ -663,8 +917,37 @@ export default function UsersPage() {
           <Button variant="ghost" onClick={() => setOffTarget(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={offDo}>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void offDo()}
+          >
             {t.umOff}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* dialog hapus user */}
+      <Dialog
+        open={delTarget !== null}
+        onClose={() => setDelTarget(null)}
+        labelledBy="umd-t"
+      >
+        <DialogIcon variant="danger">
+          <Trash2 />
+        </DialogIcon>
+        <DialogTitle id="umd-t">{`${t.umUserDelT} ${delTarget?.email ?? ""}?`}</DialogTitle>
+        <DialogBody>{t.umUserDelB}</DialogBody>
+        <DialogActions>
+          <Button variant="ghost" onClick={() => setDelTarget(null)}>
+            {t.btnCancel}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void delDo()}
+          >
+            {t.empDelDo}
           </Button>
         </DialogActions>
       </Dialog>

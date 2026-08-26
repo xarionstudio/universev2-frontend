@@ -79,6 +79,9 @@ export const id = {
   regDept: "Departemen",
   regDeptPh: "Pilih departemen",
   regEmailPh: "Masukkan alamat email",
+  regEmailLocalPh: "nama.anda",
+  regEmailLocalErr:
+    "Email — isi nama emailnya saja (tanpa @); domain @universe.com sudah terpasang otomatis.",
   regPwPh: "Buat password",
   regPwConf: "Konfirmasi password",
   regPwConfPh: "Ulangi password",
@@ -96,6 +99,10 @@ export const id = {
     "Email sudah terdaftar. Periksa kembali data Anda atau hubungi admin.",
   regRetry: "Coba lagi",
   regErrForm: "Periksa kembali isian formulir:",
+  /* aturan yang sama dengan backend (internal/pkg/validate.go) */
+  regNikErr: "NIK harus terdiri dari persis 9 digit angka.",
+  regNameErrMax: "Nama maksimal 100 karakter.",
+  regPwErrMax: "Password maksimal 72 karakter.",
   greetMorning: "Pagi",
   greetNoon: "Siang",
   greetAfternoon: "Sore",
@@ -182,7 +189,8 @@ export const id = {
   phMedis: "Catatan medis yang relevan untuk penugasan…",
   helpMedis: "Terlihat oleh SDI & paramedic saja.",
   efDzTitle: "Seret foto ke sini, atau klik untuk memilih",
-  efDzHint: "JPG/PNG, maks 2 MB — rasio 1:1 disarankan",
+  /* batas 5 MB mengikuti validasi backend (handler UploadPhoto) */
+  efDzHint: "JPG/PNG, maks 5 MB — rasio 1:1 disarankan",
   efDzReady: "— siap diunggah",
   efUnsaved: "Perubahan belum disimpan",
   efTitleAdd: "Tambah Karyawan",
@@ -194,6 +202,29 @@ export const id = {
   toastSaveT: "Perubahan disimpan",
   toastSaveD: "diperbarui.",
   toastAddT: "Karyawan ditambahkan",
+  /* integrasi backend modul Karyawan (ADR 0014) */
+  empLoadErrB: "Data karyawan tidak bisa diambil dari server.",
+  empToastExp: "Export Excel diunduh",
+  efErrDateEmpty:
+    "Backend belum bisa menyimpan perubahan bila masih ada kolom tanggal yang kosong — lengkapi Join date, Expired kontrak, dan Masa berlaku SIMPER di form ini, lalu simpan lagi.",
+  kSimperExp: "Masa berlaku SIMPER",
+  helpSimper:
+    "SIMPER umum di data karyawan — rincian per Type EGI diisi pada daftar kompetensi di atas.",
+  helpSimperExp:
+    "Saat menyimpan edit, backend menolak tanggal yang masih kosong.",
+  efErrKompExp: "Masa berlaku wajib diisi untuk setiap baris kompetensi.",
+  empImpNoneT: "Import: tidak ada baris yang masuk",
+  empImpPartT: "Import: sebagian baris dilewati",
+  empImpOkB: "baris diimpor",
+  empImpSkipB: "baris dilewati",
+  empImpMore: "error lainnya",
+  efKompFailT: "Kompetensi gagal disimpan",
+  efKompFailD:
+    "Data karyawan sudah tersimpan, tetapi kompetensinya gagal ditulis — buka Edit lalu simpan ulang.",
+  efPhotoFailT: "Foto gagal diunggah",
+  efPhotoFailD:
+    "Data karyawan sudah tersimpan, tetapi fotonya tidak terunggah — buka Edit lalu unggah ulang.",
+  efPhotoTypeErr: "Foto harus JPG/PNG, maksimal 5 MB.",
   toastFormErrT: "Periksa kembali form",
   toastFormErrD: "Ada field yang belum valid — lihat pesan di bawah field.",
   dirtyTitle: "Tinggalkan form tanpa menyimpan?",
@@ -374,7 +405,8 @@ export const id = {
   fpIp: "Alamat IP",
   fpPort: "Port",
   fpIpHelp: "IPv4 mesin di jaringan site — contoh 10.10.20.11.",
-  fpPortHelp: "Port TCP layanan absensi. Bawaan 4370 (ZKTeco/Solution).",
+  fpPortHelp:
+    "Port penarikan absen — 4370 = protokol biner ZKTeco (mesin existing), 80 = SOAP HTTP /iWsService. Keduanya didukung; backend memilih protokol dari port ini.",
   fpErrCode: "Kode wajib diisi dan tidak boleh sama dengan mesin lain.",
   fpErrLoc: "Lokasi wajib diisi.",
   fpErrIp: "Alamat IPv4 tidak valid — contoh 10.10.20.11.",
@@ -421,9 +453,14 @@ export const id = {
   fpNoteT: "Ping dijalankan dari server aplikasi",
   fpNoteB:
     "Uji koneksi berjalan di server Next.js, bukan di browser — hasilnya menggambarkan jangkauan SERVER ke jaringan site. Mesin di VLAN yang tidak terjangkau server akan selalu tampil tidak terhubung meski sebenarnya menyala.",
-  fpNoteTvT: "Layar TV memuat salinannya sendiri",
+  fpNoteTvT: "Layar TV membaca backend yang sama",
   fpNoteTvB:
-    "Data aplikasi masih tersimpan di memori browser, jadi layar Monitoring Fingerprint yang dibuka di tab atau perangkat lain memulai dari daftar bawaan. Mesin yang baru didaftarkan langsung tampil di layar yang dibuka lewat tombol Pratinjau kiosk dari tab ini; untuk TV di lapangan, daftarnya ikut setelah backend tersambung.",
+    "Daftar mesin tersimpan di backend, bukan lagi di memori browser. Layar Monitoring Fingerprint — termasuk yang dibuka di tab atau perangkat lain — mengambil daftar yang sama dari server, jadi mesin yang baru didaftarkan ikut tampil di TV lapangan tanpa perlu dibuka dari tab ini.",
+  fpLoadErrB: "Daftar mesin tidak bisa diambil dari server.",
+  fpSyncNow: "Tarik Absen Sekarang",
+  fpSyncOkT: "Sinkronisasi selesai",
+  fpSyncOkD: "log absensi ditarik dari mesin.",
+  fpSyncErrT: "Sinkronisasi gagal",
   umSub:
     "Akun login aplikasi — undang, tautkan ke karyawan, dan atur role-nya.",
   umRoleSub: "RBAC per modul — menu tanpa permission tidak dirender.",
@@ -435,16 +472,19 @@ export const id = {
   umRoleListT: "Daftar role",
   umFAll: "Semua status",
   umFAllRoles: "Semua role",
+  umLoadErrB: "Data user & role tidak bisa diambil dari server.",
   umToastImp: "Import diproses",
   umToastImpD: "baris valid ditambahkan, duplikat dilewati.",
+  umRoleImpNA:
+    "Import role belum tersedia — backend belum menyediakan endpoint-nya.",
   umToastExp: "Export CSV diunduh",
   umUserAdd: "Tambah user",
   umUserEditT: "Edit user",
-  umUserSaveAdd: "Kirim undangan",
+  umUserSaveAdd: "Simpan user",
   umLinked: "Karyawan tertaut",
   umNoLink: "Tanpa tautan (akun eksternal)",
   umUserDlgB:
-    "User baru menerima email berisi tautan set password — tidak ada password default.",
+    "Email dipakai untuk masuk dan role menentukan akses. Password awal hanya diminta saat menambah user baru.",
   umErrEmail: "Masukkan email valid dan pilih minimal satu role.",
   umOf: "dari",
   umActiveSum: "aktif",
@@ -452,13 +492,16 @@ export const id = {
   umOn: "Aktifkan",
   umOffB:
     "User tidak bisa masuk sampai diaktifkan lagi. Sesi aktifnya diputus. Data & riwayatnya tetap tersimpan.",
-  umToastInvite: "Undangan terkirim",
-  umToastInviteD: "tautan set password berlaku 24 jam.",
+  umToastUserAdd: "User ditambahkan",
   umToastUserEdit: "User diperbarui",
   umToastOff: "User dinonaktifkan",
   umToastOffD: "sesi diputus, bisa diaktifkan lagi kapan pun.",
   umToastOn: "User diaktifkan",
   umToastOnD: "bisa masuk kembali.",
+  umUserDelT: "Hapus user",
+  umUserDelB:
+    "User dihapus permanen dari database dan tidak bisa masuk lagi. Aksi ini tidak bisa dibatalkan.",
+  umToastUserDel: "User dihapus",
   umRoleAdd: "Tambah role",
   umRoleEditT: "Edit role",
   umRoleSaveAdd: "Simpan role",
@@ -490,6 +533,7 @@ export const id = {
   umPwB:
     "Password baru berlaku seketika. Password lama tidak diperlukan dan tidak pernah bisa dilihat — hanya ringkasannya yang disimpan.",
   umPwNew: "Password baru",
+  umPwInit: "Password awal",
   umPwConf: "Ulangi password baru",
   umPwHelp: "Minimal 8 karakter, mengandung huruf dan angka.",
   umPwShow: "Tampilkan password",
@@ -508,6 +552,9 @@ export const id = {
     "Tidak bisa menonaktifkan Superadmin aktif terakhir — sistem akan terkunci.",
   umGuardLastSuperRole:
     "Tidak bisa mencabut role Superadmin terakhir — sistem akan terkunci.",
+  umGuardSelfDel: "Tidak bisa menghapus akun sendiri.",
+  umGuardLastSuperDel:
+    "Tidak bisa menghapus Superadmin aktif terakhir — sistem akan terkunci.",
   umReadOnly: "Mode lihat saja",
   umReadOnlyB:
     "Role Anda punya permission Lihat pada modul ini, jadi aksi ubah disembunyikan.",
@@ -696,6 +743,12 @@ export const id = {
   apLoadErrB: "Data halaman auth tidak bisa diambil dari server.",
   apRetry: "Muat ulang",
   apErrT: "Gagal menyimpan",
+  apRoleTitle: "Role pendaftar baru",
+  apRoleHelp:
+    "Role yang otomatis diberikan ke akun yang dibuat lewat halaman register. Role Superadmin tidak ditawarkan di sini.",
+  apRoleLabel: "Role default",
+  apRoleToastT: "Role default disimpan",
+  apRoleToastD: "pendaftar berikutnya langsung memakai role ini.",
   faSubB:
     "alokasi unit ke operator. Status fit-to-work ditarik langsung dari log tidur pagi ini.",
   faShiftPagi: "Shift pagi",
@@ -1004,7 +1057,7 @@ export const id = {
   pfPwCur: "Password saat ini",
   pfPwNew: "Password baru",
   pfPwConf: "Konfirmasi password baru",
-  pfPwHelp: "Minimal 8 karakter.",
+  pfPwHelp: "Minimal 8 karakter, mengandung huruf dan angka.",
   pfPwBtn: "Ubah password",
   pfPwErrCur: "Password saat ini wajib diisi.",
   pfPwErrLen: "Minimal 8 karakter.",
