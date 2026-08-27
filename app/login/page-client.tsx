@@ -9,8 +9,8 @@ import {
   Clock,
   Eye,
   EyeOff,
+  IdCard,
   Lock,
-  Mail,
   Truck,
 } from "lucide-react";
 
@@ -41,7 +41,11 @@ export default function LoginPage() {
   const { appName } = useAppStore();
   const { login } = useSession();
   const { slides } = useAuthPageConfig();
-  const emailRef = React.useRef<HTMLInputElement>(null);
+  const nikRef = React.useRef<HTMLInputElement>(null);
+  /* Terkontrol dan disaring saat mengetik/menempel: NIK di kartu pegawai
+     sering berformat "503 264 133" — dengan maxLength di input, browser
+     memotongnya SEBELUM pemisahnya sempat dibuang. */
+  const [nik, setNik] = React.useState("");
   const pwRef = React.useRef<HTMLInputElement>(null);
   const [showPw, setShowPw] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -49,7 +53,8 @@ export default function LoginPage() {
   const [errMsg, setErrMsg] = React.useState<string | null>(null);
 
   /* Kredensial diverifikasi backend (POST /api/auth/login), bukan lagi
-     dicocokkan dengan daftar mock di app-store.
+     dicocokkan dengan daftar mock di app-store. Identitas akun adalah NIK
+     9 digit — email kini hanya data kontak opsional.
 
      Password dikirim APA ADANYA lewat HTTPS dan di-hash di server; jangan
      tergoda memakai lib/password.ts di sini — digest buatan browser tidak
@@ -61,12 +66,11 @@ export default function LoginPage() {
      sebagai cadangan saat server tidak terjangkau. */
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const email = emailRef.current?.value.trim() || "";
     const pw = pwRef.current?.value || "";
-    if (!email.includes("@") || !pw) {
+    if (!/^\d{9}$/.test(nik) || !pw) {
       setErr(true);
       setErrMsg(null);
-      emailRef.current?.focus();
+      nikRef.current?.focus();
       return;
     }
 
@@ -75,7 +79,7 @@ export default function LoginPage() {
     setBusy(true);
 
     try {
-      await login({ email, password: pw });
+      await login({ nik, password: pw });
       router.push("/dashboard");
     } catch (e2) {
       setBusy(false);
@@ -206,18 +210,24 @@ export default function LoginPage() {
                 className="flex flex-col gap-5"
               >
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    {t.emailLabel}
+                  <label htmlFor="nik" className="text-sm font-medium">
+                    {t.nikLabel}
                   </label>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
+                    <IdCard className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
                     <Input
-                      ref={emailRef}
-                      id="email"
-                      type="email"
+                      ref={nikRef}
+                      id="nik"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      value={nik}
+                      onChange={(e) =>
+                        setNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                      }
                       autoComplete="username"
-                      placeholder="nama@unggul.co.id"
-                      className="h-13 pl-12"
+                      placeholder={t.loginNikPh}
+                      className="h-13 pl-12 font-mono tracking-wider"
                     />
                   </div>
                 </div>

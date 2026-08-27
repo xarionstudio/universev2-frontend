@@ -62,7 +62,11 @@ export function Topbar() {
   /* Identitas nyata dari sesi; store dipakai sebagai cadangan saat sesi
      belum terbaca agar tidak ada kedip teks kosong. */
   const userName = me?.kar ?? storeName;
-  const userEmail = me?.email ?? storeEmail;
+  /* Baris identitas di menu akun: email bila ada, kalau tidak NIK — akun
+     kini boleh tanpa email (identitas login = NIK). */
+  const userEmail = me
+    ? me.email || (me.nik ? `NIK ${me.nik}` : "")
+    : storeEmail;
   /* Nama role datang dari GET /api/roles, bukan lagi dari daftar mock.
      Endpoint itu di balik permission `users:view`, jadi untuk role biasa
      daftarnya kosong dan topbar menampilkan label umum t.userRole — bukan

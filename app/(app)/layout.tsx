@@ -26,20 +26,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useI18n();
-  const { email, hydrated } = useSession();
+  /* Penanda "sudah login" adalah TOKEN, bukan email: identitas akun kini
+     NIK dan email boleh kosong — memakai email di sini akan menendang akun
+     tanpa email ke /login selamanya. */
+  const { token, hydrated } = useSession();
   const { user, can, ready } = usePermissions();
 
   React.useEffect(() => {
     if (!hydrated) return;
-    if (!email) router.replace("/login");
-  }, [hydrated, email, router]);
+    if (!token) router.replace("/login");
+  }, [hydrated, token, router]);
 
   // jangan render apa pun sebelum sesi terbaca — hindari kedip konten
   if (!hydrated || !ready) return null;
-  if (!email) return null;
+  if (!token) return null;
 
   const mod = moduleOfPath(pathname);
-  // email tersimpan tapi tidak cocok dengan user mana pun (mis. data di-reset)
+  // sesi tersimpan tapi tidak cocok dengan user mana pun (mis. data di-reset)
   const denied = !user
     ? t.rbacNoAccount
     : mod && !can(mod, "view")

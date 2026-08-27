@@ -66,6 +66,28 @@ import { useToast } from "@/components/ui/toast";
 
 import { downloadBlob } from "./_lib/csv";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/* NIK persis 9 digit — aturan yang sama dengan IsValidNIK di backend */
+const NIK_RE = /^\d{9}$/;
+
+/* Opsi tautan dikodekan "Nama — NIK". NIK selalu segmen TERAKHIR: nama
+   (terutama nama manual akun kiosk) boleh mengandung " — ", jadi decode
+   dengan lastIndexOf, bukan split() yang mengambil segmen pertama. */
+function splitLinked(v: string): [string, string] {
+  const i = v.lastIndexOf(" — ");
+  return i === -1 ? [v, ""] : [v.slice(0, i), v.slice(i + 3)];
+}
+
+/* Label akun untuk toast/judul dialog: email bila ada, kalau tidak NIK,
+   lalu nama — akun kini boleh tanpa email (identitas login = NIK). */
+function userLabel(u: {
+  email: string;
+  nik?: string | null;
+  kar?: string | null;
+}): string {
+  return u.email || (u.nik ? `NIK ${u.nik}` : (u.kar ?? ""));
+}
+
 export default function UsersPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
@@ -143,6 +165,11 @@ export default function UsersPage() {
   const [editing, setEditing] = React.useState<UmUser | null>(null);
   const [fEmail, setFEmail] = React.useState("");
   const [fKar, setFKar] = React.useState("");
+  /* Nama & NIK MANUAL — dipakai saat akun tidak ditautkan ke karyawan master
+     (akun eksternal/kiosk). NIK tetap wajib: ia identitas login; tanpa jalur
+     manual ini akun semacam itu tidak bisa dibuat maupun dipulihkan. */
+  const [fName, setFName] = React.useState("");
+  const [fNik, setFNik] = React.useState("");
   const [fRoles, setFRoles] = React.useState<Record<string, boolean>>({});
   const [fActive, setFActive] = React.useState(true);
   const [err, setErr] = React.useState(false);
@@ -202,11 +229,21 @@ export default function UsersPage() {
     return null;
   }
 
+  /* keadaan error per-field form (dievaluasi ulang tiap render) */
+  const fEmailBad = fEmail.trim() !== "" && !EMAIL_RE.test(fEmail.trim());
+  const fRolesEmpty = !Object.values(fRoles).some(Boolean);
+  const fNikBad = editing
+    ? fNik.trim() !== "" && !NIK_RE.test(fNik.trim())
+    : !NIK_RE.test(fNik.trim());
+  /* tautan yang NIK-nya tidak terdecode 9 digit — jangan gagal bisu */
+  const fLinkedNikBad = fKar !== "" && !NIK_RE.test(splitLinked(fKar)[1]);
+
   const rows = umUsers.filter((u) => {
     const needle = q.toLowerCase();
     if (
       needle &&
       !u.email.toLowerCase().includes(needle) &&
+      !(u.nik ?? "").includes(needle) &&
       !(u.kar ?? "").toLowerCase().includes(needle) &&
       !u.roles.some((r) => roleName(r).toLowerCase().includes(needle))
     )
@@ -223,6 +260,8 @@ export default function UsersPage() {
     setEditing(null);
     setFEmail("");
     setFKar("");
+    setFName("");
+    setFNik("");
     setFRoles({});
     setFActive(true);
     setFPw("");
@@ -238,6 +277,9 @@ export default function UsersPage() {
        eksternal yang tetap bernama di backend) jatuh ke "tanpa tautan"
        supaya NIK "null" tidak pernah ikut terkirim */
     setFKar(u.kar && u.nik ? `${u.kar} — ${u.nik}` : "");
+    /* akun tanpa tautan: nama & NIK tersimpannya masuk ke field manual */
+    setFName(u.kar ?? "");
+    setFNik(u.nik ?? "");
     setFRoles(Object.fromEntries(u.roles.map((r) => [r, true])));
     setFActive(u.on);
     setFPw("");
@@ -250,7 +292,20 @@ export default function UsersPage() {
     e.preventDefault();
     const roles = Object.keys(fRoles).filter((r) => fRoles[r]);
     const email = fEmail.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || roles.length === 0) {
+    /* Nama & NIK dari karyawan tertaut, atau dari field manual bila tanpa
+       tautan. Email opsional (format diperiksa bila diisi). NIK wajib untuk
+       akun BARU — identitas login; saat mengedit, NIK manual kosong berarti
+       pertahankan yang tersimpan (backend mengabaikan nik ""). */
+    const manual = !fKar;
+    const [karLinked, nikLinked] = fKar ? splitLinked(fKar) : ["", ""];
+    const kar = manual ? fName.trim() || null : karLinked || null;
+    const nik = manual ? fNik.trim() || null : nikLinked || null;
+    const emailOk = email === "" || EMAIL_RE.test(email);
+    /* NIK null hanya sah saat mengedit akun manual (= pertahankan yang
+       tersimpan); selain itu — termasuk hasil decode tautan — harus 9 digit */
+    const nikOk = nik === null ? editing !== null && manual : NIK_RE.test(nik);
+    const nameOk = !manual || editing !== null || kar !== null;
+    if (!emailOk || !nikOk || !nameOk || roles.length === 0) {
       setErr(true);
       return;
     }
@@ -262,7 +317,6 @@ export default function UsersPage() {
       }
       setFPwErr(null);
     }
-    const [kar, nik] = fKar ? fKar.split(" — ") : [null, null];
 
     if (editing) {
       const blocked = guard(editing, roles, fActive);
@@ -278,7 +332,7 @@ export default function UsersPage() {
       setSaving(true);
       try {
         await usersApi.updateUser(editing.id, {
-          name: nextKar ?? editing.email,
+          name: nextKar ?? userLabel(editing),
           email,
           nik: nik ?? "",
           roles,
@@ -300,7 +354,11 @@ export default function UsersPage() {
             prev.map((u) => (u.id === editing.id ? { ...u, on: fActive } : u))
           );
         }
-        pushToast("success", t.umToastUserEdit, email);
+        pushToast(
+          "success",
+          t.umToastUserEdit,
+          userLabel({ email, nik: nextNik, kar: nextKar })
+        );
         setDlgOpen(false);
       } catch (e2) {
         toastErr(e2);
@@ -310,11 +368,9 @@ export default function UsersPage() {
     } else {
       setSaving(true);
       try {
-        /* backend mewajibkan `name`; akun tanpa karyawan tertaut memakai
-           bagian lokal email sebagai nama — pola yang sama dengan akun
-           eksternal pada seed (mis. akun klinik) */
+        /* nama dari karyawan tertaut atau field manual (divalidasi di atas) */
         const created = await usersApi.createUser({
-          name: kar ?? email.split("@")[0],
+          name: kar ?? "",
           email,
           nik: nik ?? "",
           password: fPw,
@@ -322,7 +378,7 @@ export default function UsersPage() {
         });
         const mapped = toUmUser(created);
         if (mapped) setUmUsers((prev) => [...prev, mapped]);
-        pushToast("success", t.umToastUserAdd, email);
+        pushToast("success", t.umToastUserAdd, userLabel({ email, nik, kar }));
         setDlgOpen(false);
         /* backend selalu membuat user aktif — checkbox nonaktif dieksekusi
            sebagai langkah kedua lewat endpoint status */
@@ -356,7 +412,11 @@ export default function UsersPage() {
       setUmUsers((prev) =>
         prev.map((u) => (u.id === offTarget.id ? { ...u, on: false } : u))
       );
-      pushToast("info", t.umToastOff, `${offTarget.email} — ${t.umToastOffD}`);
+      pushToast(
+        "info",
+        t.umToastOff,
+        `${userLabel(offTarget)} — ${t.umToastOffD}`
+      );
       setOffTarget(null);
     } catch (e2) {
       toastErr(e2);
@@ -371,7 +431,7 @@ export default function UsersPage() {
       setUmUsers((prev) =>
         prev.map((x) => (x.id === u.id ? { ...x, on: true } : x))
       );
-      pushToast("success", t.umToastOn, `${u.email} — ${t.umToastOnD}`);
+      pushToast("success", t.umToastOn, `${userLabel(u)} — ${t.umToastOnD}`);
     } catch (e2) {
       toastErr(e2);
     }
@@ -401,7 +461,7 @@ export default function UsersPage() {
     try {
       await usersApi.deleteUser(delTarget.id);
       setUmUsers((prev) => prev.filter((u) => u.id !== delTarget.id));
-      pushToast("success", t.umToastUserDel, delTarget.email);
+      pushToast("success", t.umToastUserDel, userLabel(delTarget));
       setDelTarget(null);
     } catch (e2) {
       toastErr(e2);
@@ -438,7 +498,7 @@ export default function UsersPage() {
     try {
       await usersApi.updateUser(pwTarget.id, {
         /* backend menolak name kosong — akun tanpa nama memakai email-nya */
-        name: pwTarget.kar ?? pwTarget.email,
+        name: pwTarget.kar ?? userLabel(pwTarget),
         email: pwTarget.email,
         nik: pwTarget.nik ?? "",
         roles: pwTarget.roles,
@@ -452,7 +512,11 @@ export default function UsersPage() {
       setPwTarget(null);
       setPwNew("");
       setPwConf("");
-      pushToast("success", t.umPwToastT, `${pwTarget.email} — ${t.umPwToastD}`);
+      pushToast(
+        "success",
+        t.umPwToastT,
+        `${userLabel(pwTarget)} — ${t.umPwToastD}`
+      );
     } catch (e2) {
       toastErr(e2);
     } finally {
@@ -606,7 +670,11 @@ export default function UsersPage() {
                   className={u.on ? undefined : "opacity-60"}
                 >
                   <TableCell>
-                    <b className="font-semibold">{u.email}</b>
+                    {u.email ? (
+                      <b className="font-semibold">{u.email}</b>
+                    ) : (
+                      <span className="text-(--text-tertiary)">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="max-xl:hidden">
                     {u.kar ? (
@@ -616,7 +684,12 @@ export default function UsersPage() {
                     )}
                   </TableCell>
                   <TableCell className="font-mono text-(--text-secondary) tabular-nums max-xl:hidden">
-                    {u.nik ?? <span className="text-(--text-tertiary)">—</span>}
+                    {u.nik ?? (
+                      /* tanpa NIK = tidak bisa login — beri tanda, bukan "—" */
+                      <Badge variant="warning" dot>
+                        {t.umNoNik}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
@@ -662,7 +735,7 @@ export default function UsersPage() {
                           <Pencil />
                         </IconButton>
                         <IconButton
-                          aria-label={`${t.umPwT} — ${u.email}`}
+                          aria-label={`${t.umPwT} — ${userLabel(u)}`}
                           title={t.umPwT}
                           onClick={() => openPw(u)}
                         >
@@ -686,7 +759,7 @@ export default function UsersPage() {
                         )}
                         <IconButton
                           danger
-                          aria-label={`${t.umUserDelT} — ${u.email}`}
+                          aria-label={`${t.umUserDelT} — ${userLabel(u)}`}
                           title={t.umUserDelT}
                           onClick={() => askDel(u)}
                         >
@@ -737,16 +810,15 @@ export default function UsersPage() {
           <UserPlus />
         </DialogIcon>
         <DialogTitle id="umu-t">
-          {editing ? `${t.umUserEditT} — ${editing.email}` : t.umUserAdd}
+          {editing ? `${t.umUserEditT} — ${userLabel(editing)}` : t.umUserAdd}
         </DialogTitle>
         <DialogBody>{t.umUserDlgB}</DialogBody>
         <form onSubmit={save} noValidate>
           <Field
             className="mt-4"
-            label="Email"
+            label={t.umEmailOptional}
             htmlFor="um-email"
-            required
-            error={err}
+            error={err && fEmailBad}
             errorMessage={t.umErrEmail}
           >
             <Input
@@ -757,7 +829,13 @@ export default function UsersPage() {
               onChange={(e) => setFEmail(e.target.value)}
             />
           </Field>
-          <Field className="mt-4" label={t.umLinked} htmlFor="um-kar">
+          <Field
+            className="mt-4"
+            label={t.umLinked}
+            htmlFor="um-kar"
+            error={err && fLinkedNikBad}
+            errorMessage={t.regNikErr}
+          >
             <Select
               id="um-kar"
               value={fKar}
@@ -777,6 +855,47 @@ export default function UsersPage() {
               ))}
             </Select>
           </Field>
+          {/* tanpa tautan: nama & NIK diisi manual — NIK identitas login */}
+          {!fKar ? (
+            <>
+              <Field
+                className="mt-4"
+                label={t.umNameManual}
+                htmlFor="um-name"
+                required={!editing}
+                error={err && !editing && !fName.trim()}
+                errorMessage={t.errNama}
+              >
+                <Input
+                  id="um-name"
+                  value={fName}
+                  onChange={(e) => setFName(e.target.value)}
+                  placeholder={t.regNamePh}
+                  maxLength={100}
+                />
+              </Field>
+              <Field
+                className="mt-4"
+                label={t.umNikManual}
+                htmlFor="um-nik"
+                required={!editing}
+                helper={t.umNikManualHelp}
+                error={err && fNikBad}
+                errorMessage={t.regNikErr}
+              >
+                <Input
+                  id="um-nik"
+                  value={fNik}
+                  onChange={(e) =>
+                    setFNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                  }
+                  inputMode="numeric"
+                  placeholder={t.regNikPh}
+                  className="font-mono"
+                />
+              </Field>
+            </>
+          ) : null}
           {!editing ? (
             <Field
               className="mt-4"
@@ -796,7 +915,13 @@ export default function UsersPage() {
               />
             </Field>
           ) : null}
-          <Field className="mt-4" label="Roles" required>
+          <Field
+            className="mt-4"
+            label="Roles"
+            required
+            error={err && fRolesEmpty}
+            errorMessage={t.umErrRoles}
+          >
             <div className="grid grid-cols-2 gap-2">
               {umRoles.map((r) => (
                 <ToggleRow key={r.id}>
@@ -849,7 +974,7 @@ export default function UsersPage() {
           <KeyRound />
         </DialogIcon>
         <DialogTitle id="umpw-t">
-          {`${t.umPwT} — ${pwTarget?.email ?? ""}`}
+          {`${t.umPwT} — ${pwTarget ? userLabel(pwTarget) : ""}`}
         </DialogTitle>
         <DialogBody>{t.umPwB}</DialogBody>
         <form onSubmit={pwSave} noValidate>
@@ -911,7 +1036,9 @@ export default function UsersPage() {
         <DialogIcon variant="danger">
           <Ban />
         </DialogIcon>
-        <DialogTitle id="umo-t">{`${t.umOff} ${offTarget?.email ?? ""}?`}</DialogTitle>
+        <DialogTitle id="umo-t">
+          {`${t.umOff} ${offTarget ? userLabel(offTarget) : ""}?`}
+        </DialogTitle>
         <DialogBody>{t.umOffB}</DialogBody>
         <DialogActions>
           <Button variant="ghost" onClick={() => setOffTarget(null)}>
@@ -936,7 +1063,9 @@ export default function UsersPage() {
         <DialogIcon variant="danger">
           <Trash2 />
         </DialogIcon>
-        <DialogTitle id="umd-t">{`${t.umUserDelT} ${delTarget?.email ?? ""}?`}</DialogTitle>
+        <DialogTitle id="umd-t">
+          {`${t.umUserDelT} ${delTarget ? userLabel(delTarget) : ""}?`}
+        </DialogTitle>
         <DialogBody>{t.umUserDelB}</DialogBody>
         <DialogActions>
           <Button variant="ghost" onClick={() => setDelTarget(null)}>

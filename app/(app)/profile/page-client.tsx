@@ -62,7 +62,8 @@ export default function ProfilePage() {
     const wantPw = Boolean(pwCur || pwNew || pwConf);
     const e = {
       name: !name.trim(),
-      email: !/^\S+@\S+\.\S+$/.test(email.trim()),
+      /* email opsional — hanya formatnya yang diperiksa bila diisi */
+      email: email.trim() !== "" && !/^\S+@\S+\.\S+$/.test(email.trim()),
       cur: wantPw && !pwCur,
       nw: wantPw && pwNew.length < 8,
       conf: wantPw && pwConf !== pwNew,
@@ -134,7 +135,7 @@ export default function ProfilePage() {
               ))}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 font-mono text-[13px] text-(--text-tertiary)">
-              <span>{userEmail}</span>
+              <span>{userEmail || "—"}</span>
               <span>NIK {me?.nik ?? "—"}</span>
             </div>
           </div>
@@ -156,7 +157,6 @@ export default function ProfilePage() {
           <Field
             label={t.pfEmail}
             htmlFor="pf-email"
-            required
             error={err.email}
             errorMessage={t.pfErrEmail}
           >

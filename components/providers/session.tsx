@@ -43,8 +43,9 @@ const clientTrue = () => true;
 const NO_PERMS: ApiPermMap = {};
 
 type SessionCtx = {
-  /* Email akun yang login; null = belum login. Dipertahankan sebagai field
-     tersendiri karena beberapa halaman hanya butuh ini. */
+  /* Email akun yang login — OPSIONAL sejak identitas akun beralih ke NIK:
+     bisa null/kosong untuk akun tanpa email. JANGAN dipakai sebagai penanda
+     "sudah login"; pakai `token`/`user`. */
   email: string | null;
   token: string | null;
   user: ApiUser | null;

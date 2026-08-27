@@ -40,12 +40,6 @@ import { Select } from "@/components/ui/select";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
-/* Pendaftaran dikunci ke email perusahaan — pengguna hanya mengetik nama
-   emailnya; domain ini tampil permanen di field dan ditempel otomatis saat
-   submit. Selaras dengan guard RegisterEmailDomain di backend
-   (internal/service/auth_service.go). */
-const EMAIL_DOMAIN = "@universe.com";
-
 const ctaClass =
   "inline-flex h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-(image:--gradient-cta) text-base font-bold text-on-cta shadow-(--glow-cta) transition-[box-shadow,background-color,transform] duration-150 hover:-translate-y-px hover:bg-(image:--gradient-cta-hover) hover:shadow-[0_10px_28px_rgba(0,212,255,.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
@@ -55,8 +49,9 @@ export default function RegisterPage() {
   const { slides, positions, departments } = useAuthPageConfig();
   const [state, setState] = React.useState<FormState>("idle");
   const [errs, setErrs] = React.useState<string[]>([]);
-  /* Alasan penolakan dari backend — email/NIK sudah terpakai, NIK bukan 9
-     digit, dan seterusnya. null berarti pakai teks umum t.regFailB. */
+  /* Alasan penolakan dari backend — NIK sudah terpakai, NIK bukan 9 digit,
+     email (bila diisi) sudah dipakai, dan seterusnya. null berarti pakai
+     teks umum t.regFailB. */
   const [failMsg, setFailMsg] = React.useState<string | null>(null);
 
   const [name, setName] = React.useState("");
@@ -83,10 +78,11 @@ export default function RegisterPage() {
     if (!pos) list.push(`${t.regPos} — ${t.regPosPh.toLowerCase()}.`);
     if (!/^\d{9}$/.test(nik.trim())) list.push(t.regNikErr);
     if (!dept) list.push(`${t.regDept} — ${t.regDeptPh.toLowerCase()}.`);
-    /* Field email hanya menampung nama (local part) — domain dikunci
-       EMAIL_DOMAIN; backend menolak domain lain saat register. */
-    if (!/^[A-Za-z0-9._%+-]+$/.test(email.trim()))
-      list.push(t.regEmailLocalErr);
+    /* Email OPSIONAL — identitas akun adalah NIK. Formatnya diperiksa hanya
+       bila diisi; backend memvalidasi ulang dan menolak email yang sudah
+       dipakai akun lain. */
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim()))
+      list.push(t.regEmailErr);
     /* Kode isu dari lib/password — sumber aturan yang sama dengan halaman
        Users, cermin dari IsPasswordStrong di backend. */
     for (const issue of passwordIssues(pw)) {
@@ -116,7 +112,7 @@ export default function RegisterPage() {
       await authApi.register({
         name: name.trim(),
         nik: nik.trim(),
-        email: email.trim() + EMAIL_DOMAIN,
+        email: email.trim(),
         password: pw,
         dept,
         pos,
@@ -376,14 +372,17 @@ export default function RegisterPage() {
                     {t.regNik}
                   </label>
                   {/* NIK backend wajib persis 9 digit — karakter non-angka
-                      disaring saat mengetik, panjang dikunci di 9 */}
+                      disaring saat mengetik/menempel, lalu dipotong di 9.
+                      Bukan maxLength: browser memotong tempelan "503 264 133"
+                      SEBELUM pemisahnya dibuang. */}
                   <Input
                     id="reg-nik"
                     value={nik}
-                    onChange={(e) => setNik(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) =>
+                      setNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                    }
                     placeholder={t.regNikPh}
                     inputMode="numeric"
-                    maxLength={9}
                     className="h-12"
                   />
                 </div>
@@ -405,32 +404,22 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* email */}
+              {/* email — opsional; NIK di atas yang menjadi identitas login */}
               <div className="flex flex-col gap-2">
                 <label htmlFor="reg-email" className="text-sm font-medium">
-                  {t.emailLabel}
+                  {t.regEmailOptional}
                 </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-(--text-tertiary)" />
                   <Input
                     id="reg-email"
-                    type="text"
+                    type="email"
                     value={email}
-                    onChange={(e) => {
-                      /* Buang domain yang ikut terketik/tertempel
-                         ("nama@universe.com" → "nama"); sisa karakter tak
-                         valid ditolak validasi submit. */
-                      const v = e.target.value;
-                      const at = v.indexOf("@");
-                      setEmail((at === -1 ? v : v.slice(0, at)).trim());
-                    }}
-                    placeholder={t.regEmailLocalPh}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t.regEmailPh}
                     autoComplete="email"
-                    className="h-12 pr-34 pl-12"
+                    className="h-12 pl-12"
                   />
-                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-medium text-(--text-secondary)">
-                    {EMAIL_DOMAIN}
-                  </span>
                 </div>
               </div>
 
