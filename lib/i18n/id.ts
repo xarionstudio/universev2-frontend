@@ -287,6 +287,9 @@ export const id = {
   expPdf: "Download PDF",
   expReportFtw: "Laporan Fit To Work — Log Tidur Operator",
   expReportFtwHist: "Laporan Fit To Work — Riwayat Detail",
+  expReportAtt: "Laporan Absensi — Log Kehadiran",
+  expThInM: "Mesin check-in",
+  expThOutM: "Mesin check-out",
   expPrintedAt: "Dicetak",
   expFilter: "Filter",
   expRows: "Jumlah baris",
@@ -1081,7 +1084,6 @@ export const id = {
   allStatus: "Semua status",
   lblDateTo: "Sampai tanggal",
   toastExportT: "Export dimulai",
-  toastExportD: "attendance_2026-07-11.xlsx sedang disiapkan.",
 
   /* --- profil saya --- */
   pfSub: "Kelola informasi akun dan password Anda.",

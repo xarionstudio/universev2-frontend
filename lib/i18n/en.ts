@@ -289,6 +289,9 @@ export const en: Dict = {
   expPdf: "Download PDF",
   expReportFtw: "Fit To Work Report — Operator Sleep Log",
   expReportFtwHist: "Fit To Work Report — Detailed History",
+  expReportAtt: "Attendance Report — Presence Log",
+  expThInM: "Check-in machine",
+  expThOutM: "Check-out machine",
   expPrintedAt: "Printed",
   expFilter: "Filter",
   expRows: "Row count",
@@ -1086,7 +1089,6 @@ export const en: Dict = {
   allStatus: "All statuses",
   lblDateTo: "To date",
   toastExportT: "Export started",
-  toastExportD: "attendance_2026-07-11.xlsx is being prepared.",
 
   /* --- my profile --- */
   pfSub: "Manage your account information and password.",

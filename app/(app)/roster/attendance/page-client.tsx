@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CircleAlert, Download, Search } from "lucide-react";
+import { CircleAlert, Search } from "lucide-react";
 
 import { rosterApi } from "@/lib/api";
 import type { ApiAttendanceRow } from "@/lib/api/endpoints/roster";
@@ -12,6 +12,7 @@ import { useI18n } from "@/lib/i18n";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
+import { ExportButtons } from "@/components/ui/export-buttons";
 import { Input } from "@/components/ui/input";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
@@ -36,7 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/components/ui/toast";
 
 const stBadge: Record<AttStatus, BadgeVariant> = {
   hadir: "success",
@@ -45,6 +45,16 @@ const stBadge: Record<AttStatus, BadgeVariant> = {
   unfit: "danger",
   off: "neutral",
 };
+
+/* Warna pill status di laporan ekspor — selaras dengan stBadge di atas. */
+const stTone: Record<AttStatus, "success" | "warning" | "danger" | "neutral"> =
+  {
+    hadir: "success",
+    terlambat: "warning",
+    belum: "neutral",
+    unfit: "danger",
+    off: "neutral",
+  };
 
 /* Log absensi ditarik ulang tiap menit — irama yang sama dengan worker
    fingerprint backend (FINGERPRINT_SYNC_INTERVAL=60), supaya scan yang baru
@@ -127,7 +137,6 @@ function toAttRow(r: ApiAttendanceRow, en: boolean): AttRow {
 
 function AttendanceInner() {
   const { t, lang } = useI18n();
-  const { pushToast } = useToast();
   const searchParams = useSearchParams();
 
   const initialDate = searchParams.get("date") || localISODate();
@@ -252,6 +261,54 @@ function AttendanceInner() {
   ).length;
   const pg = usePagination(rows);
 
+  /* Payload ekspor — SEMUA baris hasil filter (bukan cuma halaman aktif),
+     dibangun saat tombol diklik supaya selalu mengikuti filter yang sedang
+     berlaku. Kop bermerek (logo, nama PT, cap waktu penarikan) ditangani
+     lib/report lewat <ExportButtons>. */
+  const buildExport = () => {
+    const filters = [
+      status
+        ? `${t.thStatus}: ${stLabel(status as AttStatus)}`
+        : `${t.thStatus}: ${t.expAll}`,
+      dept ? `${t.thDept}: ${dept}` : `${t.thDept}: ${t.expAll}`,
+      from || to ? `${t.lblDate}: ${from || "…"} — ${to || "…"}` : null,
+      q.trim() ? `${t.searchEmp}: “${q.trim()}”` : null,
+    ].filter(Boolean) as string[];
+
+    return {
+      fileBase: "attendance-log-absensi",
+      title: t.expReportAtt,
+      /* cap waktu & jumlah baris ditambahkan oleh <ExportButtons> per format */
+      meta: [`${t.expFilter}: ${filters.join(" · ")}`],
+      sheetName: t.attLog,
+      columns: [
+        { header: t.thEmp, width: 26 },
+        { header: "NIK", width: 14 },
+        { header: t.lblDate, width: 12 },
+        { header: t.thDept, width: 26 },
+        { header: t.thRoster, width: 9 },
+        { header: t.thIn, width: 10 },
+        { header: t.expThInM, width: 20 },
+        { header: t.thOut, width: 10 },
+        { header: t.expThOutM, width: 20 },
+        { header: t.thStatus, width: 13 },
+      ],
+      rows: rows.map((r) => [
+        r.name,
+        r.nik,
+        r.date || null,
+        r.dept,
+        r.code,
+        r.in || null,
+        r.inM || null,
+        r.out || null,
+        r.outM || null,
+        { text: stLabel(r.st), tone: stTone[r.st] },
+      ]),
+      landscape: true,
+    };
+  };
+
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle
@@ -330,15 +387,7 @@ function AttendanceInner() {
                 onChange={(e) => setTo(e.target.value)}
               />
             </div>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                pushToast("success", t.toastExportT, t.toastExportD)
-              }
-            >
-              <Download />
-              {t.export}
-            </Button>
+            <ExportButtons build={buildExport} />
           </ToolbarGroup>
         </Toolbar>
 
