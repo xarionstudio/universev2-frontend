@@ -4,18 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { CheckCircle2, CircleAlert, Clock, Search } from "lucide-react";
 
-import {
-  ftwData,
-  ftwHistoryFor,
-  ftwStripAt,
-  type FtwRecord,
-  type FtwStatus,
-} from "@/lib/data/ftw";
+import { ftwApi } from "@/lib/api";
+import type { ApiFtwRecord, FtwStatus } from "@/lib/api/endpoints/ftw";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button, Spinner } from "@/components/ui/button";
 import { ExportButtons } from "@/components/ui/export-buttons";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -45,17 +41,15 @@ import {
 type StKey = FtwStatus;
 
 type Row = {
-  op: FtwRecord;
+  rec: ApiFtwRecord;
   company: string;
   pos: string;
-  st: StKey;
-  /* jam istirahat tambahan sebelum boleh bekerja (0/1/2) */
-  restHours: number;
-  sleep: string;
-  sendTime: string;
-  date: string;
-  d: number;
+  strip: ("ok" | "bad" | "na")[];
 };
+
+/* Panjang bilah riwayat di kolom terakhir. Menentukan seberapa jauh ke
+   belakang data harus ditarik melampaui filter tanggal yang dipilih user. */
+const STRIP_DAYS = 7;
 
 const sleepClass = (st: StKey) =>
   cn(
@@ -72,8 +66,23 @@ const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
   na: "bg-(--fill-hover-strong)",
 };
 
+/* Geser tanggal ISO sebanyak `days` hari. Dipakai untuk memundurkan batas
+   bawah penarikan; UTC dipakai agar tidak tergelincir DST/zona. */
+function shiftIso(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/* Satu kotak bilah riwayat: hijau bila boleh kerja tanpa istirahat tambahan,
+   oranye bila melapor tapi kurang tidur, abu-abu bila tidak ada laporan. */
+function stripCell(rec: ApiFtwRecord | undefined): "ok" | "bad" | "na" {
+  if (!rec || rec.st === "belum") return "na";
+  return rec.st === "fit" ? "ok" : "bad";
+}
+
 export default function FitToWorkPage() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { empAll } = useAppStore();
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -93,13 +102,69 @@ export default function FitToWorkPage() {
     );
   }, []);
 
-  React.useEffect(() => {
-    const id = setTimeout(updateFresh, 0);
-    return () => clearTimeout(id);
-  }, [updateFresh]);
+  /* Data dari server.
+     `all` memuat rentang yang dipilih DITAMBAH 6 hari sebelumnya, karena
+     bilah riwayat tiap baris melihat 7 hari ke belakang dari tanggal baris
+     itu. Menariknya dalam satu permintaan jauh lebih murah daripada satu
+     permintaan /ftw/history per operator yang tampil.
+     `todayRows` memberi angka kartu statistik, yang selalu bicara HARI INI
+     terlepas dari filter tanggal; kalau hari ini sudah tercakup rentang di
+     atas, datanya dipakai ulang tanpa permintaan kedua. */
+  const [reloadKey, setReloadKey] = React.useState(0);
+  /* Kunci muatan: rentang + penghitung muat-ulang. Hasil dan kegagalan
+     disimpan BERSAMA kuncinya, sehingga "sedang memuat" dan "gagal" jadi
+     turunan (data.key === key) alih-alih state sendiri. Tanpa itu, effect
+     harus memanggil setLoaded(false) secara sinkron — persis yang dilarang
+     react-hooks/set-state-in-effect karena memicu render beruntun. */
+  const key = `${d1}|${d2}|${reloadKey}`;
+  const [data, setData] = React.useState<{
+    key: string;
+    all: ApiFtwRecord[];
+    today: ApiFtwRecord[];
+  } | null>(null);
+  const [errKey, setErrKey] = React.useState("");
 
-  /* refresh dari topbar: perbarui stempel "data per" */
-  useRegisterRefresh(updateFresh);
+  const loaded = data?.key === key;
+  const loadErr = errKey === key;
+  const all = React.useMemo(() => (loaded ? data.all : []), [loaded, data]);
+  const todayRows = loaded ? data.today : [];
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    const from = shiftIso(d1, -(STRIP_DAYS - 1));
+    const needsToday = todayIso < from || todayIso > d2;
+
+    void Promise.all([
+      ftwApi.getFtwHistory({ date_from: from, date_to: d2 }, ac.signal),
+      needsToday
+        ? ftwApi.getFtwHistory(
+            { date_from: todayIso, date_to: todayIso },
+            ac.signal
+          )
+        : Promise.resolve(null),
+    ])
+      .then(([range, todayOnly]) => {
+        const rows = range ?? [];
+        setData({
+          key,
+          all: rows,
+          today:
+            todayOnly ?? rows.filter((r) => r.date.slice(0, 10) === todayIso),
+        });
+        updateFresh();
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setErrKey(key);
+      });
+    return () => ac.abort();
+  }, [key, d1, d2, todayIso, updateFresh]);
+
+  /* tombol refresh di topbar menarik ulang dari server, bukan sekadar
+     memperbarui stempel "data per" */
+  const reload = React.useCallback(() => setReloadKey((k) => k + 1), []);
+  useRegisterRefresh(reload);
+
+  const retry = reload;
 
   const stBadge = (key: StKey) => {
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
@@ -116,41 +181,52 @@ export default function FitToWorkPage() {
   };
 
   const emps = empAll();
-  /* status hari ini per operator — dasar angka kartu statistik */
-  const today = ftwData(lang);
+
+  /* Indeks nik|tanggal — dasar bilah riwayat, dibangun sekali per muatan. */
+  const byKey = React.useMemo(() => {
+    const m = new Map<string, ApiFtwRecord>();
+    for (const r of all) m.set(`${r.nik}|${r.date.slice(0, 10)}`, r);
+    return m;
+  }, [all]);
+
   const needle = q.trim().toLowerCase();
-  const rows: Row[] = [];
-  for (const op of today) {
-    if (shift && op.shift !== shift) continue;
-    if (
-      needle &&
-      !op.name.toLowerCase().includes(needle) &&
-      !op.nik.includes(needle)
-    )
-      continue;
-    const emp = emps.find((e) => e.nik === op.nik);
-    const company = emp?.company ?? "PT Unggul Dinamika Utama";
-    const pos = emp?.pos ?? "—";
-    for (const entry of ftwHistoryFor(op, lang, 90)) {
-      if (d1 && entry.iso < d1) continue;
-      if (d2 && entry.iso > d2) continue;
-      // hari ini pakai data log asli operator, bukan deret riwayat sintetis
-      const isToday = entry.d === 0;
-      const key = isToday ? op.st : entry.status;
-      if (st && key !== st) continue;
-      rows.push({
-        op,
-        company,
-        pos,
-        st: key,
-        restHours: isToday ? op.restHours : entry.restHours,
-        sleep: isToday ? op.sleep : entry.sleep,
-        sendTime: entry.sendTime,
-        date: entry.date,
-        d: entry.d,
+  const rows: Row[] = React.useMemo(() => {
+    const out: Row[] = [];
+    for (const rec of all) {
+      const iso = rec.date.slice(0, 10);
+      /* baris di luar rentang pilihan hanya bahan bilah riwayat */
+      if (iso < d1 || iso > d2) continue;
+      if (shift && rec.shift !== shift) continue;
+      if (st && rec.st !== st) continue;
+      if (
+        needle &&
+        !rec.name.toLowerCase().includes(needle) &&
+        !rec.nik.includes(needle)
+      )
+        continue;
+
+      const emp = emps.find((e) => e.nik === rec.nik);
+      const strip: ("ok" | "bad" | "na")[] = [];
+      for (let k = STRIP_DAYS - 1; k >= 0; k--) {
+        strip.push(stripCell(byKey.get(`${rec.nik}|${shiftIso(iso, -k)}`)));
+      }
+
+      out.push({
+        rec,
+        company: emp?.company ?? "PT Unggul Dinamika Utama",
+        pos: emp?.pos ?? "—",
+        strip,
       });
     }
-  }
+    /* terbaru dulu, lalu abjad — urutan submitted_at dari server tidak
+       berarti apa-apa saat rentangnya lebih dari satu hari */
+    out.sort(
+      (a, b) =>
+        b.rec.date.localeCompare(a.rec.date) ||
+        a.rec.name.localeCompare(b.rec.name)
+    );
+    return out;
+  }, [all, byKey, d1, d2, shift, st, needle, emps]);
 
   /* Payload ekspor — SEMUA baris hasil filter (bukan cuma halaman aktif),
      karena laporan yang cuma berisi 10 baris pertama menyesatkan. */
@@ -198,17 +274,17 @@ export default function FitToWorkPage() {
         { header: t.thSendTime, width: 14 },
       ],
       rows: rows.map((r) => [
-        r.op.name,
-        r.op.nik,
+        r.rec.name,
+        r.rec.nik,
         r.company,
-        r.op.dept,
+        r.rec.dept,
         r.pos,
-        r.op.shift === "malam" ? t.shiftNight : t.shiftDay,
-        r.sleep,
-        { text: stLabel[r.st], tone: tone[r.st] },
-        r.restHours > 0 ? `+${r.restHours} ${t.hourShort}` : "—",
-        r.date,
-        r.sendTime,
+        r.rec.shift === "malam" ? t.shiftNight : t.shiftDay,
+        r.rec.sleep,
+        { text: stLabel[r.rec.st], tone: tone[r.rec.st] },
+        r.rec.restHours > 0 ? `+${r.rec.restHours} ${t.hourShort}` : "—",
+        r.rec.date.slice(0, 10),
+        r.rec.sendTime,
       ]),
       landscape: true,
     };
@@ -221,6 +297,9 @@ export default function FitToWorkPage() {
   const shown = rows.slice((cur - 1) * perN, cur * perN);
   const start = total === 0 ? 0 : (cur - 1) * perN + 1;
   const end = Math.min(total, cur * perN);
+
+  const countToday = (key: StKey) =>
+    String(todayRows.filter((r) => r.st === key).length);
 
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
@@ -239,7 +318,7 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-success-border)",
             color: "var(--badge-success-text)",
           }}
-          value={String(today.filter((r) => r.st === "fit").length)}
+          value={loaded ? countToday("fit") : "—"}
           label={t.ftwStatFit}
           detail={t.ftwRuleFit}
         />
@@ -250,7 +329,7 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value={String(today.filter((r) => r.st === "spare").length)}
+          value={loaded ? countToday("spare") : "—"}
           label={t.ftwStatSpare}
           detail={t.ftwRestNote}
         />
@@ -261,7 +340,7 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value={String(today.filter((r) => r.st === "pulang").length)}
+          value={loaded ? countToday("pulang") : "—"}
           label={t.ftwStatPulang}
           detail={t.ftwPulangNote}
         />
@@ -306,7 +385,9 @@ export default function FitToWorkPage() {
               aria-label={t.allShift}
             >
               <option value="">{t.allShift}</option>
-              <option value="siang">{t.shiftDay}</option>
+              {/* nilainya "pagi", bukan "siang": itu yang dipakai kolom
+                  ftw_logs.shift dan alokasi armada di backend */}
+              <option value="pagi">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
             <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
@@ -339,7 +420,19 @@ export default function FitToWorkPage() {
           </ToolbarGroup>
         </Toolbar>
 
-        {shown.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.ftwLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : shown.length ? (
           <div className="overflow-x-auto">
             <Table className="min-w-7xl">
               <TableHeader>
@@ -360,31 +453,31 @@ export default function FitToWorkPage() {
               </TableHeader>
               <TableBody>
                 {shown.map((r) => {
-                  const strip = ftwStripAt(r.op, r.d);
-                  const bad = strip.filter((s) => s === "bad").length;
+                  const bad = r.strip.filter((s) => s === "bad").length;
+                  const iso = r.rec.date.slice(0, 10);
                   return (
-                    <TableRow key={`${r.op.nik}-${r.d}`}>
+                    <TableRow key={`${r.rec.nik}-${iso}-${r.rec.shift}`}>
                       <TableCell className="font-semibold">
-                        {r.op.name}
+                        {r.rec.name || "—"}
                       </TableCell>
                       <TableCell className="font-mono text-(--text-secondary) tabular-nums">
-                        {r.op.nik}
+                        {r.rec.nik}
                       </TableCell>
                       <TableCell>{r.company}</TableCell>
-                      <TableCell>{r.op.dept}</TableCell>
+                      <TableCell>{r.rec.dept || "—"}</TableCell>
                       <TableCell>{r.pos}</TableCell>
                       <TableCell>
-                        {r.op.shift === "malam" ? t.shiftNight : t.shiftDay}
+                        {r.rec.shift === "malam" ? t.shiftNight : t.shiftDay}
                       </TableCell>
-                      <TableCell className={sleepClass(r.st)}>
-                        {r.sleep}
+                      <TableCell className={sleepClass(r.rec.st)}>
+                        {r.rec.sleep}
                       </TableCell>
-                      <TableCell>{stBadge(r.st)}</TableCell>
+                      <TableCell>{stBadge(r.rec.st)}</TableCell>
                       {/* istirahat tambahan sebelum boleh bekerja */}
                       <TableCell className="whitespace-nowrap">
-                        {r.restHours > 0 ? (
+                        {r.rec.restHours > 0 ? (
                           <span className="text-(--badge-warning-text)">
-                            +{r.restHours} {t.hourShort}
+                            +{r.rec.restHours} {t.hourShort}
                           </span>
                         ) : (
                           <span className="text-(--text-tertiary) max-sm:text-center">
@@ -393,12 +486,14 @@ export default function FitToWorkPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-mono whitespace-nowrap">
-                        {r.date}
+                        {iso}
                       </TableCell>
-                      <TableCell className="font-mono">{r.sendTime}</TableCell>
+                      <TableCell className="font-mono">
+                        {r.rec.sendTime || "—"}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {strip.map((s, i) => (
+                          {r.strip.map((s, i) => (
                             <i
                               key={i}
                               className={cn(
@@ -412,7 +507,7 @@ export default function FitToWorkPage() {
                           </span>
                         </div>
                         <Link
-                          href={`/fit-to-work/history?nik=${r.op.nik}`}
+                          href={`/fit-to-work/history?nik=${r.rec.nik}`}
                           className="mt-1 inline-block text-xs"
                         >
                           {t.ftwSeeAll}
@@ -432,23 +527,27 @@ export default function FitToWorkPage() {
           />
         )}
 
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
-            {t.ftwSumLogs}
-          </FootSum>
-          <Pagination
-            page={cur}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["10", "25", "50"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
+        {/* ringkasan "0 log" selama memuat/gagal hanya membingungkan —
+            kaki tabel ikut menunggu datanya */}
+        {loaded && !loadErr ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
+              {t.ftwSumLogs}
+            </FootSum>
+            <Pagination
+              page={cur}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              perOptions={["10", "25", "50"]}
+              onPer={(v) => {
+                setPer(v);
+                setPage(1);
+              }}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
 
       {/* aturan kelayakan — ditulis eksplisit agar operator & admin melihat
