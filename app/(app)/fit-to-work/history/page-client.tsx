@@ -2,20 +2,15 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, CircleAlert, Search } from "lucide-react";
 
-import {
-  ftwData,
-  ftwHistoryFor,
-  type FtwHistEntry,
-  type FtwRecord,
-  type FtwStatus,
-} from "@/lib/data/ftw";
+import { ftwApi } from "@/lib/api";
+import type { ApiFtwRecord, FtwStatus } from "@/lib/api/endpoints/ftw";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, Spinner } from "@/components/ui/button";
 import { ExportButtons } from "@/components/ui/export-buttons";
 import { Input } from "@/components/ui/input";
 import { PageButton } from "@/components/ui/pagination";
@@ -44,12 +39,16 @@ import {
 type StKey = FtwStatus;
 
 type Row = {
-  op: FtwRecord;
+  rec: ApiFtwRecord;
   company: string;
   pos: string;
-  st: StKey;
-  entry: FtwHistEntry;
 };
+
+/* Lebar jendela bawaan. Dulu 90 hari, wajar saat datanya sintetis; dengan log
+   asli (ratusan baris per hari) itu puluhan ribu baris sekali tarik. 30 hari
+   sudah menjawab pertanyaan "bagaimana bulan ini" tanpa membuat halaman
+   menggantung — dan user tetap bebas melebarkannya lewat filter tanggal. */
+const DEFAULT_RANGE_DAYS = 30;
 
 const sleepClass = (st: StKey) =>
   cn(
@@ -124,14 +123,14 @@ function WindowPagination({
 }
 
 function FtwHistoryInner() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { empAll } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const now = new Date();
   const todayIso = now.toISOString().slice(0, 10);
-  const startIso = new Date(now.getTime() - 90 * 86400000)
+  const startIso = new Date(now.getTime() - (DEFAULT_RANGE_DAYS - 1) * 86400000)
     .toISOString()
     .slice(0, 10);
 
@@ -144,7 +143,53 @@ function FtwHistoryInner() {
   const [per, setPer] = React.useState("10");
   const [page, setPage] = React.useState(1);
 
-  const ops = ftwData(lang);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  /* Pola yang sama dengan halaman Fit To Work: hasil disimpan bersama kunci
+     muatannya, sehingga "sedang memuat" dan "gagal" jadi turunan dan effect
+     tidak perlu memanggil setState secara sinkron.
+     `nik` ikut kunci karena penyaringan operator dikerjakan server — untuk
+     satu operator hasilnya puluhan baris, bukan puluhan ribu. */
+  const key = `${fhOp}|${d1}|${d2}|${reloadKey}`;
+  const [data, setData] = React.useState<{
+    key: string;
+    rows: ApiFtwRecord[];
+  } | null>(null);
+  const [errKey, setErrKey] = React.useState("");
+
+  const loaded = data?.key === key;
+  const loadErr = errKey === key;
+  const all = React.useMemo(() => (loaded ? data.rows : []), [loaded, data]);
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void ftwApi
+      .getFtwHistory(
+        { nik: fhOp || undefined, date_from: d1, date_to: d2 },
+        ac.signal
+      )
+      .then((rows) => setData({ key, rows: rows ?? [] }))
+      .catch(() => {
+        if (!ac.signal.aborted) setErrKey(key);
+      });
+    return () => ac.abort();
+  }, [key, fhOp, d1, d2]);
+
+  const retry = React.useCallback(() => setReloadKey((k) => k + 1), []);
+
+  /* Daftar operator diambil dari log yang benar-benar ada di rentang ini,
+     bukan dari master karyawan: yang berguna dipilih di halaman riwayat
+     hanyalah operator yang punya log. Operator yang datang lewat ?nik=
+     tetap ditambahkan walau rentangnya kosong, supaya pilihannya tidak
+     hilang sendiri dari dropdown. */
+  const ops = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of all) if (!m.has(r.nik)) m.set(r.nik, r.name || r.nik);
+    if (fhOp && !m.has(fhOp)) m.set(fhOp, fhOp);
+    return [...m.entries()]
+      .map(([nik, name]) => ({ nik, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [all, fhOp]);
+
   const selectedOp = ops.find((o) => o.nik === fhOp);
 
   const stBadge = (key: StKey) => {
@@ -163,29 +208,33 @@ function FtwHistoryInner() {
 
   const emps = empAll();
   const needle = q.trim().toLowerCase();
-  const rows: Row[] = [];
-  for (const op of selectedOp ? [selectedOp] : ops) {
-    if (shift && op.shift !== shift) continue;
-    if (
-      needle &&
-      !op.name.toLowerCase().includes(needle) &&
-      !op.nik.includes(needle)
-    )
-      continue;
-    const emp = emps.find((e) => e.nik === op.nik);
-    const company = emp?.company ?? "PT Unggul Dinamika Utama";
-    const pos = emp?.pos ?? "—";
-    for (const entry of ftwHistoryFor(op, lang, 90)) {
-      if (d1 && entry.iso < d1) continue;
-      if (d2 && entry.iso > d2) continue;
-      const key = entry.status;
-      if (st && key !== st) continue;
-      rows.push({ op, company, pos, st: key, entry });
+  const rows: Row[] = React.useMemo(() => {
+    const out: Row[] = [];
+    for (const rec of all) {
+      if (shift && rec.shift !== shift) continue;
+      if (st && rec.st !== st) continue;
+      if (
+        needle &&
+        !rec.name.toLowerCase().includes(needle) &&
+        !rec.nik.includes(needle)
+      )
+        continue;
+      const emp = emps.find((e) => e.nik === rec.nik);
+      out.push({
+        rec,
+        company: emp?.company ?? "PT Unggul Dinamika Utama",
+        pos: emp?.pos ?? "—",
+      });
     }
-  }
-  rows.sort((a, b) =>
-    a.entry.iso < b.entry.iso ? 1 : a.entry.iso > b.entry.iso ? -1 : 0
-  );
+    /* terbaru dulu, lalu abjad — supaya urutannya stabil saat satu tanggal
+       berisi banyak operator */
+    out.sort(
+      (a, b) =>
+        b.rec.date.localeCompare(a.rec.date) ||
+        a.rec.name.localeCompare(b.rec.name)
+    );
+    return out;
+  }, [all, shift, st, needle, emps]);
 
   /* Payload ekspor — seluruh baris hasil filter, bukan hanya halaman aktif */
   const buildExport = () => {
@@ -232,17 +281,17 @@ function FtwHistoryInner() {
         { header: t.thSendTime, width: 14 },
       ],
       rows: rows.map((r) => [
-        r.entry.date,
-        r.op.name,
-        r.op.nik,
+        r.rec.date.slice(0, 10),
+        r.rec.name,
+        r.rec.nik,
         r.company,
-        r.op.dept,
+        r.rec.dept,
         r.pos,
-        r.op.shift === "malam" ? t.shiftNight : t.shiftDay,
-        r.entry.sleep,
-        { text: stLabel[r.st], tone: tone[r.st] },
-        r.entry.restHours > 0 ? `+${r.entry.restHours} ${t.hourShort}` : "—",
-        r.entry.sendTime,
+        r.rec.shift === "malam" ? t.shiftNight : t.shiftDay,
+        r.rec.sleep,
+        { text: stLabel[r.rec.st], tone: tone[r.rec.st] },
+        r.rec.restHours > 0 ? `+${r.rec.restHours} ${t.hourShort}` : "—",
+        r.rec.sendTime,
       ]),
       landscape: true,
     };
@@ -325,7 +374,9 @@ function FtwHistoryInner() {
               aria-label={t.allShift}
             >
               <option value="">{t.allShift}</option>
-              <option value="siang">{t.shiftDay}</option>
+              {/* nilainya "pagi", bukan "siang": itu yang tersimpan di
+                  kolom ftw_logs.shift */}
+              <option value="pagi">{t.shiftDay}</option>
               <option value="malam">{t.shiftNight}</option>
             </Select>
             <div className="flex items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
@@ -358,7 +409,19 @@ function FtwHistoryInner() {
           </ToolbarGroup>
         </Toolbar>
 
-        {shown.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.ftwLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : shown.length ? (
           <div className="overflow-x-auto">
             <Table className="min-w-7xl">
               <TableHeader>
@@ -375,23 +438,25 @@ function FtwHistoryInner() {
               </TableHeader>
               <TableBody>
                 {shown.map((r) => (
-                  <TableRow key={`${r.op.nik}-${r.entry.d}`}>
+                  <TableRow
+                    key={`${r.rec.nik}-${r.rec.date.slice(0, 10)}-${r.rec.shift}`}
+                  >
                     <TableCell className="font-mono whitespace-nowrap">
-                      {r.entry.date}
+                      {r.rec.date.slice(0, 10)}
                     </TableCell>
                     <TableCell>
-                      <NameCell name={r.op.name} sub={r.op.nik} />
+                      <NameCell name={r.rec.name || "—"} sub={r.rec.nik} />
                     </TableCell>
                     <TableCell>{r.company}</TableCell>
-                    <TableCell>{r.op.dept}</TableCell>
+                    <TableCell>{r.rec.dept || "—"}</TableCell>
                     <TableCell>{r.pos}</TableCell>
                     <TableCell>
-                      {r.op.shift === "malam" ? t.shiftNight : t.shiftDay}
+                      {r.rec.shift === "malam" ? t.shiftNight : t.shiftDay}
                     </TableCell>
-                    <TableCell className={sleepClass(r.st)}>
-                      {r.entry.sleep}
+                    <TableCell className={sleepClass(r.rec.st)}>
+                      {r.rec.sleep}
                     </TableCell>
-                    <TableCell>{stBadge(r.st)}</TableCell>
+                    <TableCell>{stBadge(r.rec.st)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -405,22 +470,25 @@ function FtwHistoryInner() {
           />
         )}
 
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
-            {t.ftwSumLogs}
-          </FootSum>
-          <WindowPagination
-            page={cur}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
+        {/* ringkasan "0 log" selama memuat/gagal hanya membingungkan */}
+        {loaded && !loadErr ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{`${start}–${end}`}</b> {t.attSumB} <b>{total}</b>{" "}
+              {t.ftwSumLogs}
+            </FootSum>
+            <WindowPagination
+              page={cur}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              onPer={(v) => {
+                setPer(v);
+                setPage(1);
+              }}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
     </div>
   );

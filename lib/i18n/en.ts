@@ -235,6 +235,7 @@ export const en: Dict = {
   toastAddT: "Employee added",
   /* employees module backend integration (ADR 0014) */
   empLoadErrB: "Employee data could not be fetched from the server.",
+  ftwLoadErrB: "Fit To Work logs could not be fetched from the server.",
   empToastExp: "Excel export downloaded",
   efErrDateEmpty:
     "The backend cannot save changes while a date field is still empty — fill in Join date, Contract expiry, and SIMPER validity on this form, then save again.",

@@ -232,6 +232,7 @@ export const id = {
   toastAddT: "Karyawan ditambahkan",
   /* integrasi backend modul Karyawan (ADR 0014) */
   empLoadErrB: "Data karyawan tidak bisa diambil dari server.",
+  ftwLoadErrB: "Log Fit To Work tidak bisa diambil dari server.",
   empToastExp: "Export Excel diunduh",
   efErrDateEmpty:
     "Backend belum bisa menyimpan perubahan bila masih ada kolom tanggal yang kosong — lengkapi Join date, Expired kontrak, dan Masa berlaku SIMPER di form ini, lalu simpan lagi.",
