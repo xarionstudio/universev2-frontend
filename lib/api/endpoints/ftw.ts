@@ -70,6 +70,21 @@ export function getTodayFtw(
   return api.get<Paged<ApiFtwRecord>>("/ftw/today", q, signal);
 }
 
+/* Seluruh baris FTW satu tanggal — /ftw/today membatasi perPage 200,
+   jadi dilooping per halaman (pola listAllEmployees). */
+export async function listAllTodayFtw(
+  date?: string,
+  signal?: AbortSignal
+): Promise<ApiFtwRecord[]> {
+  const out: ApiFtwRecord[] = [];
+  for (let page = 1; ; page++) {
+    const res = await getTodayFtw({ page, perPage: 200, date }, signal);
+    out.push(...res.items);
+    if (page >= res.pagination.totalPages || res.items.length === 0) break;
+  }
+  return out;
+}
+
 /* GET /api/ftw/history
 
    Wajib menyertakan `nik` ATAU rentang tanggal (date_from/date_to); bila

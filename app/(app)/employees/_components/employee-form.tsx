@@ -14,7 +14,13 @@ import {
   Upload,
 } from "lucide-react";
 
-import { assetUrl, employeesApi, errorDetail, isApiError } from "@/lib/api";
+import {
+  assetUrl,
+  employeesApi,
+  errorDetail,
+  isApiError,
+  masterApi,
+} from "@/lib/api";
 import { toEmployee, toKomp } from "@/lib/api/adapters";
 import type { Employee, Komp } from "@/lib/data/employees";
 import { egiTypes } from "@/lib/data/units-db";
@@ -73,6 +79,29 @@ export function EmployeeForm({ nik }: { nik?: string }) {
      yang sama dengan halaman detail. Mode tambah tidak butuh apa pun. */
   const [record, setRecord] = React.useState<Employee | null>(null);
   const [loaded, setLoaded] = React.useState(!nik);
+
+  /* Opsi Type EGI dari master (GET /api/master/egi) — penambahan lewat menu
+     Master Data langsung tersedia di dropdown SIMPER; kegagalan (termasuk
+     403 akun tanpa master:view) jatuh diam-diam ke daftar statis egiTypes.
+     Set() sekalian membuang duplikat ("SPARE" dua kali di daftar statis). */
+  const [egiOpts, setEgiOpts] = React.useState<string[] | null>(null);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void masterApi
+      .listMaster("egi", { perPage: 200 }, ac.signal)
+      .then((res) => {
+        const names = (res.entries ?? [])
+          .filter((e) => e.active)
+          .map((e) => e.name);
+        if (names.length) setEgiOpts(names);
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+  const egiList = React.useMemo(
+    () => Array.from(new Set(egiOpts ?? egiTypes)),
+    [egiOpts]
+  );
   const [loadErr, setLoadErr] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
 
@@ -550,13 +579,12 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                       >
                         <option value=""></option>
                         {/* nilai lawas dari DB (mis. kode seed "DT") tetap
-                            tampil walau tak ada di egiTypes — agar edit
+                            tampil walau tak ada di daftar — agar edit
                             tidak diam-diam mengosongkannya */}
-                        {k.cls &&
-                        !(egiTypes as readonly string[]).includes(k.cls) ? (
+                        {k.cls && !egiList.includes(k.cls) ? (
                           <option value={k.cls}>{k.cls}</option>
                         ) : null}
-                        {egiTypes.map((c) => (
+                        {egiList.map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>

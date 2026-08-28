@@ -111,9 +111,14 @@ export function getAllocations(
   return api.get<ApiFleetAlloc>("/fleet/allocations", q, signal);
 }
 
-/* POST /api/fleet/allocations/auto — server yang menyusun formasinya. */
-export function autoAllocate(date: string, shift: string): Promise<unknown> {
-  return api.post<unknown>("/fleet/allocations/auto", { date, shift });
+/* POST /api/fleet/allocations/auto — server yang menyusun alokasi menurut
+   aturan MVP (SIMPER Type EGI cocok + hadir + Jam Tidur fit/spare) dan
+   MENGGANTI seluruh alokasi tanggal+shift itu; balasannya peta segar. */
+export function autoAllocate(
+  date: string,
+  shift: string
+): Promise<ApiFleetAlloc> {
+  return api.post<ApiFleetAlloc>("/fleet/allocations/auto", { date, shift });
 }
 
 /* PUT /api/fleet/allocations — simpan manual.
@@ -157,8 +162,15 @@ export function reportUnitBreakdown(
 }
 
 /* GET /api/units/:code/history */
-export function getUnitHistory(code: string): Promise<ApiUnitHist[]> {
-  return api.get<ApiUnitHist[]>(`/units/${encodeURIComponent(code)}/history`);
+export function getUnitHistory(
+  code: string,
+  signal?: AbortSignal
+): Promise<ApiUnitHist[]> {
+  return api.get<ApiUnitHist[]>(
+    `/units/${encodeURIComponent(code)}/history`,
+    undefined,
+    signal
+  );
 }
 
 /* ── Database unit ───────────────────────────────────────────────────── */

@@ -1,13 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Download, Pencil, Plus, Search, Truck, Upload } from "lucide-react";
+import {
+  CircleAlert,
+  Download,
+  Pencil,
+  Plus,
+  Search,
+  Truck,
+  Upload,
+} from "lucide-react";
 
+import { errorDetail, fleetApi } from "@/lib/api";
+import { toUdb } from "@/lib/api/adapters";
+import type { ApiUnitDb, UnitDbBody } from "@/lib/api/endpoints/fleet";
 import { typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
-import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import {
   Dialog,
   DialogActions,
@@ -28,7 +39,6 @@ import {
   ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
-import { Progress } from "@/components/ui/progress";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
@@ -43,16 +53,15 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-type ImpState = {
-  stage: "idle" | "progress" | "done";
-  pct: number;
-  name: string;
-};
+import { downloadBlob } from "../../users/_lib/csv";
 
 export default function UnitDbPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { udbAll, saveUdb } = useAppStore();
+  const { can, user: me } = usePermissions();
+  /* Data unit ada di modul RBAC `asset` (route /units/db) meski halaman ini
+     bernaung di navigasi Master — tombol tulis mengikuti asset:manage. */
+  const canManage = can("asset", "manage");
 
   const [cat, setCat] = React.useState("");
   const [prod, setProd] = React.useState("");
@@ -72,21 +81,37 @@ export default function UnitDbPage() {
 
   /* dialog import */
   const [impOpen, setImpOpen] = React.useState(false);
-  const [imp, setImp] = React.useState<ImpState>({
-    stage: "idle",
-    pct: 0,
-    name: "",
-  });
+  const [impBusy, setImpBusy] = React.useState<string | null>(null);
   const [dragging, setDragging] = React.useState(false);
-  const impTimer = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
+  /* ── hidrasi dari GET /api/units/db (513+ unit sungguhan; bukan lagi seed
+     equipment.json). Baris API mentah disimpan supaya PUT bisa mengirim body
+     LENGKAP — backend meng-update semua kolomnya sekaligus. ── */
+  const [apiRows, setApiRows] = React.useState<ApiUnitDb[] | null>(null);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  const [saving, setSaving] = React.useState(false);
   React.useEffect(() => {
-    return () => {
-      if (impTimer.current) clearInterval(impTimer.current);
-    };
+    const ac = new AbortController();
+    void fleetApi
+      .listUnitDb(undefined, ac.signal)
+      .then((rows) => {
+        setApiRows(rows ?? []);
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey]);
+  const retry = React.useCallback(() => {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
   }, []);
+  const loaded = apiRows !== null;
 
-  const all = udbAll();
+  const all = React.useMemo(() => (apiRows ?? []).map(toUdb), [apiRows]);
   const classes = Array.from(new Set(all.map((u) => u.cls))).sort();
   const products = Array.from(new Set(all.map((u) => u.product))).sort();
   const egis = Array.from(new Set(all.map((u) => u.egi))).sort();
@@ -135,57 +160,121 @@ export default function UnitDbPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  /* ── mutasi pesimistis lewat API. PUT /units/db mengidentifikasi baris
+     lewat `code` DI DALAM body dan meng-update semua kolom sekaligus, jadi
+     body dibangun dari baris API mentah + field yang diedit; kode unit
+     karena itu tidak bisa diganti pada mode edit. ── */
+  function bodyOf(u: ApiUnitDb): UnitDbBody {
+    return {
+      code: u.code,
+      egi: u.egi,
+      product: u.product,
+      cls: u.cls,
+      cat: u.cat,
+      area: u.area,
+      active: u.active,
+      standby: u.standby,
+      breakdown: u.breakdown,
+      loc: u.loc,
+      upd: new Date().toISOString().slice(0, 10),
+      by: me?.kar ?? "admin",
+    };
+  }
+
+  async function save(e: React.FormEvent) {
     e.preventDefault();
-    const code = fCode.trim();
+    const code = fCode.trim().toUpperCase();
     const dupe = all.some((u) => u.code === code && u.uid !== editUid);
     const badCode = !code || dupe;
     const badEgi = !fEgi;
     setErrCode(badCode);
     setErrEgi(badEgi);
-    if (badCode || badEgi) return;
-    saveUdb(editUid, { code, egi: fEgi, cls: fCls, product: fProd });
-    setDlgOpen(false);
-    pushToast(
-      "success",
-      editUid ? t.udbEditToastT : t.udbToastT,
-      `${code} — ${fEgi} · ${fProd}`
-    );
+    if (badCode || badEgi || saving) return;
+    setSaving(true);
+    try {
+      if (editUid) {
+        const cur = (apiRows ?? []).find((u) => "u-" + u.id === editUid);
+        if (!cur) return;
+        const body = { ...bodyOf(cur), egi: fEgi, cls: fCls, product: fProd };
+        await fleetApi.updateUnitDb(body);
+        setApiRows((prev) =>
+          (prev ?? []).map((u) => (u.id === cur.id ? { ...u, ...body } : u))
+        );
+      } else {
+        const created = await fleetApi.createUnitDb({
+          code,
+          egi: fEgi,
+          product: fProd,
+          cls: fCls,
+          cat: "",
+          area: "",
+          active: true,
+          standby: false,
+          breakdown: false,
+          loc: "",
+          upd: new Date().toISOString().slice(0, 10),
+          by: me?.kar ?? "admin",
+        });
+        setApiRows((prev) => [...(prev ?? []), created]);
+      }
+      setDlgOpen(false);
+      pushToast(
+        "success",
+        editUid ? t.udbEditToastT : t.udbToastT,
+        `${code} — ${fEgi} · ${fProd}`
+      );
+    } catch (err) {
+      /* dialog tetap terbuka — isian jangan hilang */
+      pushToast("error", t.apErrT, errorDetail(err, t.udbLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function startImport(name: string) {
-    if (impTimer.current) clearInterval(impTimer.current);
-    setImp({ stage: "progress", pct: 0, name: name || "unit_import.xlsx" });
-    impTimer.current = setInterval(() => {
-      setImp((prev) => {
-        const pct = prev.pct + 15 + Math.random() * 12;
-        if (pct >= 100) {
-          if (impTimer.current) clearInterval(impTimer.current);
-          impTimer.current = null;
-          return { ...prev, pct: 100, stage: "done" };
-        }
-        return { ...prev, pct };
-      });
-    }, 130);
+  /* ── impor .xlsx sungguhan (POST /units/db/import) — hasilnya
+     {imported, skipped, errors}; daftar ditarik ulang setelah selesai. ── */
+  async function uploadImport(file: File) {
+    if (impBusy) return;
+    setImpBusy(file.name);
+    try {
+      const res = (await fleetApi.importUnitDb(file)) as {
+        imported: number;
+        skipped: number;
+        errors: string[] | null;
+      };
+      setImpOpen(false);
+      pushToast(
+        "success",
+        t.udbImpToastT,
+        `${res.imported} ${t.udbImpToastD}` +
+          (res.skipped ? ` · ${res.skipped} ${t.udbImpSkipD}` : "")
+      );
+      retry();
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.udbLoadErrB));
+    } finally {
+      setImpBusy(null);
+    }
   }
 
   function openImport() {
-    if (impTimer.current) clearInterval(impTimer.current);
-    impTimer.current = null;
-    setImp({ stage: "idle", pct: 0, name: "" });
     setDragging(false);
     setImpOpen(true);
   }
 
   function closeImport() {
-    if (impTimer.current) clearInterval(impTimer.current);
-    impTimer.current = null;
-    setImpOpen(false);
+    if (!impBusy) setImpOpen(false);
   }
 
-  function doImport() {
-    setImpOpen(false);
-    pushToast("success", t.udbImpToastT, `10 ${t.udbImpToastD}`);
+  async function doExport() {
+    try {
+      const blob = await fleetApi.exportUnitDb();
+      const name = `units_db_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      downloadBlob(name, blob);
+      pushToast("success", t.toastExportT, name);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.udbLoadErrB));
+    }
   }
 
   const heads = [
@@ -202,170 +291,189 @@ export default function UnitDbPage() {
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navUnitDb} sub={t.udbSub}>
-        <Button onClick={openAdd}>
-          <Plus />
-          {t.udbAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={openAdd}>
+            <Plus />
+            {t.udbAdd}
+          </Button>
+        ) : null}
       </PageTitle>
 
-      <Panel>
-        <Toolbar>
-          <ToolbarTitle>{t.udbListTitle}</ToolbarTitle>
-          <ToolbarGroup>
-            <SearchInput
-              className="w-60 max-sm:w-full"
-              placeholder={t.searchUnit}
-              aria-label={t.searchUnit}
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
+      {loadErr && !loaded ? (
+        <Panel>
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.udbLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        </Panel>
+      ) : !loaded ? (
+        <Panel>
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        </Panel>
+      ) : (
+        <Panel>
+          <Toolbar>
+            <ToolbarTitle>{t.udbListTitle}</ToolbarTitle>
+            <ToolbarGroup>
+              <SearchInput
+                className="w-60 max-sm:w-full"
+                placeholder={t.searchUnit}
+                aria-label={t.searchUnit}
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setPage(1);
+                }}
+              />
+              <Select
+                wrapperClassName="w-42.5 max-sm:w-full"
+                value={cat}
+                onChange={(e) => {
+                  setCat(e.target.value);
+                  setPage(1);
+                }}
+                aria-label={t.allCats}
+              >
+                <option value="">{t.allCats}</option>
+                {classes.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                wrapperClassName="w-45 max-sm:w-full"
+                value={prod}
+                onChange={(e) => {
+                  setProd(e.target.value);
+                  setPage(1);
+                }}
+                aria-label={t.allProds}
+              >
+                <option value="">{t.allProds}</option>
+                {products.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+              <Button variant="secondary" onClick={() => void doExport()}>
+                <Download />
+                {t.export}
+              </Button>
+              {canManage ? (
+                <Button variant="secondary" onClick={openImport}>
+                  <Upload />
+                  {t.udbImport}
+                </Button>
+              ) : null}
+            </ToolbarGroup>
+          </Toolbar>
+
+          {rows.length ? (
+            <Table>
+              <TableHeader>
+                <tr>
+                  {heads.map((h, i) => (
+                    <TableHead
+                      key={h}
+                      className={i === 6 ? "max-xl:hidden" : undefined}
+                      style={i === 7 ? { width: 70 } : undefined}
+                    >
+                      {h}
+                    </TableHead>
+                  ))}
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {rows.map((u) => (
+                  <TableRow key={u.uid}>
+                    <TableCell>
+                      <NameCell name={u.code} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="info">{u.cls}</Badge>
+                    </TableCell>
+                    <TableCell>{u.egi}</TableCell>
+                    <TableCell className="text-(--text-secondary)">
+                      {typeOfEgi(u.egi)}
+                    </TableCell>
+                    <TableCell>{u.product}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        {u.active ? (
+                          <Badge variant="success" dot>
+                            Aktif
+                          </Badge>
+                        ) : (
+                          <Badge variant="danger" dot>
+                            Nonaktif
+                          </Badge>
+                        )}
+                        {u.standby ? (
+                          <Badge variant="warning" dot>
+                            Standby
+                          </Badge>
+                        ) : null}
+                        {u.breakdown ? (
+                          <Badge variant="danger" dot>
+                            Breakdown
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-xl:hidden">
+                      <NameCell
+                        name={<span className="font-medium">{u.upd}</span>}
+                        sub={u.by}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {canManage ? (
+                        <IconButton
+                          aria-label={t.udbEditT}
+                          onClick={() => openEdit(u.uid)}
+                        >
+                          <Pencil />
+                        </IconButton>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <StateBox
+              icon={<Search className="text-primary-bright" />}
+              title={t.noResTitle}
+              body={t.usEmptyB}
+            />
+          )}
+
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{range}</b> {t.attSumB} <b>{filtered.length}</b>{" "}
+              {t.udbSumB}
+            </FootSum>
+            <Pagination
+              page={p}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              perOptions={["10", "25", "50"]}
+              onPer={(v) => {
+                setPer(v);
                 setPage(1);
               }}
             />
-            <Select
-              wrapperClassName="w-42.5 max-sm:w-full"
-              value={cat}
-              onChange={(e) => {
-                setCat(e.target.value);
-                setPage(1);
-              }}
-              aria-label={t.allCats}
-            >
-              <option value="">{t.allCats}</option>
-              {classes.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-            <Select
-              wrapperClassName="w-45 max-sm:w-full"
-              value={prod}
-              onChange={(e) => {
-                setProd(e.target.value);
-                setPage(1);
-              }}
-              aria-label={t.allProds}
-            >
-              <option value="">{t.allProds}</option>
-              {products.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                pushToast("info", t.toastExportT, "unit_database.xlsx")
-              }
-            >
-              <Download />
-              {t.export}
-            </Button>
-            <Button variant="secondary" onClick={openImport}>
-              <Upload />
-              {t.udbImport}
-            </Button>
-          </ToolbarGroup>
-        </Toolbar>
-
-        {rows.length ? (
-          <Table>
-            <TableHeader>
-              <tr>
-                {heads.map((h, i) => (
-                  <TableHead
-                    key={h}
-                    className={i === 6 ? "max-xl:hidden" : undefined}
-                    style={i === 7 ? { width: 70 } : undefined}
-                  >
-                    {h}
-                  </TableHead>
-                ))}
-              </tr>
-            </TableHeader>
-            <TableBody>
-              {rows.map((u) => (
-                <TableRow key={u.uid}>
-                  <TableCell>
-                    <NameCell name={u.code} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="info">{u.cls}</Badge>
-                  </TableCell>
-                  <TableCell>{u.egi}</TableCell>
-                  <TableCell className="text-(--text-secondary)">
-                    {typeOfEgi(u.egi)}
-                  </TableCell>
-                  <TableCell>{u.product}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      {u.active ? (
-                        <Badge variant="success" dot>
-                          Aktif
-                        </Badge>
-                      ) : (
-                        <Badge variant="danger" dot>
-                          Nonaktif
-                        </Badge>
-                      )}
-                      {u.standby ? (
-                        <Badge variant="warning" dot>
-                          Standby
-                        </Badge>
-                      ) : null}
-                      {u.breakdown ? (
-                        <Badge variant="danger" dot>
-                          Breakdown
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-xl:hidden">
-                    <NameCell
-                      name={<span className="font-medium">{u.upd}</span>}
-                      sub={u.by}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      aria-label={t.udbEditT}
-                      onClick={() => openEdit(u.uid)}
-                    >
-                      <Pencil />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <StateBox
-            icon={<Search className="text-primary-bright" />}
-            title={t.noResTitle}
-            body={t.usEmptyB}
-          />
-        )}
-
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{filtered.length}</b>{" "}
-            {t.udbSumB}
-          </FootSum>
-          <Pagination
-            page={p}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["10", "25", "50"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
-      </Panel>
+          </PanelFoot>
+        </Panel>
+      )}
 
       {/* Dialog tambah/edit unit */}
       <Dialog
@@ -390,11 +498,15 @@ export default function UnitDbPage() {
               error={errCode}
               errorMessage={t.udbErrCode}
             >
+              {/* PUT backend mengenali baris lewat code — kode tidak bisa
+                  diganti pada mode edit */}
               <Input
                 id="udb-code"
                 className="font-mono"
                 placeholder="DT-122"
                 value={fCode}
+                disabled={!!editUid}
+                readOnly={!!editUid}
                 onChange={(e) => setFCode(e.target.value)}
               />
             </Field>
@@ -452,7 +564,8 @@ export default function UnitDbPage() {
             >
               {t.btnCancel}
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner /> : null}
               {editUid ? t.udbSaveEdit : t.udbAddDo}
             </Button>
           </DialogActions>
@@ -472,6 +585,19 @@ export default function UnitDbPage() {
         <DialogTitle id="udbi-t">{t.udbImpT}</DialogTitle>
         <DialogBody>{t.udbImpB}</DialogBody>
         <div className="mt-4">
+          {/* input file tersembunyi — Dropzone onPick tidak membuka pemilih
+              berkas sendiri; drop langsung membawa File-nya */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void uploadImport(f);
+            }}
+          />
           <Dropzone
             icon={<Upload />}
             title={t.udbImpDzTitle}
@@ -479,47 +605,23 @@ export default function UnitDbPage() {
             aria-label={t.udbImpDzTitle}
             dragging={dragging}
             onDragChange={setDragging}
-            onPick={() => startImport("unit_import.xlsx")}
-            onDropFile={(name) => startImport(name)}
+            onPick={() => fileRef.current?.click()}
+            onDropFile={(name, file) => {
+              if (file) void uploadImport(file);
+            }}
           />
-          {imp.stage === "progress" ? (
-            <div className="mt-4">
-              <div className="mb-2 flex justify-between text-sm">
-                <span className="font-semibold">{imp.name}</span>
-                <span className="font-mono text-(--text-secondary)">
-                  {Math.round(imp.pct)}%
-                </span>
-              </div>
-              <Progress value={imp.pct} />
-            </div>
-          ) : null}
-          {imp.stage === "done" ? (
-            <div className="mt-4 flex items-start gap-2 rounded-control border border-(--badge-success-border) bg-(--badge-success-fill) px-4 py-3 text-sm leading-normal text-(--badge-success-text)">
-              <svg
-                viewBox="0 0 24 24"
-                className="mt-0.5 size-4 flex-none"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 11.1V12a10 10 0 1 1-5.9-9.1" />
-                <path d="m9 11 3 3L22 4" />
-              </svg>
-              <span>
-                {imp.name} — {t.udbImpSummary}
-              </span>
+          {impBusy ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-(--text-secondary)">
+              <Spinner className="size-4" />
+              <span className="font-semibold">{impBusy}</span> —{" "}
+              {t.udbUploading}
             </div>
           ) : null}
         </div>
         <DialogActions>
-          <Button variant="ghost" onClick={closeImport}>
+          <Button variant="ghost" disabled={!!impBusy} onClick={closeImport}>
             {t.btnCancel}
           </Button>
-          {imp.stage === "done" ? (
-            <Button onClick={doImport}>{t.udbImpDoBtn}</Button>
-          ) : null}
         </DialogActions>
       </Dialog>
     </div>

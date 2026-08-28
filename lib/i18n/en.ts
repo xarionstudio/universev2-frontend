@@ -23,6 +23,13 @@ export const en: Dict = {
     "The entry is only removed from this list — the employee is NOT created.",
   pendDelBtn: "Delete",
   pendDelToast: "Pending entry removed",
+  usLoadErrB: "The unit status board could not be fetched from the server.",
+  flLoadErrB: "The fleet list could not be fetched from the server.",
+  faLoadErrB: "The allocation board could not be fetched from the server.",
+  faBelumHadir: "not present yet",
+  faAutoConfirmB:
+    "The server builds the allocation under the MVP rule: an operator is only paired when their Type-EGI SIMPER matches AND they have attendance data AND a sleep-hours report (fit/spare) for this date. WARNING: the entire allocation for this date & shift is REPLACED — existing manual assignments are rebuilt too.",
+  faAutoRun: "Run auto-allocation",
   pendEditT: "Fix pending entry",
   pendEditB:
     "Fix the typos. Pick an OFFICIAL department to import it as an employee right away; leave it on the old value if you are only fixing other fields.",
@@ -337,6 +344,10 @@ export const en: Dict = {
   udbImpDoBtn: "Import 10 units",
   udbImpToastT: "Units imported",
   udbImpToastD: "units added to the database.",
+  udbImpSkipD: "rows skipped/updated",
+  udbUploading: "Uploading & processing…",
+  udbLoadErrB: "The unit database could not be fetched from the server.",
+  mdLoadErrB: "The master list could not be fetched from the server.",
   navMD: "Master Data",
   navMaster: "Master",
   mdSub:

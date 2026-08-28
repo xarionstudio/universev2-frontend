@@ -11,6 +11,15 @@
 
 import type { Employee, Komp } from "@/lib/data/employees";
 import { FP_META_NEW, type FpMachine } from "@/lib/data/fingerprint";
+import { type Fleet } from "@/lib/data/fleet";
+import type { MdCat, MdEntry } from "@/lib/data/master-data";
+import {
+  statusRank,
+  type Unit,
+  type UnitHist,
+  type UnitStatus,
+} from "@/lib/data/unit-status";
+import type { UnitDb } from "@/lib/data/units-db";
 import {
   umModules,
   type UmModule,
@@ -21,8 +30,174 @@ import {
 import { EMPTY_PERMS, type PermMap } from "@/lib/rbac";
 
 import type { ApiCompetency, ApiEmployee } from "./endpoints/employees";
+import type {
+  ApiFleetSetting,
+  ApiUnit,
+  ApiUnitDb,
+  ApiUnitHist,
+} from "./endpoints/fleet";
+import type { ApiMasterEntry } from "./endpoints/master";
 import type { ApiFingerprintDevice } from "./endpoints/misc";
 import type { ApiPermMap, ApiRole, ApiUser, PermLevel } from "./types";
+
+/* ── Fleet Setting ───────────────────────────────────────────────────── */
+
+/* id UI memakai konvensi seed "fl-<digger>" (bukan "fl-<dbId>") supaya
+   konfigurasi display mock yang merujuk "fl-EX5002" dkk tetap menemukan
+   fleet hasil hidrasi; dbId numerik yang dipakai PUT/DELETE. `units` bisa
+   null dari Go (slice nil). */
+export function toFleet(f: ApiFleetSetting): Fleet {
+  return {
+    id: "fl-" + f.digger,
+    dbId: f.id,
+    digger: f.digger,
+    loc: f.loc,
+    bus: f.bus,
+    units: f.units ?? [],
+    active: f.active,
+  };
+}
+
+/* ── Status Unit ─────────────────────────────────────────────────────── */
+
+const VALID_UNIT_STATUS: readonly UnitStatus[] = [
+  "ready",
+  "breakdown",
+  "standby",
+];
+
+function asUnitStatus(v: string): UnitStatus {
+  return (VALID_UNIT_STATUS as readonly string[]).includes(v)
+    ? (v as UnitStatus)
+    : "ready";
+}
+
+/* Backend UnitHist adalah [4]string; slot ke-4 di FE adalah union UnitStatus
+   yang meng-index statusDotColor — jaga dari nilai liar. */
+export function toUnitHist(h: ApiUnitHist): UnitHist {
+  return [h[0], h[1], h[2], asUnitStatus(h[3])];
+}
+
+export function toUnit(u: ApiUnit): Unit {
+  return {
+    code: u.code,
+    type: u.type,
+    status: asUnitStatus(u.status),
+    loc: u.loc,
+    upd: u.upd,
+    /* Go men-serialisasi slice nil sebagai null — bukan [] */
+    hist: (u.hist ?? []).map(toUnitHist),
+  };
+}
+
+/* Backend mengurutkan unit_code ASC saja; papan mengandalkan presort
+   breakdown → standby → ready yang dulu dibuat seed mock. */
+export function toUnits(list: ApiUnit[] | null | undefined): Unit[] {
+  return (list ?? [])
+    .map(toUnit)
+    .sort(
+      (a, b) =>
+        statusRank[a.status] - statusRank[b.status] ||
+        a.code.localeCompare(b.code)
+    );
+}
+
+/* ── Master Data ─────────────────────────────────────────────────────── */
+
+/* Baris master backend berbeda bentuk per kategori (internal/model/master.go);
+   UI memakai MdEntry generik ber-kolom posisional a/b. `id` UI = CODE entri —
+   itulah identitas path PUT/DELETE (segmen ":id" backend berisi code). */
+export function toMdEntry(cat: MdCat, e: ApiMasterEntry): MdEntry {
+  const s = (k: string) => (typeof e[k] === "string" ? (e[k] as string) : "");
+  let a = "";
+  let b = "";
+  switch (cat) {
+    case "eqclass":
+      a = s("description");
+      break;
+    case "area":
+      a = s("category");
+      break;
+    case "tempudo":
+      a = s("location");
+      b = s("pickupType");
+      break;
+    case "bus":
+      a = s("egiType");
+      b = s("departureTime");
+      break;
+    case "lokasiex":
+      a = s("busCode");
+      b = s("tempudoCode");
+      break;
+    case "mess":
+      a = s("block");
+      break;
+    case "runtext":
+      a = s("targetDisplay");
+      b = s("textColor");
+      break;
+  }
+  return { id: e.code, name: e.name, a, b, active: e.active };
+}
+
+/* Kebalikan toMdEntry untuk badan POST/PUT — kolom posisional a/b kembali ke
+   nama field kategorinya. `code` sengaja tidak dikirim: identitas dijaga
+   path (PUT) atau dibangkitkan server (POST). */
+export function mdEntryBody(
+  cat: MdCat,
+  d: { name: string; a: string; b: string; active: boolean }
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { name: d.name, active: d.active };
+  switch (cat) {
+    case "eqclass":
+      body.description = d.a;
+      break;
+    case "area":
+      body.category = d.a;
+      break;
+    case "tempudo":
+      body.location = d.a;
+      body.pickupType = d.b;
+      break;
+    case "bus":
+      body.egiType = d.a;
+      body.departureTime = d.b;
+      break;
+    case "lokasiex":
+      body.busCode = d.a;
+      body.tempudoCode = d.b;
+      break;
+    case "mess":
+      body.block = d.a;
+      break;
+    case "runtext":
+      body.targetDisplay = d.a;
+      body.textColor = d.b;
+      break;
+  }
+  return body;
+}
+
+/* ── Database Unit ───────────────────────────────────────────────────── */
+
+/* ApiUnitDb -> UnitDb UI; `uid` sintetis dari id numerik tabel. */
+export function toUdb(u: ApiUnitDb): UnitDb {
+  return {
+    uid: "u-" + u.id,
+    code: u.code,
+    cat: u.cat,
+    cls: u.cls,
+    egi: u.egi,
+    product: u.product,
+    active: u.active,
+    standby: u.standby,
+    breakdown: u.breakdown,
+    loc: u.loc,
+    upd: u.upd,
+    by: u.by,
+  };
+}
 
 /* ── Permission ──────────────────────────────────────────────────────── */
 

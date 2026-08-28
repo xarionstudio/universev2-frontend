@@ -1,14 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Search, Wrench } from "lucide-react";
+import { CircleAlert, Search, Wrench } from "lucide-react";
 
-import { statusDotColor, type UnitStatus } from "@/lib/data/unit-status";
+import { errorDetail, fleetApi } from "@/lib/api";
+import { toUnitHist, toUnits } from "@/lib/api/adapters";
+import {
+  statusDotColor,
+  type UnitHist,
+  type UnitStatus,
+} from "@/lib/data/unit-status";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { useRegisterRefresh } from "@/components/providers/refresh";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, Spinner } from "@/components/ui/button";
 import {
   Dialog,
   DialogActions,
@@ -59,6 +66,10 @@ const statusBadge: Record<
   standby: { variant: "warning", label: "Standby" },
 };
 
+/* Papan berubah dari sisi server (laporan breakdown, sinkron unit DB) —
+   irama poll yang sama dengan halaman ber-API lain. */
+const REFRESH_MS = 60 * 1000;
+
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
 }
@@ -68,24 +79,116 @@ function stampNow() {
   return `${pad(d.getHours())}:${pad(d.getMinutes())} WITA`;
 }
 
+/* stempel riwayat meniru layout server persis: Go `02 Jan 15:04` — bulan
+   INGGRIS. toLocaleDateString("id-ID") menghasilkan "Agu"/"Mei" dan baris
+   refleksi jadi beda format dari baris server di timeline yang sama. */
+const GO_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+function histStampNow() {
+  const d = new Date();
+  return `${pad(d.getDate())} ${GO_MONTHS[d.getMonth()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function UnitStatusPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
+  const { can } = usePermissions();
+  const canManage = can("asset", "manage");
+  /* Daftar tetap di app-store: dashboard membaca `units` untuk baris
+     perhatian breakdown — halaman ini yang menghidrasinya dari backend. */
   const { units, setUnits } = useAppStore();
 
   const [filter, setFilter] = React.useState<"all" | UnitStatus>("all");
   const [q, setQ] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [per, setPer] = React.useState("10");
-  const [freshTime, setFreshTime] = React.useState(stampNow);
+  const [freshTime, setFreshTime] = React.useState("");
+
+  /* ── hidrasi + poll 60 dtk (GET /api/units/status) ──
+     Kegagalan poll latar didiamkan: data lama bertahan dan stempel
+     "data per" tidak maju; kegagalan muat PERTAMA menampilkan kotak error
+     dengan tombol ulang. */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    let ac: AbortController | null = null;
+    const loadUnits = () => {
+      ac?.abort();
+      const c = new AbortController();
+      ac = c;
+      void fleetApi
+        .listUnitStatuses(c.signal)
+        .then((rows) => {
+          if (!alive) return;
+          setUnits(toUnits(rows));
+          setLoaded(true);
+          setLoadErr(false);
+          setFreshTime(stampNow());
+        })
+        .catch(() => {
+          if (alive && !c.signal.aborted) setLoadErr(true);
+        });
+    };
+    loadUnits();
+    const timer = setInterval(loadUnits, REFRESH_MS);
+    return () => {
+      alive = false;
+      ac?.abort();
+      clearInterval(timer);
+    };
+  }, [reloadKey, setUnits]);
+
+  const retry = React.useCallback(() => {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  /* refresh dari topbar: tarik ulang dari server (stempel maju saat sukses) */
+  useRegisterRefresh(retry);
 
   const [drawerCode, setDrawerCode] = React.useState<string | null>(null);
   const [dlgCode, setDlgCode] = React.useState<string | null>(null);
   const [newSt, setNewSt] = React.useState("Ready");
   const [reason, setReason] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
-  /* refresh dari topbar: perbarui stempel "data per" */
-  useRegisterRefresh(() => setFreshTime(stampNow()));
+  /* Riwayat penuh diambil LAZY per unit saat drawer dibuka — payload daftar
+     hanya membawa cuplikan; kegagalan jatuh diam-diam ke cuplikan itu. */
+  const [drawerHist, setDrawerHist] = React.useState<{
+    code: string;
+    rows: UnitHist[];
+  } | null>(null);
+  React.useEffect(() => {
+    if (!drawerCode) return;
+    const ac = new AbortController();
+    void fleetApi
+      .getUnitHistory(drawerCode, ac.signal)
+      .then((rows) => {
+        if (!ac.signal.aborted)
+          setDrawerHist({
+            code: drawerCode,
+            rows: (rows ?? []).map(toUnitHist),
+          });
+      })
+      .catch(() => {
+        /* pakai cuplikan dari payload daftar */
+      });
+    return () => ac.abort();
+  }, [drawerCode]);
 
   const needle = q.trim().toLowerCase();
   const rows = units.filter((u) => {
@@ -111,6 +214,10 @@ export default function UnitStatusPage() {
     ? units.find((u) => u.code === drawerCode)
     : undefined;
   const dlgUnit = dlgCode ? units.find((u) => u.code === dlgCode) : undefined;
+  const drawerRows =
+    drawerHist && drawerUnit && drawerHist.code === drawerUnit.code
+      ? drawerHist.rows
+      : (drawerUnit?.hist ?? []);
 
   function openDialog(code: string) {
     const u = units.find((x) => x.code === code);
@@ -120,27 +227,49 @@ export default function UnitStatusPage() {
     setDlgCode(code);
   }
 
-  function saveStatus() {
-    if (!dlgUnit || !reason.trim()) return;
+  /* Ubah status → PUT /units/:code/status; Breakdown → POST status-report
+     (server mencatat riwayat, menyetel updated_note, dan menyinkronkan flag
+     unit DB). Refleksi lokal meniru persis yang disimpan server supaya poll
+     berikutnya tidak menulis ulang barisnya. */
+  async function saveStatus() {
+    if (!dlgUnit || !reason.trim() || saving) return;
     const kind = newSt.toLowerCase() as UnitStatus;
-    const now = new Date();
-    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const when = `${now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${hm}`;
     const why = reason.trim();
-    setUnits((prev) =>
-      prev.map((u) =>
-        u.code === dlgUnit.code
-          ? {
-              ...u,
-              status: kind,
-              upd: `${hm} — ${why}`,
-              hist: [[when, newSt, why, kind], ...u.hist],
-            }
-          : u
-      )
-    );
-    setDlgCode(null);
-    pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD);
+    setSaving(true);
+    try {
+      if (kind === "breakdown") {
+        await fleetApi.reportUnitBreakdown(dlgUnit.code, why);
+      } else {
+        await fleetApi.updateUnitStatus(dlgUnit.code, kind, why);
+      }
+      const when = histStampNow();
+      const what = kind === "breakdown" ? "Breakdown" : kind;
+      setUnits((prev) =>
+        prev.map((u) =>
+          u.code === dlgUnit.code
+            ? {
+                ...u,
+                status: kind,
+                upd: why,
+                hist: [[when, what, why, kind], ...u.hist],
+              }
+            : u
+        )
+      );
+      setDlgCode(null);
+      pushToast("success", `${dlgUnit.code} → ${newSt}`, t.toastStD);
+      /* Tarik ulang SEKARANG (refleksi di atas hanya penambal kedip):
+         reloadKey membatalkan GET poll yang mungkin sedang terbang dengan
+         snapshot pra-simpan — tanpa ini balasannya bisa mendarat setelah
+         refleksi dan mengembalikan baris ke status lama sampai poll
+         berikut; sekalian merapikan urutan (breakdown naik ke atas). */
+      retry();
+    } catch (e) {
+      /* dialog tetap terbuka — alasan yang diketik jangan hilang */
+      pushToast("error", t.apErrT, errorDetail(e, t.usLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
   const heads = [
@@ -199,7 +328,19 @@ export default function UnitStatusPage() {
           </ToolbarGroup>
         </Toolbar>
 
-        {rows.length ? (
+        {loadErr && !loaded ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.usLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : rows.length ? (
           <Table>
             <TableHeader>
               <tr>
@@ -239,13 +380,15 @@ export default function UnitStatusPage() {
                       >
                         {t.btnHist}
                       </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openDialog(u.code)}
-                      >
-                        {t.btnChangeSt}
-                      </Button>
+                      {canManage ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openDialog(u.code)}
+                        >
+                          {t.btnChangeSt}
+                        </Button>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -260,23 +403,25 @@ export default function UnitStatusPage() {
           />
         )}
 
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{rows.length}</b>{" "}
-            {t.udbSumB} · <b>{breakN}</b> Breakdown
-          </FootSum>
-          <Pagination
-            page={p}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["10", "25", "50"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
+        {loaded ? (
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{range}</b> {t.attSumB} <b>{rows.length}</b>{" "}
+              {t.udbSumB} · <b>{breakN}</b> Breakdown
+            </FootSum>
+            <Pagination
+              page={p}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              perOptions={["10", "25", "50"]}
+              onPer={(v) => {
+                setPer(v);
+                setPage(1);
+              }}
+            />
+          </PanelFoot>
+        ) : null}
       </Panel>
 
       {/* Drawer riwayat status */}
@@ -310,7 +455,7 @@ export default function UnitStatusPage() {
               {t.histTitle}
             </h4>
             <Timeline>
-              {drawerUnit.hist.map(([when, what, why, kind], i) => (
+              {drawerRows.map(([when, what, why, kind], i) => (
                 <TimelineItem
                   key={`${when}-${i}`}
                   dotColor={statusDotColor[kind]}
@@ -366,7 +511,11 @@ export default function UnitStatusPage() {
           <Button variant="ghost" onClick={() => setDlgCode(null)}>
             {t.btnCancel}
           </Button>
-          <Button onClick={saveStatus} disabled={!reason.trim()}>
+          <Button
+            onClick={() => void saveStatus()}
+            disabled={!reason.trim() || saving}
+          >
+            {saving ? <Spinner /> : null}
             {t.btnSaveSt}
           </Button>
         </DialogActions>

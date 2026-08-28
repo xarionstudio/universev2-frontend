@@ -16,7 +16,12 @@ export type Unit = {
   hist: UnitHist[];
 };
 
-const rank: Record<UnitStatus, number> = { breakdown: 0, standby: 1, ready: 2 };
+/* urutan papan: breakdown paling atas — dipakai juga adapter API */
+export const statusRank: Record<UnitStatus, number> = {
+  breakdown: 0,
+  standby: 1,
+  ready: 2,
+};
 
 export const initialUnits: Unit[] = unitsDb
   .filter((u) => u.active)
@@ -68,7 +73,9 @@ export const initialUnits: Unit[] = unitsDb
     };
   })
   .sort(
-    (a, b) => rank[a.status] - rank[b.status] || a.code.localeCompare(b.code)
+    (a, b) =>
+      statusRank[a.status] - statusRank[b.status] ||
+      a.code.localeCompare(b.code)
   );
 
 export const statusDotColor: Record<UnitStatus, string> = {

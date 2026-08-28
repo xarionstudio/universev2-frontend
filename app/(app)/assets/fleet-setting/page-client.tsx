@@ -1,13 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Pencil, Plus, Trash2, Truck, X } from "lucide-react";
+import { CircleAlert, Pencil, Plus, Trash2, Truck, X } from "lucide-react";
 
+import { errorDetail, fleetApi } from "@/lib/api";
+import { toFleet } from "@/lib/api/adapters";
+import type { ApiUnitDb } from "@/lib/api/endpoints/fleet";
 import { FLEET_MAX_UNITS, type Fleet } from "@/lib/data/fleet";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -30,6 +34,7 @@ import {
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
 import {
   NameCell,
   Table,
@@ -44,11 +49,46 @@ import { useToast } from "@/components/ui/toast";
 export default function FleetSettingPage() {
   const { t } = useI18n();
   const { pushToast } = useToast();
-  const { udbAll, mdData, fleets, setFleets } = useAppStore();
+  const { can } = usePermissions();
+  const canManage = can("asset", "manage");
+  /* Daftar fleet tetap di app-store (alokasi, display admin, dan TV masih
+     membacanya) — halaman ini yang menghidrasinya dari backend. Seed mock
+     TIDAK dikosongkan di store: jendela kiosk terbuka terpisah dan tidak
+     pernah terhidrasi. */
+  const { mdData, fleets, setFleets } = useAppStore();
 
-  /* dialog tambah/edit */
+  /* ── hidrasi: fleet + kandidat unit dari Database Unit ── */
+  const [dbUnits, setDbUnits] = React.useState<ApiUnitDb[]>([]);
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void Promise.all([
+      fleetApi.listFleetSettings(ac.signal),
+      fleetApi.listUnitDb(undefined, ac.signal),
+    ])
+      .then(([rows, units]) => {
+        setFleets((rows ?? []).map(toFleet));
+        setDbUnits(units ?? []);
+        setLoaded(true);
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey, setFleets]);
+
+  const retry = React.useCallback(() => {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  /* dialog tambah/edit — `editing` membawa dbId untuk PUT/DELETE */
   const [dlgOpen, setDlgOpen] = React.useState(false);
-  const [editId, setEditId] = React.useState<string | null>(null);
+  const [editing, setEditing] = React.useState<Fleet | null>(null);
+  const editId = editing?.id ?? null;
   const [fDigger, setFDigger] = React.useState("");
   const [fBus, setFBus] = React.useState("");
   const [fLoc, setFLoc] = React.useState("");
@@ -57,6 +97,7 @@ export default function FleetSettingPage() {
   const [fActive, setFActive] = React.useState(true);
   const [errDigger, setErrDigger] = React.useState(false);
   const [errUnits, setErrUnits] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
   /* dialog hapus */
   const [delTarget, setDelTarget] = React.useState<Fleet | null>(null);
@@ -82,7 +123,10 @@ export default function FleetSettingPage() {
     ? `${(p - 1) * perN + 1}–${Math.min(listRows.length, p * perN)}`
     : "0";
 
-  const all = udbAll();
+  /* kandidat digger/OHT dari GET /api/units/db (bukan lagi seed lokal);
+     bus & area masih dari master mock — modul master di balik permission
+     `master:view`, akun asset-saja akan 403 bila diambil dari API */
+  const all = dbUnits;
   const diggerTypeOf = (code: string) => {
     const u = all.find((x) => x.code === code);
     return u ? `${u.egi} · ${u.product}` : "—";
@@ -111,7 +155,13 @@ export default function FleetSettingPage() {
   const unitOpts = Array.from(
     new Map(
       all
-        .filter((u) => u.cls === "HD" && u.active && !usedElsewhere.has(u.code))
+        .filter(
+          (u) =>
+            /* OHT backend berkelas "HD" ATAU "DT" (kosakata lama) */
+            (u.cls === "HD" || u.cls === "DT") &&
+            u.active &&
+            !usedElsewhere.has(u.code)
+        )
         .map((u) => [u.code, u])
     ).values()
   ).sort((a, b) => a.code.localeCompare(b.code));
@@ -134,7 +184,7 @@ export default function FleetSettingPage() {
   }
 
   function openAdd() {
-    setEditId(null);
+    setEditing(null);
     setFDigger(diggerOpts[0] || "");
     setFBus(busOpts[0] || "");
     setFLoc(areaOpts[0] || "");
@@ -147,7 +197,7 @@ export default function FleetSettingPage() {
   }
 
   function openEdit(f: Fleet) {
-    setEditId(f.id);
+    setEditing(f);
     setFDigger(f.digger);
     setFBus(f.bus);
     setFLoc(f.loc);
@@ -159,8 +209,12 @@ export default function FleetSettingPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  /* CRUD via API — pesimistis: panggil dulu, refleksikan ke store setelah
+     sukses. CREATE memakai id numerik balasan server; UPDATE menghitung ulang
+     id UI karena berbasis digger. */
+  async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     const digger = fDigger.trim();
     const badDigger =
       !digger || fleets.some((f) => f.digger === digger && f.id !== editId);
@@ -177,29 +231,53 @@ export default function FleetSettingPage() {
       units: fUnits,
       active: fActive,
     };
-    setFleets((prev) =>
-      editId
-        ? prev.map((f) => (f.id === editId ? { ...f, ...data } : f))
-        : [...prev, { id: `fl-${Date.now()}`, ...data }]
-    );
-    setDlgOpen(false);
-    pushToast("success", editId ? t.flToastEdit : t.flToastAdd, digger);
+    setSaving(true);
+    try {
+      if (editing) {
+        if (!editing.dbId) return;
+        await fleetApi.updateFleetSetting(editing.dbId, data);
+        setFleets((prev) =>
+          prev.map((f) =>
+            f.dbId === editing.dbId ? { ...f, ...data, id: `fl-${digger}` } : f
+          )
+        );
+      } else {
+        const created = await fleetApi.createFleetSetting(data);
+        setFleets((prev) => [...prev, toFleet(created)]);
+      }
+      setDlgOpen(false);
+      pushToast("success", editing ? t.flToastEdit : t.flToastAdd, digger);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.flLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function doDelete() {
-    if (!delTarget) return;
-    setFleets((prev) => prev.filter((f) => f.id !== delTarget.id));
-    setDelTarget(null);
-    pushToast("success", t.flToastDel, delTarget.digger);
+  async function doDelete() {
+    if (!delTarget?.dbId || saving) return;
+    setSaving(true);
+    try {
+      await fleetApi.deleteFleetSetting(delTarget.dbId);
+      setFleets((prev) => prev.filter((f) => f.dbId !== delTarget.dbId));
+      setDelTarget(null);
+      pushToast("success", t.flToastDel, delTarget.digger);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.flLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navFleetSetting} sub={t.flSub}>
-        <Button onClick={openAdd}>
-          <Plus />
-          {t.flAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={openAdd} disabled={!loaded}>
+            <Plus />
+            {t.flAdd}
+          </Button>
+        ) : null}
       </PageTitle>
 
       <Panel>
@@ -218,85 +296,105 @@ export default function FleetSettingPage() {
             />
           </ToolbarGroup>
         </Toolbar>
-        <Table>
-          <TableHeader>
-            <tr>
-              <TableHead>Fleet</TableHead>
-              <TableHead>{t.flLoc}</TableHead>
-              <TableHead className="max-xl:hidden">{t.flBus}</TableHead>
-              <TableHead>{t.flUnits}</TableHead>
-              <TableHead>{t.thStatus}</TableHead>
-              <TableHead style={{ width: 110 }}>{t.thAct}</TableHead>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {pageRows.map((f) => (
-              <TableRow key={f.id}>
-                <TableCell>
-                  <NameCell name={f.digger} sub={diggerTypeOf(f.digger)} />
-                </TableCell>
-                <TableCell>{f.loc}</TableCell>
-                <TableCell className="font-mono max-xl:hidden">
-                  {f.bus}
-                </TableCell>
-                <TableCell>
-                  <div className="flex max-w-80 flex-wrap gap-1">
-                    {f.units.map((u) => (
-                      <Badge key={u} variant="info">
-                        {u}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {f.active ? (
-                    <Badge variant="success" dot>
-                      {t.stAktif}
-                    </Badge>
-                  ) : (
-                    <Badge variant="danger" dot>
-                      {t.stNonaktif}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <IconButton
-                      aria-label={t.udbEditT}
-                      onClick={() => openEdit(f)}
-                    >
-                      <Pencil />
-                    </IconButton>
-                    <IconButton
-                      danger
-                      aria-label={t.empDel}
-                      onClick={() => setDelTarget(f)}
-                    >
-                      <Trash2 />
-                    </IconButton>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{listRows.length}</b>{" "}
-            {t.flSumB}
-          </FootSum>
-          <Pagination
-            page={p}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["5", "10", "25"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
+        {loadErr && !loaded ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.flLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <tr>
+                  <TableHead>Fleet</TableHead>
+                  <TableHead>{t.flLoc}</TableHead>
+                  <TableHead className="max-xl:hidden">{t.flBus}</TableHead>
+                  <TableHead>{t.flUnits}</TableHead>
+                  <TableHead>{t.thStatus}</TableHead>
+                  {canManage ? (
+                    <TableHead style={{ width: 110 }}>{t.thAct}</TableHead>
+                  ) : null}
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((f) => (
+                  <TableRow key={f.id}>
+                    <TableCell>
+                      <NameCell name={f.digger} sub={diggerTypeOf(f.digger)} />
+                    </TableCell>
+                    <TableCell>{f.loc}</TableCell>
+                    <TableCell className="font-mono max-xl:hidden">
+                      {f.bus}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex max-w-80 flex-wrap gap-1">
+                        {f.units.map((u) => (
+                          <Badge key={u} variant="info">
+                            {u}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {f.active ? (
+                        <Badge variant="success" dot>
+                          {t.stAktif}
+                        </Badge>
+                      ) : (
+                        <Badge variant="danger" dot>
+                          {t.stNonaktif}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    {canManage ? (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <IconButton
+                            aria-label={t.udbEditT}
+                            onClick={() => openEdit(f)}
+                          >
+                            <Pencil />
+                          </IconButton>
+                          <IconButton
+                            danger
+                            aria-label={t.empDel}
+                            onClick={() => setDelTarget(f)}
+                          >
+                            <Trash2 />
+                          </IconButton>
+                        </div>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <PanelFoot>
+              <FootSum>
+                {t.attSumA} <b>{range}</b> {t.attSumB} <b>{listRows.length}</b>{" "}
+                {t.flSumB}
+              </FootSum>
+              <Pagination
+                page={p}
+                pageCount={pageCount}
+                onPage={setPage}
+                per={per}
+                perOptions={["5", "10", "25"]}
+                onPer={(v) => {
+                  setPer(v);
+                  setPage(1);
+                }}
+              />
+            </PanelFoot>
+          </>
+        )}
       </Panel>
 
       <DNote title={t.flNoteT}>{t.flNoteB}</DNote>
@@ -312,10 +410,10 @@ export default function FleetSettingPage() {
           <Truck />
         </DialogIcon>
         <DialogTitle id="fl-t">
-          {editId ? `${t.flEditT} ${fDigger}` : t.flAdd}
+          {editing ? `${t.flEditT} ${fDigger}` : t.flAdd}
         </DialogTitle>
         <DialogBody>{t.flDlgB}</DialogBody>
-        <form onSubmit={save} noValidate>
+        <form onSubmit={(e) => void save(e)} noValidate>
           <FormGrid className="mt-4">
             <Field
               label="Digger (fleet leader)"
@@ -329,7 +427,7 @@ export default function FleetSettingPage() {
                 value={fDigger}
                 onChange={(e) => setFDigger(e.target.value)}
               >
-                {editId && !diggerOpts.includes(fDigger) ? (
+                {editing && !diggerOpts.includes(fDigger) ? (
                   <option value={fDigger}>{fDigger}</option>
                 ) : null}
                 {diggerOpts.map((c) => (
@@ -449,8 +547,9 @@ export default function FleetSettingPage() {
             >
               {t.btnCancel}
             </Button>
-            <Button type="submit">
-              {editId ? t.udbSaveEdit : t.flSaveAdd}
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner /> : null}
+              {editing ? t.udbSaveEdit : t.flSaveAdd}
             </Button>
           </DialogActions>
         </form>
@@ -473,7 +572,11 @@ export default function FleetSettingPage() {
           <Button variant="ghost" onClick={() => setDelTarget(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={doDelete}>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void doDelete()}
+          >
             {t.empDelDo}
           </Button>
         </DialogActions>

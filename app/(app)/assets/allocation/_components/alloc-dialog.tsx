@@ -29,12 +29,16 @@ export function AllocDialog({
   unit,
   ops,
   alloc,
+  ftwAvailable,
   onClose,
   onAssign,
 }: {
   unit: FaUnit | null;
   ops: FaOp[];
   alloc: Record<string, string>;
+  /* false = data FTW tanggal ini gagal dimuat (mis. 403) — jangan memblokir
+     penugasan manual hanya karena datanya tidak terbaca */
+  ftwAvailable: boolean;
   onClose: () => void;
   onAssign: (op: FaOp) => void;
 }) {
@@ -61,12 +65,15 @@ export function AllocDialog({
               const busyCode = Object.entries(alloc).find(
                 ([code, nik]) => nik === o.nik && code !== unit.code
               )?.[0];
-              const blocked = !valid || o.ftw !== "fit" || !!busyCode;
+              const blocked =
+                !valid || !!busyCode || (ftwAvailable && o.ftw !== "fit");
               const ftw = ftwBadgeOf(o, t);
               let sub = match
                 ? `${match.cls} · SIMPER ${match.simper}`
                 : t.faKompNone;
               if (busyCode) sub += ` · ${t.faBusy} (${busyCode})`;
+              /* aturan MVP: server menuntut data hadir — beri hint dini */
+              if (o.hadir === false) sub += ` · ${t.faBelumHadir}`;
               return (
                 <div
                   key={o.nik}

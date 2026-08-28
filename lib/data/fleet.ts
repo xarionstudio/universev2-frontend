@@ -5,7 +5,10 @@
 export const FLEET_MAX_UNITS = 13;
 
 export type Fleet = {
+  /* id UI "fl-<digger>" — konvensi seed lama yang juga dirujuk konfigurasi
+     display; dbId numerik backend menyertainya setelah hidrasi API */
   id: string;
+  dbId?: number;
   digger: string;
   loc: string;
   bus: string;

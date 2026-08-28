@@ -6,7 +6,7 @@
    yang menyebutkan tipe barisnya. */
 
 import { api, requestBlob } from "../client";
-import type { ListQuery, Paged } from "../types";
+import type { ListQuery } from "../types";
 
 /* Kategori yang benar-benar dikenali internal/service/master_service.go.
    Nilai di luar daftar ini ditolak backend, bukan menghasilkan daftar kosong. */
@@ -34,16 +34,30 @@ export type ApiMasterEntry = {
   [extra: string]: unknown;
 };
 
+/* Amplop daftar master — BUKAN Paged<T> ({items, pagination}) seperti grup
+   lain: master_service membungkusnya sendiri. `search` disaring in-memory
+   di server; perPage default 20, maksimum 200 (pkg/pagination). */
+export type MasterList<T = ApiMasterEntry> = {
+  entries: T[] | null;
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+  category: string;
+};
+
 /* GET /api/master/:category */
 export function listMaster<T = ApiMasterEntry>(
   category: MasterCategory,
   q?: ListQuery,
   signal?: AbortSignal
-): Promise<Paged<T>> {
-  return api.get<Paged<T>>(`/master/${category}`, q, signal);
+): Promise<MasterList<T>> {
+  return api.get<MasterList<T>>(`/master/${category}`, q, signal);
 }
 
-/* POST /api/master/:category */
+/* POST /api/master/:category — `code` opsional (server membangkitkan
+   "<prefiks>-<nano>" bila kosong); balasannya entri utuh ber-`code`.
+   Kode duplikat dalam kategori = 409. */
 export function createMasterEntry<T = ApiMasterEntry>(
   category: MasterCategory,
   body: Record<string, unknown>
@@ -51,21 +65,23 @@ export function createMasterEntry<T = ApiMasterEntry>(
   return api.post<T>(`/master/${category}`, body);
 }
 
-/* PUT /api/master/:category/:id */
+/* PUT /api/master/:category/:code — segmen terakhir path bernama ":id" di
+   router backend tapi isinya CODE entri, bukan id numerik tabel. Patch
+   parsial: hanya field yang dikirim yang berubah; kode tak dikenal = 404. */
 export function updateMasterEntry(
   category: MasterCategory,
-  id: string | number,
+  code: string,
   body: Record<string, unknown>
 ): Promise<void> {
-  return api.put<void>(`/master/${category}/${id}`, body);
+  return api.put<void>(`/master/${category}/${encodeURIComponent(code)}`, body);
 }
 
-/* DELETE /api/master/:category/:id */
+/* DELETE /api/master/:category/:code — hard delete; kode tak dikenal = 404. */
 export function deleteMasterEntry(
   category: MasterCategory,
-  id: string | number
+  code: string
 ): Promise<void> {
-  return api.del<void>(`/master/${category}/${id}`);
+  return api.del<void>(`/master/${category}/${encodeURIComponent(code)}`);
 }
 
 /* POST /api/master/:category/import — field form `file`. */

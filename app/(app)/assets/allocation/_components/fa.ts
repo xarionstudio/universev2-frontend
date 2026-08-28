@@ -12,8 +12,10 @@ export type FaUnit = {
   status: "ready" | "breakdown" | "standby";
 };
 
-/* Operator = karyawan aktif ber-kompetensi + status FTW hari ini */
-export type FaOp = Employee & { ftw: FtwStatus };
+/* Operator = karyawan aktif ber-kompetensi + status FTW & kehadiran pada
+   tanggal alokasi. hadir undefined = data kehadiran tidak tersedia (mis.
+   akun tanpa permission roster) — hanya hint, bukan pemblokir. */
+export type FaOp = Employee & { ftw: FtwStatus; hadir?: boolean };
 
 export function todayIso() {
   return new Date().toISOString().slice(0, 10);

@@ -2,8 +2,11 @@
 
 import * as React from "react";
 import { notFound, useParams } from "next/navigation";
-import { Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
+import { CircleAlert, Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
 
+import { errorDetail, fleetApi, masterApi } from "@/lib/api";
+import { mdEntryBody, toMdEntry } from "@/lib/api/adapters";
+import type { ApiUnitDb } from "@/lib/api/endpoints/fleet";
 import {
   mdCatLabels,
   mdCats,
@@ -13,8 +16,9 @@ import {
 import { unitsDb } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/components/providers/app-store";
+import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -72,6 +76,11 @@ export default function MasterDataPage() {
   const cat = params.cat as MdCat;
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
+  const { can } = usePermissions();
+  const canManage = can("master", "manage");
+  /* Store mdData tetap jadi rumah datanya: konsumen lain (dropdown bus/area
+     Fleet Setting, mess di form karyawan, running text di admin display)
+     membacanya juga — hidrasi halaman ini sekalian menyegarkan mereka. */
   const { mdData, setMdData } = useAppStore();
 
   const [q, setQ] = React.useState("");
@@ -99,21 +108,88 @@ export default function MasterDataPage() {
   const en = lang === "en";
   const catLabel = mdCatLabels[cat][lang];
 
+  /* ── hidrasi dari GET /api/master/:category (sekali per kunjungan; master
+     bukan papan hidup, tidak perlu poll — reloadKey menyegarkan setelah
+     mutasi gagal). Kategori pendukung ikut ditarik: lokasiex butuh opsi
+     bus+tempudo; bus/lokasiex butuh Database Unit (modul asset — 403 pada
+     akun master-saja didegradasi ke seed statis). ── */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  const [saving, setSaving] = React.useState(false);
+  const [apiUnits, setApiUnits] = React.useState<ApiUnitDb[] | null>(null);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void masterApi
+      .listMaster(cat, { perPage: 200 }, ac.signal)
+      .then((res) => {
+        setMdData((prev) => ({
+          ...prev,
+          [cat]: (res.entries ?? []).map((e) => toMdEntry(cat, e)),
+        }));
+        setLoaded(true);
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    if (cat === "lokasiex") {
+      for (const dep of ["bus", "tempudo"] as const) {
+        void masterApi
+          .listMaster(dep, { perPage: 200 }, ac.signal)
+          .then((res) =>
+            setMdData((prev) => ({
+              ...prev,
+              [dep]: (res.entries ?? []).map((e) => toMdEntry(dep, e)),
+            }))
+          )
+          .catch(() => {
+            /* dropdown jatuh ke isi store */
+          });
+      }
+    }
+    if (cat === "bus" || cat === "lokasiex") {
+      void fleetApi
+        .listUnitDb(undefined, ac.signal)
+        .then((units) => setApiUnits(units ?? []))
+        .catch(() => {
+          /* seed statis tetap jadi sumber opsi */
+        });
+    }
+    return () => ac.abort();
+  }, [cat, reloadKey, setMdData]);
+  const retry = React.useCallback(() => {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
   /* opsi dropdown dari sumber yang benar (bukan teks bebas):
      bus ← Database Unit class BUS; lokasi excavator ← digger + master bus/tempudo */
+  const unitsSrc = React.useMemo(
+    () =>
+      apiUnits ??
+      unitsDb.map((u) => ({
+        code: u.code,
+        cls: u.cls,
+        cat: u.cat,
+        egi: u.egi,
+        active: u.active,
+      })),
+    [apiUnits]
+  );
   const busCodeOpts = React.useMemo(() => {
     const used = new Set(
       mdData.bus.filter((r) => r.id !== editId).map((r) => r.name)
     );
-    return unitsDb
+    return unitsSrc
       .filter((u) => u.cls === "BUS" && u.active && !used.has(u.code))
       .map((u) => u.code);
-  }, [mdData.bus, editId]);
+  }, [mdData.bus, editId, unitsSrc]);
   const diggerOpts = React.useMemo(() => {
     const used = new Set(
       mdData.lokasiex.filter((r) => r.id !== editId).map((r) => r.name)
     );
-    return unitsDb
+    return unitsSrc
       .filter(
         (u) =>
           (u.cat === "BIG_DIGGER" || u.cat === "MEDIUM_DIGGER") &&
@@ -121,7 +197,7 @@ export default function MasterDataPage() {
           !used.has(u.code)
       )
       .map((u) => u.code);
-  }, [mdData.lokasiex, editId]);
+  }, [mdData.lokasiex, editId, unitsSrc]);
   const busOpts = React.useMemo(
     () => mdData.bus.filter((r) => r.active).map((r) => r.name),
     [mdData.bus]
@@ -131,7 +207,7 @@ export default function MasterDataPage() {
     [mdData.tempudo]
   );
   const busTypeOf = (code: string) =>
-    unitsDb.find((u) => u.code === code)?.egi ?? "";
+    unitsSrc.find((u) => u.code === code)?.egi ?? "";
 
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {
@@ -271,32 +347,64 @@ export default function MasterDataPage() {
     setDlgOpen(true);
   }
 
-  function save(e: React.FormEvent) {
+  /* ── mutasi pesimistis: POST/PUT/DELETE dulu, refleksi store setelah 2xx.
+     id baris = CODE entri (identitas path backend); entri baru memakai code
+     balasan server. ── */
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const name = fName.trim();
     if (!name) {
       setErrName(true);
       return;
     }
+    if (saving) return;
+    setSaving(true);
     const data = { name, a: fA, b: fB, active: fActive };
-    setMdData((prev) => ({
-      ...prev,
-      [cat]: editId
-        ? prev[cat].map((r) => (r.id === editId ? { ...r, ...data } : r))
-        : [...prev[cat], { id: `${cat}-${Date.now()}`, ...data }],
-    }));
-    setDlgOpen(false);
-    pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
+    try {
+      if (editId) {
+        await masterApi.updateMasterEntry(cat, editId, mdEntryBody(cat, data));
+        setMdData((prev) => ({
+          ...prev,
+          [cat]: prev[cat].map((r) =>
+            r.id === editId ? { ...r, ...data } : r
+          ),
+        }));
+      } else {
+        const created = await masterApi.createMasterEntry(
+          cat,
+          mdEntryBody(cat, data)
+        );
+        setMdData((prev) => ({
+          ...prev,
+          [cat]: [...prev[cat], toMdEntry(cat, created)],
+        }));
+      }
+      setDlgOpen(false);
+      pushToast("success", editId ? t.mdEditToastT : t.mdAddToastT, name);
+    } catch (err) {
+      /* dialog tetap terbuka — isian jangan hilang */
+      pushToast("error", t.apErrT, errorDetail(err, t.mdLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function doDelete() {
-    if (!delTarget) return;
-    setMdData((prev) => ({
-      ...prev,
-      [cat]: prev[cat].filter((r) => r.id !== delTarget.id),
-    }));
-    setDelTarget(null);
-    pushToast("success", t.mdDelToastT, delTarget.name);
+  async function doDelete() {
+    if (!delTarget || saving) return;
+    setSaving(true);
+    try {
+      await masterApi.deleteMasterEntry(cat, delTarget.id);
+      setMdData((prev) => ({
+        ...prev,
+        [cat]: prev[cat].filter((r) => r.id !== delTarget.id),
+      }));
+      setDelTarget(null);
+      pushToast("success", t.mdDelToastT, delTarget.name);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.mdLoadErrB));
+    } finally {
+      setSaving(false);
+    }
   }
 
   function fieldValue(key: ColKey) {
@@ -314,153 +422,175 @@ export default function MasterDataPage() {
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={catLabel} sub={t.mdSub}>
-        <Button onClick={openAdd}>
-          <Plus />
-          {t.mdAdd}
-        </Button>
+        {canManage ? (
+          <Button onClick={openAdd}>
+            <Plus />
+            {t.mdAdd}
+          </Button>
+        ) : null}
       </PageTitle>
 
-      <Panel>
-        <Toolbar>
-          <ToolbarTitle>{catLabel}</ToolbarTitle>
-          <ToolbarGroup>
-            <SearchInput
-              className="w-60 max-sm:w-full"
-              placeholder={t.mdSearchPh}
-              aria-label={t.mdSearchPh}
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
+      {loadErr && !loaded ? (
+        <Panel>
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.mdLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        </Panel>
+      ) : !loaded ? (
+        <Panel>
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        </Panel>
+      ) : (
+        <Panel>
+          <Toolbar>
+            <ToolbarTitle>{catLabel}</ToolbarTitle>
+            <ToolbarGroup>
+              <SearchInput
+                className="w-60 max-sm:w-full"
+                placeholder={t.mdSearchPh}
+                aria-label={t.mdSearchPh}
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setPage(1);
+                }}
+              />
+              <Select
+                wrapperClassName="w-40 max-sm:w-full"
+                value={stF}
+                onChange={(e) => {
+                  setStF(e.target.value);
+                  setPage(1);
+                }}
+                aria-label={t.allStatus}
+              >
+                <option value="">{t.allStatus}</option>
+                <option value="1">{t.stAktif}</option>
+                <option value="0">{t.stNonaktif}</option>
+              </Select>
+            </ToolbarGroup>
+          </Toolbar>
+
+          {rows.length ? (
+            <Table>
+              <TableHeader>
+                <tr>
+                  {[
+                    ...cols.map((c) => ({
+                      key: c.key as SortKey,
+                      label: c.label,
+                    })),
+                    { key: "active" as SortKey, label: t.thStatus },
+                  ].map((h) => (
+                    <TableHead key={h.key}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(h.key)}
+                        className="inline-flex cursor-pointer items-center gap-1 tracking-[inherit] text-inherit uppercase [font:inherit]"
+                      >
+                        {h.label}
+                        <span className="font-mono">
+                          {sort?.key === h.key
+                            ? sort.dir === 1
+                              ? "↑"
+                              : "↓"
+                            : ""}
+                        </span>
+                      </button>
+                    </TableHead>
+                  ))}
+                  <TableHead style={{ width: 110 }}>{t.thAct}</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    {cols.map((c) => (
+                      <TableCell key={c.key} className="max-w-105">
+                        {c.kind === "color" ? (
+                          <span className="inline-flex items-center gap-2">
+                            <i
+                              className="inline-block size-3 rounded"
+                              style={{ background: colorVal[r[c.key]] }}
+                            />
+                            {r[c.key]}
+                          </span>
+                        ) : c.key === "name" ? (
+                          <span className="font-semibold">{r.name}</span>
+                        ) : (
+                          <span className="text-(--text-secondary)">
+                            {r[c.key]}
+                          </span>
+                        )}
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      {r.active ? (
+                        <Badge variant="success" dot>
+                          {t.stAktif}
+                        </Badge>
+                      ) : (
+                        <Badge variant="danger" dot>
+                          {t.stNonaktif}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {canManage ? (
+                        <div className="flex gap-2">
+                          <IconButton
+                            aria-label={t.mdEditT}
+                            onClick={() => openEdit(r)}
+                          >
+                            <Pencil />
+                          </IconButton>
+                          <IconButton
+                            danger
+                            aria-label={t.empDel}
+                            onClick={() => setDelTarget(r)}
+                          >
+                            <Trash2 />
+                          </IconButton>
+                        </div>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <StateBox
+              icon={<Search className="text-primary-bright" />}
+              title={t.noResTitle}
+              body={t.mdEmptyB}
+            />
+          )}
+
+          <PanelFoot>
+            <FootSum>
+              {t.attSumA} <b>{range}</b> {t.attSumB} <b>{sorted.length}</b>{" "}
+              {t.mdSumB} — {catLabel}
+            </FootSum>
+            <Pagination
+              page={p}
+              pageCount={pageCount}
+              onPage={setPage}
+              per={per}
+              perOptions={["10", "25", "50"]}
+              onPer={(v) => {
+                setPer(v);
                 setPage(1);
               }}
             />
-            <Select
-              wrapperClassName="w-40 max-sm:w-full"
-              value={stF}
-              onChange={(e) => {
-                setStF(e.target.value);
-                setPage(1);
-              }}
-              aria-label={t.allStatus}
-            >
-              <option value="">{t.allStatus}</option>
-              <option value="1">{t.stAktif}</option>
-              <option value="0">{t.stNonaktif}</option>
-            </Select>
-          </ToolbarGroup>
-        </Toolbar>
-
-        {rows.length ? (
-          <Table>
-            <TableHeader>
-              <tr>
-                {[
-                  ...cols.map((c) => ({
-                    key: c.key as SortKey,
-                    label: c.label,
-                  })),
-                  { key: "active" as SortKey, label: t.thStatus },
-                ].map((h) => (
-                  <TableHead key={h.key}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSort(h.key)}
-                      className="inline-flex cursor-pointer items-center gap-1 tracking-[inherit] text-inherit uppercase [font:inherit]"
-                    >
-                      {h.label}
-                      <span className="font-mono">
-                        {sort?.key === h.key
-                          ? sort.dir === 1
-                            ? "↑"
-                            : "↓"
-                          : ""}
-                      </span>
-                    </button>
-                  </TableHead>
-                ))}
-                <TableHead style={{ width: 110 }}>{t.thAct}</TableHead>
-              </tr>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  {cols.map((c) => (
-                    <TableCell key={c.key} className="max-w-105">
-                      {c.kind === "color" ? (
-                        <span className="inline-flex items-center gap-2">
-                          <i
-                            className="inline-block size-3 rounded"
-                            style={{ background: colorVal[r[c.key]] }}
-                          />
-                          {r[c.key]}
-                        </span>
-                      ) : c.key === "name" ? (
-                        <span className="font-semibold">{r.name}</span>
-                      ) : (
-                        <span className="text-(--text-secondary)">
-                          {r[c.key]}
-                        </span>
-                      )}
-                    </TableCell>
-                  ))}
-                  <TableCell>
-                    {r.active ? (
-                      <Badge variant="success" dot>
-                        {t.stAktif}
-                      </Badge>
-                    ) : (
-                      <Badge variant="danger" dot>
-                        {t.stNonaktif}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <IconButton
-                        aria-label={t.mdEditT}
-                        onClick={() => openEdit(r)}
-                      >
-                        <Pencil />
-                      </IconButton>
-                      <IconButton
-                        danger
-                        aria-label={t.empDel}
-                        onClick={() => setDelTarget(r)}
-                      >
-                        <Trash2 />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <StateBox
-            icon={<Search className="text-primary-bright" />}
-            title={t.noResTitle}
-            body={t.mdEmptyB}
-          />
-        )}
-
-        <PanelFoot>
-          <FootSum>
-            {t.attSumA} <b>{range}</b> {t.attSumB} <b>{sorted.length}</b>{" "}
-            {t.mdSumB} — {catLabel}
-          </FootSum>
-          <Pagination
-            page={p}
-            pageCount={pageCount}
-            onPage={setPage}
-            per={per}
-            perOptions={["10", "25", "50"]}
-            onPer={(v) => {
-              setPer(v);
-              setPage(1);
-            }}
-          />
-        </PanelFoot>
-      </Panel>
+          </PanelFoot>
+        </Panel>
+      )}
 
       {/* Dialog tambah/edit entri */}
       <Dialog
@@ -544,7 +674,8 @@ export default function MasterDataPage() {
             >
               {t.btnCancel}
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner /> : null}
               {editId ? t.udbSaveEdit : t.mdSaveAdd}
             </Button>
           </DialogActions>
@@ -568,7 +699,12 @@ export default function MasterDataPage() {
           <Button variant="ghost" onClick={() => setDelTarget(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={doDelete}>
+          <Button
+            variant="destructive"
+            disabled={saving}
+            onClick={() => void doDelete()}
+          >
+            {saving ? <Spinner /> : null}
             {t.empDelDo}
           </Button>
         </DialogActions>

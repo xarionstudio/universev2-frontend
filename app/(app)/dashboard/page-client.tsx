@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
 
-import { miscApi, rosterApi } from "@/lib/api";
+import { fleetApi, miscApi, rosterApi } from "@/lib/api";
+import { toUnits } from "@/lib/api/adapters";
 import type { ApiDashboardSummary } from "@/lib/api/endpoints/misc";
 import type { ApiAttendanceRow } from "@/lib/api/endpoints/roster";
 import { ftwData, type FtwRecord } from "@/lib/data/ftw";
@@ -69,9 +70,15 @@ function attentionRows(
     name: u.code,
     sub: u.type,
     dept: "—",
-    issue: en
-      ? `Reported down at ${u.upd.slice(0, 5)} — awaiting repair (${u.loc})`
-      : `Dilaporkan rusak ${u.upd.slice(0, 5)} — menunggu perbaikan (${u.loc})`,
+    /* upd dari server adalah alasan mentah, bukan lagi "HH:MM — ..." mock —
+       slice(0,5) hanya sah bila prefiksnya memang jam */
+    issue: /^\d\d:\d\d/.test(u.upd)
+      ? en
+        ? `Reported down at ${u.upd.slice(0, 5)} — awaiting repair (${u.loc})`
+        : `Dilaporkan rusak ${u.upd.slice(0, 5)} — menunggu perbaikan (${u.loc})`
+      : en
+        ? `Reported down — ${u.upd || "awaiting repair"} (${u.loc})`
+        : `Dilaporkan rusak — ${u.upd || "menunggu perbaikan"} (${u.loc})`,
     badge: "Breakdown",
     badgeVariant: "danger",
     route: "/assets/status",
@@ -122,7 +129,7 @@ function attentionRows(
 
 export default function DashboardPage() {
   const { t, lang } = useI18n();
-  const { userName: storeName, units } = useAppStore();
+  const { userName: storeName, units, setUnits } = useAppStore();
   /* Sapaan harus menyebut orang yang BENAR-BENAR login. Sebelumnya diambil
      dari app-store yang nilai awalnya masih persona mock ("First Angel"),
      sehingga siapa pun yang masuk disapa dengan nama orang lain. Store tetap
@@ -130,6 +137,11 @@ export default function DashboardPage() {
      terbaca — pola yang sama dengan topbar. */
   const { user: me } = usePermissions();
   const userName = me?.kar ?? storeName;
+  /* Store `units` diseed [] — dashboard TIDAK boleh bergantung pada halaman
+     Status Unit pernah dibuka: efek di bawah menghidrasinya sendiri dari
+     GET /units/status. Bila akun tak punya izin modul asset (403), kartu
+     Breakdown jatuh ke angka summary.fleet (tanpa rincian kode unit). */
+  const [unitsOk, setUnitsOk] = React.useState(false);
   const breakUnits = units.filter((u) => u.status === "breakdown");
   /* statistik dari sumber yang sama dengan modul & display TV */
   /* "Unfit" = benar-benar tidak boleh bekerja (dipulangkan, < 4 jam).
@@ -186,6 +198,14 @@ export default function DashboardPage() {
           if (alive) setAttRows(res.items ?? []);
         })
         .catch(() => {});
+      void fleetApi
+        .listUnitStatuses(c.signal)
+        .then((rows) => {
+          if (!alive) return;
+          setUnits(toUnits(rows));
+          setUnitsOk(true);
+        })
+        .catch(() => {});
     };
     load();
     const timer = setInterval(load, REFRESH_MS);
@@ -194,7 +214,7 @@ export default function DashboardPage() {
       ac?.abort();
       clearInterval(timer);
     };
-  }, [reloadKey, updateFresh]);
+  }, [reloadKey, updateFresh, setUnits]);
 
   React.useEffect(() => {
     const id = setTimeout(updateFresh, 0);
@@ -294,7 +314,13 @@ export default function DashboardPage() {
             borderColor: "var(--badge-danger-border)",
             color: "var(--color-danger-text)",
           }}
-          value={String(breakUnits.length)}
+          value={
+            unitsOk
+              ? String(breakUnits.length)
+              : summary
+                ? String(summary.fleet.breakdown)
+                : "—"
+          }
           label={t.statBreakdown}
           detail={
             <>

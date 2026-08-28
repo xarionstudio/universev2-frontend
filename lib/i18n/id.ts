@@ -20,6 +20,13 @@ export const id = {
     "Entri hanya dihapus dari daftar ini — data karyawannya TIDAK dibuat.",
   pendDelBtn: "Hapus",
   pendDelToast: "Entri pending dihapus",
+  usLoadErrB: "Daftar status unit tidak bisa diambil dari server.",
+  flLoadErrB: "Daftar fleet tidak bisa diambil dari server.",
+  faLoadErrB: "Papan alokasi tidak bisa diambil dari server.",
+  faBelumHadir: "belum hadir",
+  faAutoConfirmB:
+    "Server menyusun alokasi menurut aturan MVP: operator hanya dipasangkan bila SIMPER Type EGI-nya cocok DAN punya data hadir DAN punya data Jam Tidur (fit/spare) pada tanggal ini. PERHATIAN: seluruh alokasi tanggal & shift ini DIGANTI — penugasan manual yang ada ikut tersusun ulang.",
+  faAutoRun: "Jalankan auto-alokasi",
   pendEditT: "Perbaiki entri pending",
   pendEditB:
     "Perbaiki salah ketiknya. Pilih departemen RESMI untuk langsung mengimpornya sebagai karyawan; biarkan pada nilai lamanya bila hanya memperbaiki field lain.",
@@ -335,6 +342,10 @@ export const id = {
   udbImpDoBtn: "Impor 10 unit",
   udbImpToastT: "Unit diimpor",
   udbImpToastD: "unit masuk database.",
+  udbImpSkipD: "baris dilewati/diperbarui",
+  udbUploading: "Mengunggah & memproses…",
+  udbLoadErrB: "Database unit tidak bisa diambil dari server.",
+  mdLoadErrB: "Daftar master tidak bisa diambil dari server.",
   navMD: "Master Data",
   navMaster: "Master",
   mdSub:

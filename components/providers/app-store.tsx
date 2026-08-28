@@ -22,7 +22,7 @@ import {
   type Audio,
   type Display,
 } from "@/lib/data/settings-data";
-import { initialUnits, type Unit } from "@/lib/data/unit-status";
+import { type Unit } from "@/lib/data/unit-status";
 import { unitsDb as udbBase, type UnitDb } from "@/lib/data/units-db";
 import { type UmRole, type UmUser } from "@/lib/data/users";
 
@@ -141,7 +141,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   /* kosong sampai dihidrasi dari backend — lihat catatan di tipe AppStore */
   const [emps, setEmps] = React.useState<Employee[]>([]);
   const [apRows, setApRows] = React.useState<ApRow[]>(apInitialRows);
-  const [units, setUnits] = React.useState<Unit[]>(initialUnits);
+  /* kosong sampai dihidrasi dari backend — halaman Status Unit DAN dashboard
+     sama-sama mengisi lewat GET /api/units/status (dashboard tak boleh
+     bergantung pada halaman lain pernah dibuka) */
+  const [units, setUnits] = React.useState<Unit[]>([]);
   const [udbAdded, setUdbAdded] = React.useState<UnitDb[]>([]);
   const [udbOverrides, setUdbOverrides] = React.useState<
     Record<string, Partial<UnitDb>>
