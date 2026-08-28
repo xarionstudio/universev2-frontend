@@ -47,7 +47,21 @@ export function Sidebar() {
     setSideOpen(false);
   }, [pathname, setSideOpen]);
 
-  const isChildActive = (href: string) => pathname.startsWith(href);
+  /* Anak aktif = href TERPANJANG yang cocok di antara saudaranya —
+     "/employees" dan "/employees/pending" bertetangga; startsWith polos
+     menyalakan keduanya sekaligus. */
+  const isChildActive = (item: NavItem, href: string) => {
+    let best = "";
+    for (const c of item.children ?? []) {
+      if (
+        c.href &&
+        (pathname === c.href || pathname.startsWith(c.href + "/")) &&
+        c.href.length > best.length
+      )
+        best = c.href;
+    }
+    return href === best;
+  };
   const isTopActive = (item: NavItem) =>
     item.href ? pathname.startsWith(item.href) : false;
 
@@ -141,7 +155,10 @@ export function Sidebar() {
               <Link
                 key={c.href}
                 href={c.href!}
-                className={cn(kidClass, isChildActive(c.href!) && activeClass)}
+                className={cn(
+                  kidClass,
+                  isChildActive(item, c.href!) && activeClass
+                )}
               >
                 {label}
               </Link>

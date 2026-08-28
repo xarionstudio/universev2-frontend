@@ -67,7 +67,7 @@ export default function RegisterPage() {
   /* Validasi di bawah tetap dijalankan lebih dulu supaya pengguna dapat
      seluruh kesalahan formulir sekaligus tanpa menunggu jaringan. Aturannya
      dijaga SAMA dengan backend (internal/service/auth_service.go +
-     internal/pkg/validate.go): nama maks 100, NIK persis 9 digit, password
+     internal/pkg/validate.go): nama maks 100, NIK angka 1-50 digit, password
      min 8 mengandung huruf & angka (maks 72). Backend memvalidasi ulang
      semuanya — yang di sini murni kenyamanan, bukan pengganti. */
   async function onSubmit(e: React.FormEvent) {
@@ -76,7 +76,7 @@ export default function RegisterPage() {
     if (!name.trim()) list.push(t.errNama);
     else if (name.trim().length > 100) list.push(t.regNameErrMax);
     if (!pos) list.push(`${t.regPos} — ${t.regPosPh.toLowerCase()}.`);
-    if (!/^\d{9}$/.test(nik.trim())) list.push(t.regNikErr);
+    if (!/^\d{1,50}$/.test(nik.trim())) list.push(t.regNikErr);
     if (!dept) list.push(`${t.regDept} — ${t.regDeptPh.toLowerCase()}.`);
     /* Email OPSIONAL — identitas akun adalah NIK. Formatnya diperiksa hanya
        bila diisi; backend memvalidasi ulang dan menolak email yang sudah
@@ -110,7 +110,7 @@ export default function RegisterPage() {
          (Settings → Halaman Auth; bawaan Viewer). Tidak ada token yang
          dikembalikan, jadi pengguna tetap harus login setelah ini. */
       await authApi.register({
-        name: name.trim(),
+        name: name.trim().toUpperCase(),
         nik: nik.trim(),
         email: email.trim(),
         password: pw,
@@ -339,6 +339,9 @@ export default function RegisterPage() {
                   <label htmlFor="reg-name" className="text-sm font-medium">
                     {t.regName}
                   </label>
+                  {/* Nama dikunci HURUF KAPITAL — tampilan lewat CSS (caret
+                      tidak lompat saat menyunting di tengah), nilai final
+                      dikapitalkan saat submit; backend menormalkan ulang. */}
                   <Input
                     id="reg-name"
                     value={name}
@@ -346,7 +349,7 @@ export default function RegisterPage() {
                     placeholder={t.regNamePh}
                     autoComplete="name"
                     maxLength={100}
-                    className="h-12"
+                    className="h-12 uppercase"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -371,15 +374,15 @@ export default function RegisterPage() {
                   <label htmlFor="reg-nik" className="text-sm font-medium">
                     {t.regNik}
                   </label>
-                  {/* NIK backend wajib persis 9 digit — karakter non-angka
-                      disaring saat mengetik/menempel, lalu dipotong di 9.
-                      Bukan maxLength: browser memotong tempelan "503 264 133"
-                      SEBELUM pemisahnya dibuang. */}
+                  {/* NIK = angka bebas 1-50 digit — karakter non-angka
+                      disaring saat mengetik/menempel. Bukan maxLength:
+                      browser memotong tempelan "503 264 133" SEBELUM
+                      pemisahnya dibuang. */}
                   <Input
                     id="reg-nik"
                     value={nik}
                     onChange={(e) =>
-                      setNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                      setNik(e.target.value.replace(/\D/g, "").slice(0, 50))
                     }
                     placeholder={t.regNikPh}
                     inputMode="numeric"

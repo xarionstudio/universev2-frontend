@@ -145,7 +145,7 @@ export type AuthPayload = {
   perms: ApiPermMap | null;
 };
 
-/* Identitas login adalah NIK (9 digit), bukan email. */
+/* Identitas login adalah NIK (angka, panjang bebas), bukan email. */
 export type LoginBody = { nik: string; password: string };
 
 export type RegisterBody = {

@@ -54,7 +54,7 @@ export default function LoginPage() {
 
   /* Kredensial diverifikasi backend (POST /api/auth/login), bukan lagi
      dicocokkan dengan daftar mock di app-store. Identitas akun adalah NIK
-     9 digit — email kini hanya data kontak opsional.
+     (angka, panjang bebas) — email kini hanya data kontak opsional.
 
      Password dikirim APA ADANYA lewat HTTPS dan di-hash di server; jangan
      tergoda memakai lib/password.ts di sini — digest buatan browser tidak
@@ -67,7 +67,7 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const pw = pwRef.current?.value || "";
-    if (!/^\d{9}$/.test(nik) || !pw) {
+    if (!nik || !pw) {
       setErr(true);
       setErrMsg(null);
       nikRef.current?.focus();
@@ -223,7 +223,7 @@ export default function LoginPage() {
                       pattern="\d*"
                       value={nik}
                       onChange={(e) =>
-                        setNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                        setNik(e.target.value.replace(/\D/g, "").slice(0, 50))
                       }
                       autoComplete="username"
                       placeholder={t.loginNikPh}

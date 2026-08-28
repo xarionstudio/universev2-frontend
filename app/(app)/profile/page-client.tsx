@@ -71,7 +71,7 @@ export default function ProfilePage() {
     setErr(e);
     if (Object.values(e).some(Boolean)) return;
 
-    const nextName = name.trim();
+    const nextName = name.trim().toUpperCase();
     const nextEmail = email.trim();
 
     /* Profil dan password adalah DUA endpoint terpisah di backend, jadi
@@ -152,6 +152,7 @@ export default function ProfilePage() {
               id="pf-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="uppercase"
             />
           </Field>
           <Field

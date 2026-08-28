@@ -6,7 +6,7 @@
      /api/units/db/...   database master unit
    Pembagian itu mengikuti router.go apa adanya. */
 
-import { api } from "../client";
+import { api, requestBlob } from "../client";
 
 export type UnitStatus = "ready" | "breakdown" | "standby";
 
@@ -194,6 +194,9 @@ export function importUnitDb(file: File): Promise<unknown> {
   return api.post<unknown>("/units/db/import", fd);
 }
 
-/* CATATAN: router tidak punya endpoint ekspor untuk modul fleet/unit —
-   tombol ekspor di halaman Aset harus dibangkitkan di klien (lib/report/xlsx)
-   atau menunggu endpoint baru di backend. */
+/* GET /api/units/db/export — xlsx seluruh unit DB. Modul fleet lain
+   (settings/alokasi/status) belum punya endpoint ekspor; tombol ekspornya
+   harus dibangkitkan di klien atau menunggu endpoint baru. */
+export function exportUnitDb(): Promise<Blob> {
+  return requestBlob("/units/db/export");
+}

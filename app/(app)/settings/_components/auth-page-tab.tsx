@@ -305,7 +305,7 @@ export function AuthPageTab() {
   const [delOpt, setDelOpt] = React.useState<ApiAuthOption | null>(null);
 
   async function addOption(kind: AuthOptionKind, name: string) {
-    const clean = name.trim();
+    const clean = name.trim().toUpperCase();
     if (!clean) return false;
     setBusy(true);
     try {
@@ -767,12 +767,15 @@ function OptionColumn({
     <div className="flex flex-col gap-3">
       <h4 className="text-sm font-semibold">{title}</h4>
       <form onSubmit={submit} className="flex gap-2">
+        {/* opsi dikunci HURUF KAPITAL — CSS untuk tampilan, nilai final
+            dikapitalkan di addOption; backend menormalkan ulang */}
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
           maxLength={100}
+          className="uppercase"
         />
         <Button type="submit" disabled={busy || !name.trim()}>
           <Plus />

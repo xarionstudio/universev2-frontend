@@ -230,7 +230,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     if (busy) return;
     const errs = {
       nama: !f.nama.trim(),
-      nik: !/^\d{9}$/.test(f.nik.trim()),
+      nik: !/^\d{1,50}$/.test(f.nik.trim()),
       exp: !!(f.exp && f.join && f.exp <= f.join),
       /* baris kompetensi ber-Type EGI wajib punya masa berlaku: kolom
          expiry_date DATE NOT NULL di DB, dan PUT kompetensi berjalan dalam
@@ -253,9 +253,10 @@ export function EmployeeForm({ nik }: { nik?: string }) {
        Status khususnya: string kosong di-default-kan backend ke "aktif",
        yang akan diam-diam mengaktifkan karyawan cuti/nonaktif. */
     const body = {
-      name,
-      dept: f.dept,
-      pos: f.pos,
+      /* dikunci HURUF KAPITAL — backend menormalkan ulang (UpperTrim) */
+      name: name.toUpperCase(),
+      dept: f.dept.trim().toUpperCase(),
+      pos: f.pos.trim().toUpperCase(),
       company: f.company,
       equip: f.equip,
       join: f.join,
@@ -437,6 +438,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   id="ef-nama"
                   value={f.nama}
                   onChange={(e) => up("nama", e.target.value)}
+                  className="uppercase"
                 />
               </Field>
               <Field
@@ -472,10 +474,11 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   value={f.dept}
                   onChange={(e) => up("dept", e.target.value)}
                 >
-                  <option>Operation</option>
+                  {/* nilai KAPITAL — selaras data pasca-migrasi 000021 */}
+                  <option>OPERATION</option>
                   <option>SDI</option>
                   <option>HRGA</option>
-                  <option>Plant</option>
+                  <option>PLANT</option>
                 </Select>
               </Field>
               <Field label={t.thPos} htmlFor="ef-pos" required>
@@ -483,6 +486,7 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   id="ef-pos"
                   value={f.pos}
                   onChange={(e) => up("pos", e.target.value)}
+                  className="uppercase"
                 />
               </Field>
               <Field label="Equipment type" htmlFor="ef-equip">

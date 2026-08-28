@@ -60,8 +60,11 @@ export function navItems(lang: Lang): NavItem[] {
       key: "employees",
       labelKey: "navEmployees",
       icon: Users,
-      href: "/employees",
       visKey: "employees",
+      children: [
+        { href: "/employees", labelKey: "navEmpData" },
+        { href: "/employees/pending", labelKey: "navEmpPending" },
+      ],
     },
     {
       key: "roster",

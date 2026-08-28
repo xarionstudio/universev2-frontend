@@ -67,8 +67,8 @@ import { useToast } from "@/components/ui/toast";
 import { downloadBlob } from "./_lib/csv";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-/* NIK persis 9 digit — aturan yang sama dengan IsValidNIK di backend */
-const NIK_RE = /^\d{9}$/;
+/* NIK = angka saja, 1-50 digit — aturan yang sama dengan IsValidNIK backend */
+const NIK_RE = /^\d{1,50}$/;
 
 /* Opsi tautan dikodekan "Nama — NIK". NIK selalu segmen TERAKHIR: nama
    (terutama nama manual akun kiosk) boleh mengandung " — ", jadi decode
@@ -235,7 +235,7 @@ export default function UsersPage() {
   const fNikBad = editing
     ? fNik.trim() !== "" && !NIK_RE.test(fNik.trim())
     : !NIK_RE.test(fNik.trim());
-  /* tautan yang NIK-nya tidak terdecode 9 digit — jangan gagal bisu */
+  /* tautan yang NIK-nya tidak terdecode sebagai angka — jangan gagal bisu */
   const fLinkedNikBad = fKar !== "" && !NIK_RE.test(splitLinked(fKar)[1]);
 
   const rows = umUsers.filter((u) => {
@@ -298,11 +298,11 @@ export default function UsersPage() {
        pertahankan yang tersimpan (backend mengabaikan nik ""). */
     const manual = !fKar;
     const [karLinked, nikLinked] = fKar ? splitLinked(fKar) : ["", ""];
-    const kar = manual ? fName.trim() || null : karLinked || null;
+    const kar = manual ? fName.trim().toUpperCase() || null : karLinked || null;
     const nik = manual ? fNik.trim() || null : nikLinked || null;
     const emailOk = email === "" || EMAIL_RE.test(email);
     /* NIK null hanya sah saat mengedit akun manual (= pertahankan yang
-       tersimpan); selain itu — termasuk hasil decode tautan — harus 9 digit */
+       tersimpan); selain itu — termasuk hasil decode tautan — harus angka */
     const nikOk = nik === null ? editing !== null && manual : NIK_RE.test(nik);
     const nameOk = !manual || editing !== null || kar !== null;
     if (!emailOk || !nikOk || !nameOk || roles.length === 0) {
@@ -872,6 +872,7 @@ export default function UsersPage() {
                   onChange={(e) => setFName(e.target.value)}
                   placeholder={t.regNamePh}
                   maxLength={100}
+                  className="uppercase"
                 />
               </Field>
               <Field
@@ -887,7 +888,7 @@ export default function UsersPage() {
                   id="um-nik"
                   value={fNik}
                   onChange={(e) =>
-                    setFNik(e.target.value.replace(/\D/g, "").slice(0, 9))
+                    setFNik(e.target.value.replace(/\D/g, "").slice(0, 50))
                   }
                   inputMode="numeric"
                   placeholder={t.regNikPh}

@@ -139,6 +139,50 @@ export function uploadPhoto(nik: string, photo: File): Promise<unknown> {
   return api.post<unknown>(`/employees/${encodeURIComponent(nik)}/photo`, fd);
 }
 
+/* internal/model/employee.go — PendingRegistration: baris impor Excel yang
+   DITAHAN karena departemennya tidak dikenal sistem. */
+export type ApiPendingRegistration = {
+  id: number;
+  nik: string;
+  name: string;
+  dept: string;
+  pos: string;
+  reason: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/* GET /api/employees/pending */
+export function listPendingRegistrations(
+  signal?: AbortSignal
+): Promise<ApiPendingRegistration[]> {
+  return api.get<ApiPendingRegistration[]>(
+    "/employees/pending",
+    undefined,
+    signal
+  );
+}
+
+/* PUT /api/employees/pending/:id — perbaiki entri (salah ketik NIK/nama/
+   departemen/posisi). Bila departemen barunya DIKENAL sistem, entri langsung
+   diimpor menjadi karyawan: resolved=true, entry=null. Bila belum, entrinya
+   diperbarui dan tetap pending: resolved=false, entry=baris terbaru. */
+export function updatePendingRegistration(
+  id: string | number,
+  body: { nik: string; name: string; dept: string; pos: string }
+): Promise<{ resolved: boolean; entry: ApiPendingRegistration | null }> {
+  return api.put<{ resolved: boolean; entry: ApiPendingRegistration | null }>(
+    `/employees/pending/${id}`,
+    body
+  );
+}
+
+/* DELETE /api/employees/pending/:id — hanya membersihkan daftar; data
+   karyawannya TIDAK dibuat. */
+export function deletePendingRegistration(id: string | number): Promise<void> {
+  return api.del<void>(`/employees/pending/${id}`);
+}
+
 /* POST /api/employees/import — Excel, field form `file`. */
 export function importEmployees(file: File): Promise<unknown> {
   const fd = new FormData();
