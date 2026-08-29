@@ -38,7 +38,16 @@ export type ExportPayload = {
   landscape?: boolean;
 };
 
-export function ExportButtons({ build }: { build: () => ExportPayload }) {
+export function ExportButtons({
+  build,
+  iconOnly = false,
+}: {
+  build: () => ExportPayload;
+  /* Toolbar yang padat filter (mis. Attendance) memakai tombol ikon 40px agar
+     sejajar dengan kontrol h-10 dan tidak melipat toolbar jadi dua baris;
+     labelnya pindah ke title + aria-label. */
+  iconOnly?: boolean;
+}) {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
   const [busy, setBusy] = React.useState(false);
@@ -108,15 +117,31 @@ export function ExportButtons({ build }: { build: () => ExportPayload }) {
     printReport(report);
   }
 
+  const iconCls = iconOnly ? "size-10 [&_svg]:size-4" : undefined;
   return (
     <>
-      <Button variant="secondary" onClick={onExcel} disabled={busy}>
+      <Button
+        variant="secondary"
+        size={iconOnly ? "icon" : "default"}
+        className={iconCls}
+        onClick={onExcel}
+        disabled={busy}
+        aria-label={t.expExcel}
+        title={iconOnly ? t.expExcel : undefined}
+      >
         {busy ? <Spinner className="size-4" /> : <FileSpreadsheet />}
-        {t.expExcel}
+        {iconOnly ? null : t.expExcel}
       </Button>
-      <Button variant="secondary" onClick={onPdf}>
+      <Button
+        variant="secondary"
+        size={iconOnly ? "icon" : "default"}
+        className={iconCls}
+        onClick={onPdf}
+        aria-label={t.expPdf}
+        title={iconOnly ? t.expPdf : undefined}
+      >
         <Printer />
-        {t.expPdf}
+        {iconOnly ? null : t.expPdf}
       </Button>
     </>
   );

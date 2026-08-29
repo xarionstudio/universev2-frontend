@@ -387,7 +387,7 @@ function AttendanceInner() {
                 onChange={(e) => setTo(e.target.value)}
               />
             </div>
-            <ExportButtons build={buildExport} />
+            <ExportButtons build={buildExport} iconOnly />
           </ToolbarGroup>
         </Toolbar>
 
