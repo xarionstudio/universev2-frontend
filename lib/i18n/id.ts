@@ -925,6 +925,14 @@ export const id = {
   upSub:
     "Impor roster bulanan dari file Excel — satu baris per karyawan per hari.",
   upTemplate: "Unduh template (.xlsx)",
+  upTplDlgT: "Unduh Template Roster",
+  upTplDlgB:
+    "Pilih periode roster — kolom tanggal dibuat sesuai jumlah hari pada bulan itu.",
+  upTplMonth: "Bulan",
+  upTplYear: "Tahun",
+  upTplSheetTitle: "Template Roster",
+  upTplMetaFill:
+    "Isi kode roster untuk SETIAP tanggal. Kode valid: D, N, R, STB, OFF, CR, AL, LWP, LWOP, PH, PHD, S, A, MCU, MCR, MCUF, ISM, OBC, KRT, TGS, DNS, TRV, TR, TRS, IN, TERM, EOC, RSG.",
   dzTitle: "Seret file roster ke sini, atau klik untuk memilih",
   dzHint:
     "Format .xlsx sesuai template — kolom NIK, nama, tanggal 1–31 berisi kode roster",
@@ -945,7 +953,6 @@ export const id = {
   toastImportD:
     "2.140 baris masuk. 5 baris error menunggu perbaikan — unduh detailnya.",
   toastTemplateT: "Template diunduh",
-  toastTemplateD: "roster_template.xlsx — kolom NIK, nama, tanggal 1–31.",
   toastErrT: "5 baris error diunduh",
   toastErrD: "roster_juli_2026_errors.xlsx — perbaiki lalu unggah ulang.",
   upBack: "Kembali ke Data Roster",

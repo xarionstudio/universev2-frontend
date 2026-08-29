@@ -931,6 +931,14 @@ export const en: Dict = {
   upSub:
     "Import the monthly roster from an Excel file — one row per employee per day.",
   upTemplate: "Download template (.xlsx)",
+  upTplDlgT: "Download Roster Template",
+  upTplDlgB:
+    "Pick the roster period — the date columns follow that month's day count.",
+  upTplMonth: "Month",
+  upTplYear: "Year",
+  upTplSheetTitle: "Roster Template",
+  upTplMetaFill:
+    "Fill a roster code for EVERY date. Valid codes: D, N, R, STB, OFF, CR, AL, LWP, LWOP, PH, PHD, S, A, MCU, MCR, MCUF, ISM, OBC, KRT, TGS, DNS, TRV, TR, TRS, IN, TERM, EOC, RSG.",
   dzTitle: "Drag the roster file here, or click to browse",
   dzHint:
     ".xlsx format per the template — NIK, name, day columns 1–31 hold roster codes",
@@ -951,7 +959,6 @@ export const en: Dict = {
   toastImportD:
     "2,140 rows imported. 5 error rows awaiting fixes — download the details.",
   toastTemplateT: "Template downloaded",
-  toastTemplateD: "roster_template.xlsx — NIK, name, day columns 1–31.",
   toastErrT: "5 error rows downloaded",
   toastErrD: "roster_juli_2026_errors.xlsx — fix and re-upload.",
   upBack: "Back to Roster Data",

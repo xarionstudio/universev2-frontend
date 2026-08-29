@@ -2,13 +2,23 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, Upload } from "lucide-react";
+import { ArrowLeft, Download, FileSpreadsheet, Upload } from "lucide-react";
 
 import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
+import { printedAt, reportFileName } from "@/lib/report/logo";
+import { downloadXlsx } from "@/lib/report/xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogIcon,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Dropzone } from "@/components/ui/dropzone";
+import { Field, FormGrid } from "@/components/ui/field";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
@@ -21,6 +31,7 @@ import {
 } from "@/components/ui/panel";
 import { Progress } from "@/components/ui/progress";
 import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -32,6 +43,37 @@ import {
 import { useToast } from "@/components/ui/toast";
 
 type Stage = "idle" | "progress" | "validating" | "results";
+
+/* Nama bulan penuh untuk dialog template — lokal seperti MON_ID di halaman
+   attendance; kamus i18n hanya menyimpan string tunggal. */
+const MONTH_ID = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+const MONTH_EN = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export default function RosterUploadPage() {
   const { t, lang } = useI18n();
@@ -79,6 +121,59 @@ export default function RosterUploadPage() {
       setImportBusy(false);
       pushToast("success", t.toastImportT, t.toastImportD);
     }, 1200);
+  }
+
+  /* Dialog template: default periode = bulan DEPAN — roster disusun di muka. */
+  const now = new Date();
+  const defMonth = ((now.getMonth() + 1) % 12) + 1;
+  const defYear =
+    now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  const [tplOpen, setTplOpen] = React.useState(false);
+  const [tplBusy, setTplBusy] = React.useState(false);
+  const [tplMonth, setTplMonth] = React.useState(String(defMonth));
+  const [tplYear, setTplYear] = React.useState(String(defYear));
+  const tplYears = [defYear - 1, defYear, defYear + 1, defYear + 2];
+  const monthNames = lang === "en" ? MONTH_EN : MONTH_ID;
+
+  /* Template .xlsx bermerek (kop logo + PT + cap waktu) via lib/report.
+     Kolom tanggal mengikuti jumlah hari bulan terpilih. Baris data sengaja
+     kosong tapi header persis format parser backend (internal/export/excel.go
+     mencari baris ber-sel A "NIK"; kop bermerek tidak mengganggunya), jadi
+     template hasil unduhan bisa langsung diisi dan diunggah balik. */
+  async function downloadTemplate() {
+    if (tplBusy) return;
+    setTplBusy(true);
+    try {
+      const y = parseInt(tplYear, 10);
+      const m = parseInt(tplMonth, 10);
+      /* new Date(y, m, 0) = hari terakhir bulan m (1-12) */
+      const days = new Date(y, m, 0).getDate();
+      const mm = String(m).padStart(2, "0");
+      const name = reportFileName(`roster-template-${y}-${mm}`, "xlsx");
+      await downloadXlsx(name, {
+        name: `Roster ${y}-${mm}`,
+        title: `${t.upTplSheetTitle} — ${monthNames[m - 1]} ${y}`,
+        meta: [
+          `${t.expPrintedAt}: ${printedAt(lang === "en")}`,
+          t.upTplMetaFill,
+        ],
+        columns: [
+          { header: "NIK", width: 14 },
+          { header: t.thNama, width: 26 },
+          { header: t.thDept, width: 20 },
+          { header: t.thPos, width: 20 },
+          ...Array.from({ length: days }, (_, i) => ({
+            header: String(i + 1).padStart(2, "0"),
+            width: 5,
+          })),
+        ],
+        rows: [],
+      });
+      pushToast("success", t.toastTemplateT, name);
+      setTplOpen(false);
+    } finally {
+      setTplBusy(false);
+    }
   }
 
   const preview = React.useMemo(() => upPreviewData(), []);
@@ -136,12 +231,7 @@ export default function RosterUploadPage() {
             <ArrowLeft />
             {t.upBack}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              pushToast("success", t.toastTemplateT, t.toastTemplateD)
-            }
-          >
+          <Button variant="secondary" onClick={() => setTplOpen(true)}>
             <Download />
             {t.upTemplate}
           </Button>
@@ -382,6 +472,53 @@ export default function RosterUploadPage() {
           </div>
         ))}
       </Panel>
+
+      <Dialog
+        open={tplOpen}
+        onClose={() => setTplOpen(false)}
+        labelledBy="tpl-dlg-title"
+      >
+        <DialogIcon variant="info">
+          <FileSpreadsheet />
+        </DialogIcon>
+        <DialogTitle id="tpl-dlg-title">{t.upTplDlgT}</DialogTitle>
+        <DialogBody>{t.upTplDlgB}</DialogBody>
+        <FormGrid className="mt-5">
+          <Field label={t.upTplMonth} htmlFor="tpl-month">
+            <Select
+              id="tpl-month"
+              value={tplMonth}
+              onChange={(e) => setTplMonth(e.target.value)}
+            >
+              {monthNames.map((mn, i) => (
+                <option key={mn} value={String(i + 1)}>
+                  {mn}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={t.upTplYear} htmlFor="tpl-year">
+            <Select
+              id="tpl-year"
+              value={tplYear}
+              onChange={(e) => setTplYear(e.target.value)}
+            >
+              {tplYears.map((y) => (
+                <option key={y}>{y}</option>
+              ))}
+            </Select>
+          </Field>
+        </FormGrid>
+        <DialogActions>
+          <Button variant="ghost" onClick={() => setTplOpen(false)}>
+            {t.btnCancel}
+          </Button>
+          <Button onClick={downloadTemplate} disabled={tplBusy}>
+            {tplBusy ? <Spinner /> : <Download />}
+            {t.upTemplate}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

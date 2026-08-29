@@ -416,7 +416,7 @@ export default function FitToWorkPage() {
               />
             </div>
             {/* ekspor mengikuti filter aktif: yang diunduh = yang terlihat */}
-            <ExportButtons build={buildExport} />
+            <ExportButtons build={buildExport} iconOnly />
           </ToolbarGroup>
         </Toolbar>
 
