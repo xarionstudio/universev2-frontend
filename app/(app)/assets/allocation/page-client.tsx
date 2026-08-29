@@ -278,8 +278,11 @@ export default function FleetAllocationPage() {
     const nik = alloc[u.code];
     const op = nik ? opByNik.get(nik) : undefined;
     if (!op) return "none";
-    /* peringatan FTW hanya bila datanya benar-benar termuat */
-    return ftwAvailable && op.ftw !== "fit" ? "warn" : "ok";
+    /* peringatan FTW hanya bila datanya benar-benar termuat;
+       spare (fit + sudah absen) setara fit — bukan peringatan */
+    return ftwAvailable && op.ftw !== "fit" && op.ftw !== "spare"
+      ? "warn"
+      : "ok";
   }
 
   const needle = q.trim().toLowerCase();

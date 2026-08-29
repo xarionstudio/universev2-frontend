@@ -28,14 +28,16 @@ export default function DisplayFitworkPage() {
         {
           icon: <ClipboardCheck className="text-primary-bright" />,
           iconClass: "bg-(--badge-info-fill) border-(--badge-info-border)",
-          value: String(n("Fit") + n("Kurang tidur")),
+          value: String(
+            n("Fit") + n("Spare") + n("Diistirahatkan") + n("Dipulangkan")
+          ),
           label: "Sudah Lapor",
         },
         {
           icon: <CheckCircle2 className="text-(--badge-success-text)" />,
           iconClass:
             "bg-(--badge-success-fill) border-(--badge-success-border)",
-          value: String(n("Fit")),
+          value: String(n("Fit") + n("Spare")),
           label: "Fit",
         },
         {
@@ -48,7 +50,7 @@ export default function DisplayFitworkPage() {
         {
           icon: <AlertTriangle className="text-danger-text" />,
           iconClass: "bg-(--badge-danger-fill) border-(--badge-danger-border)",
-          value: String(n("Kurang tidur")),
+          value: String(n("Diistirahatkan") + n("Dipulangkan")),
           label: "Kurang Tidur",
         },
       ]}

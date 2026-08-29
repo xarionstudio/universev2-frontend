@@ -21,6 +21,7 @@ export type ApiDashboardSummary = {
     total: number;
     fit: number;
     spare: number;
+    istirahat: number;
     pulang: number;
     belum: number;
   };

@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CircleAlert, Clock, Search } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Clock,
+  Search,
+  UserCheck,
+} from "lucide-react";
 
 import { ftwApi } from "@/lib/api";
 import type { ApiFtwRecord, FtwStatus } from "@/lib/api/endpoints/ftw";
@@ -55,9 +61,9 @@ const sleepClass = (st: StKey) =>
   cn(
     "font-mono",
     st === "pulang" && "font-semibold text-danger-text",
-    st === "spare" && "font-semibold text-(--badge-warning-text)",
+    st === "istirahat" && "font-semibold text-(--badge-warning-text)",
     st === "belum" && "text-(--text-tertiary)",
-    st === "fit" && "text-(--text-secondary)"
+    (st === "fit" || st === "spare") && "text-(--text-secondary)"
   );
 
 const STRIP_CLS: Record<"ok" | "bad" | "na", string> = {
@@ -78,7 +84,7 @@ function shiftIso(iso: string, days: number) {
    oranye bila melapor tapi kurang tidur, abu-abu bila tidak ada laporan. */
 function stripCell(rec: ApiFtwRecord | undefined): "ok" | "bad" | "na" {
   if (!rec || rec.st === "belum") return "na";
-  return rec.st === "fit" ? "ok" : "bad";
+  return rec.st === "fit" || rec.st === "spare" ? "ok" : "bad";
 }
 
 export default function FitToWorkPage() {
@@ -167,9 +173,12 @@ export default function FitToWorkPage() {
   const retry = reload;
 
   const stBadge = (key: StKey) => {
+    /* spare (fit + absen — boleh operasi) hijau; fit (tidur aman, belum
+       absen) biru info; istirahat (kurang tidur) kuning */
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
-      fit: { v: "success", l: t.bFit },
-      spare: { v: "warning", l: t.ftwStatSpare },
+      fit: { v: "info", l: t.bFit },
+      spare: { v: "success", l: t.ftwStatSpare },
+      istirahat: { v: "warning", l: t.ftwStatIstirahat },
       pulang: { v: "danger", l: t.ftwStatPulang },
       belum: { v: "neutral", l: t.ftwStatBelum },
     };
@@ -234,12 +243,14 @@ export default function FitToWorkPage() {
     const stLabel: Record<StKey, string> = {
       fit: t.bFit,
       spare: t.ftwStatSpare,
+      istirahat: t.ftwStatIstirahat,
       pulang: t.ftwStatPulang,
       belum: t.ftwStatBelum,
     };
     const tone: Record<StKey, "success" | "warning" | "danger" | "neutral"> = {
-      fit: "success",
-      spare: "warning",
+      fit: "neutral",
+      spare: "success",
+      istirahat: "warning",
       pulang: "danger",
       belum: "neutral",
     };
@@ -310,17 +321,30 @@ export default function FitToWorkPage() {
         </Fresh>
       </PageTitle>
 
-      <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
+      <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
+        {/* fit = tidur cukup (belum tentu absen); spare = fit + SUDAH absen
+            — boleh mengoperasikan unit (status turunan dari server) */}
         <StatCard
           icon={<CheckCircle2 />}
+          iconStyle={{
+            background: "rgba(0,212,255,.14)",
+            borderColor: "rgba(0,212,255,.4)",
+            color: "var(--color-primary-bright)",
+          }}
+          value={loaded ? countToday("fit") : "—"}
+          label={t.ftwStatFit}
+          detail={t.ftwRuleFit}
+        />
+        <StatCard
+          icon={<UserCheck />}
           iconStyle={{
             background: "var(--badge-success-fill)",
             borderColor: "var(--badge-success-border)",
             color: "var(--badge-success-text)",
           }}
-          value={loaded ? countToday("fit") : "—"}
-          label={t.ftwStatFit}
-          detail={t.ftwRuleFit}
+          value={loaded ? countToday("spare") : "—"}
+          label={t.ftwStatSpare}
+          detail={t.ftwSpareNote}
         />
         <StatCard
           icon={<Clock />}
@@ -329,8 +353,8 @@ export default function FitToWorkPage() {
             borderColor: "var(--badge-warning-border)",
             color: "var(--badge-warning-text)",
           }}
-          value={loaded ? countToday("spare") : "—"}
-          label={t.ftwStatSpare}
+          value={loaded ? countToday("istirahat") : "—"}
+          label={t.ftwStatIstirahat}
           detail={t.ftwRestNote}
         />
         <StatCard
@@ -372,6 +396,7 @@ export default function FitToWorkPage() {
               <option value="">{t.allStatus}</option>
               <option value="belum">{t.ftwStatBelum}</option>
               <option value="pulang">{t.ftwStatPulang}</option>
+              <option value="istirahat">{t.ftwStatIstirahat}</option>
               <option value="spare">{t.ftwStatSpare}</option>
               <option value="fit">{t.bFit}</option>
             </Select>
@@ -557,6 +582,7 @@ export default function FitToWorkPage() {
         <ul className="flex flex-col gap-1.5 text-xs text-(--text-secondary)">
           {[
             [t.ftwRuleFit, "success"],
+            [t.ftwRuleSpare, "success"],
             [t.ftwRuleSpare1, "warning"],
             [t.ftwRuleSpare2, "warning"],
             [t.ftwRulePulang, "danger"],

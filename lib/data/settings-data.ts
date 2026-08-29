@@ -45,7 +45,11 @@ export const initialAudios: Audio[] = [
 export type DisplayKind = "att" | "fleet" | "ftw" | "finger" | "monitor";
 
 export type Display = {
+  /* kode display (mis. "DSP-M01") — dipakai URL kiosk & heartbeat */
   id: string;
+  /* id numerik tabel backend (display_devices) — kunci PUT/DELETE; kosong
+     hanya pada baris seed mock yang belum pernah terhidrasi */
+  dbId?: number;
   name: string;
   loc: string;
   content: DisplayKind;

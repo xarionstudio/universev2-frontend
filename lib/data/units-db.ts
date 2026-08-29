@@ -552,41 +552,9 @@ export const unitsDb: UnitDb[] = raw.split("\n").map((s, i) => {
   };
 });
 
-/* mapping model unit (kolom EGI) → Type EGI (grup kompetensi operator) */
-export function typeOfEgi(egi: string): string {
-  const e = (egi || "").toUpperCase();
-  if (/^WT|- ?WT|SYM3256|FM260/.test(e)) return "WATER TRUCK";
-  if (/^FT/.test(e)) return "FUEL TRUCK";
-  if (/^ST|^CT|XTREM|WB4300/.test(e)) return "SUPPORT TRUCK";
-  if (/^MH|- ?MH/.test(e)) return "MANHAUL";
-  if (/F84G/.test(e)) return "BUS";
-  if (/TRITON|PAJERO|COLDDIESEL|FE71/.test(e)) return "LIGHT VEHICLE";
-  if (/785|777/.test(e)) return "HD 785 / 777";
-  if (/465|773|TR60/.test(e)) return "HD 465 / 773";
-  if (/R100E/.test(e)) return "VOLVO";
-  if (/SKT130/.test(e)) return "SKT130";
-  if (/SKT105/.test(e)) return "SKT105";
-  if (/SYZ ?440|SYZ ?320/.test(e)) return "SANY SYZ 440";
-  if (/2600/.test(e)) return "PC 2600";
-  if (/2000/.test(e)) return "PC 2000";
-  if (/1250/.test(e)) return "PC 1250";
-  if (/1200/.test(e)) return "PC 1200";
-  if (/6020/.test(e)) return "PC 6020";
-  if (/870|SY750/.test(e)) return "PC 870";
-  if (/470/.test(e)) return "PC 470";
-  if (/ZX350|350|SY365/.test(e)) return "PC 350";
-  if (/ZX2[01]0|PC ?200|200-LA|SY2[01]5|215/.test(e)) return "PC 200";
-  if (/D375|D9/.test(e)) return "D9-375";
-  if (/D155|D8T|D360/.test(e)) return "D8-155";
-  if (/D6|D85|D260/.test(e)) return "D6-D85SS";
-  if (/GD825|GD755|16GC|14M/.test(e)) return "GRADER";
-  if (/P4[16]0/.test(e)) return "SCANIA P410";
-  if (/DM30/.test(e)) return "DRILL";
-  if (/BW ?2/.test(e)) return "COMPACTOR";
-  return "SPARE";
-}
-
-/* daftar Type EGI — hasil pemetaan seluruh 513 unit sumber */
+/* Daftar Type EGI kanonik — kosakata yang SAMA dipakai master EGI,
+   kompetensi SIMPER operator, dan pencocokan auto-alokasi. Didefinisikan di
+   atas typeOfEgi karena dipakai guard idempotennya. */
 export const egiTypes = [
   "BUS",
   "COMPACTOR",
@@ -617,8 +585,51 @@ export const egiTypes = [
   "SUPPORT TRUCK",
   "VOLVO",
   "WATER TRUCK",
-  "SPARE",
 ];
+
+const EGI_TYPE_SET = new Set(egiTypes);
+
+/* Model unit (kolom EGI) → Type EGI (grup kompetensi operator).
+
+   IDEMPOTEN: nilai yang SUDAH berupa Type EGI kanonik dikembalikan apa
+   adanya. Ini wajib sejak form Database Unit menyimpan Type EGI langsung ke
+   kolom `egi` (29 Agu 2026) — tanpa guard ini "GRADER"/"BUS"/"DRILL"/
+   "SUPPORT TRUCK" jatuh ke fallback "SPARE", sehingga unitnya tidak akan
+   pernah cocok dengan kompetensi operator mana pun di auto-alokasi.
+   Baris lama yang masih menyimpan model mentah tetap dipetakan heuristik. */
+export function typeOfEgi(egi: string): string {
+  const e = (egi || "").trim().toUpperCase();
+  if (EGI_TYPE_SET.has(e)) return e;
+  if (/^WT|- ?WT|SYM3256|FM260/.test(e)) return "WATER TRUCK";
+  if (/^FT/.test(e)) return "FUEL TRUCK";
+  if (/^ST|^CT|XTREM|WB4300/.test(e)) return "SUPPORT TRUCK";
+  if (/^MH|- ?MH/.test(e)) return "MANHAUL";
+  if (/F84G/.test(e)) return "BUS";
+  if (/TRITON|PAJERO|COLDDIESEL|FE71/.test(e)) return "LIGHT VEHICLE";
+  if (/785|777/.test(e)) return "HD 785 / 777";
+  if (/465|773|TR60/.test(e)) return "HD 465 / 773";
+  if (/R100E/.test(e)) return "VOLVO";
+  if (/SKT130/.test(e)) return "SKT130";
+  if (/SKT105/.test(e)) return "SKT105";
+  if (/SYZ ?440|SYZ ?320/.test(e)) return "SANY SYZ 440";
+  if (/2600/.test(e)) return "PC 2600";
+  if (/2000/.test(e)) return "PC 2000";
+  if (/1250/.test(e)) return "PC 1250";
+  if (/1200/.test(e)) return "PC 1200";
+  if (/6020/.test(e)) return "PC 6020";
+  if (/870|SY750/.test(e)) return "PC 870";
+  if (/470/.test(e)) return "PC 470";
+  if (/ZX350|350|SY365/.test(e)) return "PC 350";
+  if (/ZX2[01]0|PC ?200|200-LA|SY2[01]5|215/.test(e)) return "PC 200";
+  if (/D375|D9/.test(e)) return "D9-375";
+  if (/D155|D8T|D360/.test(e)) return "D8-155";
+  if (/D6|D85|D260/.test(e)) return "D6-D85SS";
+  if (/GD825|GD755|16GC|14M/.test(e)) return "GRADER";
+  if (/P4[16]0/.test(e)) return "SCANIA P410";
+  if (/DM30/.test(e)) return "DRILL";
+  if (/BW ?2/.test(e)) return "COMPACTOR";
+  return "SPARE";
+}
 
 /* eq class yang benar-benar ada di data unit */
 export const eqClassDefs: [string, string][] = [

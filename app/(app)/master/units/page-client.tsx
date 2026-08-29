@@ -14,7 +14,7 @@ import {
 import { errorDetail, fleetApi } from "@/lib/api";
 import { toUdb } from "@/lib/api/adapters";
 import type { ApiUnitDb, UnitDbBody } from "@/lib/api/endpoints/fleet";
-import { typeOfEgi } from "@/lib/data/units-db";
+import { egiTypes, typeOfEgi } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { usePermissions } from "@/components/providers/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +114,16 @@ export default function UnitDbPage() {
   const all = React.useMemo(() => (apiRows ?? []).map(toUdb), [apiRows]);
   const classes = Array.from(new Set(all.map((u) => u.cls))).sort();
   const products = Array.from(new Set(all.map((u) => u.product))).sort();
-  const egis = Array.from(new Set(all.map((u) => u.egi))).sort();
+  /* Opsi Type EGI = kosakata kanonik, ditambah tipe hasil pemetaan baris yang
+     ada (menjaga nilai lama tetap terpilih saat diedit). Kolom EGI mentah
+     tidak lagi ditampilkan maupun diisi manual — lihat catatan di form. */
+  const egiTypeOpts = React.useMemo(
+    () =>
+      Array.from(
+        new Set([...egiTypes, ...all.map((u) => typeOfEgi(u.egi))])
+      ).sort(),
+    [all]
+  );
 
   const needle = q.trim().toLowerCase();
   const filtered = all.filter((u) => {
@@ -123,6 +132,7 @@ export default function UnitDbPage() {
     if (!needle) return true;
     return (
       u.code.toLowerCase().includes(needle) ||
+      typeOfEgi(u.egi).toLowerCase().includes(needle) ||
       u.egi.toLowerCase().includes(needle) ||
       u.product.toLowerCase().includes(needle)
     );
@@ -139,7 +149,7 @@ export default function UnitDbPage() {
   function openAdd() {
     setEditUid(null);
     setFCode("");
-    setFEgi(egis[0] || "");
+    setFEgi(egiTypeOpts[0] || "");
     setFCls("HD");
     setFProd("CATERPILLAR");
     setErrCode(false);
@@ -152,7 +162,10 @@ export default function UnitDbPage() {
     if (!u) return;
     setEditUid(uid);
     setFCode(u.code);
-    setFEgi(u.egi);
+    /* baris lama menyimpan model mentah — tampilkan Type EGI hasil
+       pemetaannya supaya nilainya ada di daftar opsi (dan menyimpan ulang
+       menormalkan baris itu ke kosakata kanonik) */
+    setFEgi(typeOfEgi(u.egi));
     setFCls(u.cls);
     setFProd(u.product);
     setErrCode(false);
@@ -277,10 +290,12 @@ export default function UnitDbPage() {
     }
   }
 
+  /* Kolom "EGI" (model mentah) DIHAPUS 29 Agu 2026 — asal datanya tidak
+     terlacak dan form hanya mengisi Type EGI, jadi menampilkan keduanya
+     hanya membingungkan. */
   const heads = [
     t.thUnitCode,
     "Eq. class",
-    "EGI",
     "Type EGI",
     "Product",
     t.thStatus,
@@ -382,8 +397,8 @@ export default function UnitDbPage() {
                   {heads.map((h, i) => (
                     <TableHead
                       key={h}
-                      className={i === 6 ? "max-xl:hidden" : undefined}
-                      style={i === 7 ? { width: 70 } : undefined}
+                      className={i === 5 ? "max-xl:hidden" : undefined}
+                      style={i === 6 ? { width: 70 } : undefined}
                     >
                       {h}
                     </TableHead>
@@ -399,7 +414,6 @@ export default function UnitDbPage() {
                     <TableCell>
                       <Badge variant="info">{u.cls}</Badge>
                     </TableCell>
-                    <TableCell>{u.egi}</TableCell>
                     <TableCell className="text-(--text-secondary)">
                       {typeOfEgi(u.egi)}
                     </TableCell>
@@ -510,8 +524,12 @@ export default function UnitDbPage() {
                 onChange={(e) => setFCode(e.target.value)}
               />
             </Field>
+            {/* Type EGI adalah SATU-SATUNYA klasifikasi yang diisi di sini:
+                nilainya masuk ke kolom `egi` dan dipakai apa adanya untuk
+                mencocokkan kompetensi SIMPER operator saat auto-alokasi
+                (typeOfEgi/typeiEgi bersifat idempoten). */}
             <Field
-              label="EGI"
+              label="Type EGI"
               htmlFor="udb-egi"
               required
               error={errEgi}
@@ -522,7 +540,7 @@ export default function UnitDbPage() {
                 value={fEgi}
                 onChange={(e) => setFEgi(e.target.value)}
               >
-                {egis.map((c) => (
+                {egiTypeOpts.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

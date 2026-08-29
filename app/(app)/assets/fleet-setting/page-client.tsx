@@ -123,8 +123,8 @@ export default function FleetSettingPage() {
     ? `${(p - 1) * perN + 1}–${Math.min(listRows.length, p * perN)}`
     : "0";
 
-  /* kandidat digger/OHT dari GET /api/units/db (bukan lagi seed lokal);
-     bus & area masih dari master mock — modul master di balik permission
+  /* kandidat digger/OHT/bus dari GET /api/units/db (bukan seed lokal);
+     area masih dari master mock — modul master di balik permission
      `master:view`, akun asset-saja akan 403 bila diambil dari API */
   const all = dbUnits;
   const diggerTypeOf = (code: string) => {
@@ -145,7 +145,15 @@ export default function FleetSettingPage() {
   )
     .filter((code) => !fleets.some((f) => f.digger === code && f.id !== editId))
     .sort();
-  const busOpts = mdData.bus.filter((b) => b.active).map((b) => b.name);
+  /* Bus default = KODE UNIT terdaftar ber-Eq. Class BUS di Database Unit —
+     bukan master bus (halaman kelolanya sudah dicabut dari MVP). Nilai bus
+     fleet lama yang bukan kode unit tetap ditampilkan saat edit supaya
+     select tidak tampak kosong padahal ada nilainya. */
+  const busUnitOpts = Array.from(
+    new Set(all.filter((u) => u.cls === "BUS" && u.active).map((u) => u.code))
+  ).sort();
+  const busOpts =
+    fBus && !busUnitOpts.includes(fBus) ? [fBus, ...busUnitOpts] : busUnitOpts;
   const areaOpts = mdData.area.filter((a) => a.active).map((a) => a.name);
 
   /* pilihan unit OHT — langsung dari Database Unit, unit milik fleet lain disembunyikan */

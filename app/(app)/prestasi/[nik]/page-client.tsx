@@ -84,10 +84,14 @@ const OUTCOME: Record<
   },
 };
 
-/* Hasil aturan Fit To Work — label & warnanya disamakan dengan modul FTW */
+/* Hasil aturan Fit To Work — label disamakan dengan modul FTW. Warna fit di
+   sini SENGAJA hijau (bukan info seperti halaman FTW): riwayat prestasi
+   memakai evaluasi band tidur murni sehingga "spare" turunan tidak pernah
+   muncul, dan fit adalah status terbaik yang tampil. */
 const FTW: Record<FtwStatus, { key: keyof Dict; variant: BadgeVariant }> = {
   fit: { key: "bFit", variant: "success" },
-  spare: { key: "ftwStatSpare", variant: "warning" },
+  spare: { key: "ftwStatSpare", variant: "success" },
+  istirahat: { key: "ftwStatIstirahat", variant: "warning" },
   pulang: { key: "ftwStatPulang", variant: "danger" },
   belum: { key: "ftwStatBelum", variant: "neutral" },
 };

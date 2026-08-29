@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ChevronDown,
   ChevronUp,
+  CircleAlert,
   Eye,
   Monitor,
   Pencil,
@@ -11,6 +12,9 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { errorDetail, fleetApi, settingsApi } from "@/lib/api";
+import { toFleet } from "@/lib/api/adapters";
+import type { ApiDisplayDevice } from "@/lib/api/endpoints/settings";
 import {
   MONITOR_MAX_FLEETS,
   MONITOR_PER_PAGE,
@@ -22,7 +26,7 @@ import { openDisplay } from "@/lib/open-display";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/components/providers/app-store";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Checkbox, ToggleRow } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -46,6 +50,7 @@ import {
 } from "@/components/ui/panel";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
+import { StateBox } from "@/components/ui/state-box";
 import {
   NameCell,
   Table,
@@ -69,6 +74,17 @@ import { useToast } from "@/components/ui/toast";
 
 const ROTATE_OPTIONS = ["5", "8", "10", "15", "20", "30"];
 
+/* Kode display baru: lanjutan nomor DSP-M tertinggi yang ada. Kode dipakai
+   URL kiosk (?monitor=) dan route heartbeat, jadi harus stabil & terbaca. */
+function nextMonitorCode(rows: Display[]): string {
+  let max = 0;
+  for (const d of rows) {
+    const m = /^DSP-M(\d+)$/.exec(d.id);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `DSP-M${String(max + 1).padStart(2, "0")}`;
+}
+
 export function MonitorAdmin() {
   const { t } = useI18n();
   const { pushToast } = useToast();
@@ -76,9 +92,61 @@ export function MonitorAdmin() {
 
   const rows = store.dspMonitor;
   const setRows = store.setDspMonitor;
+  const setFleets = store.setFleets;
   const runtextOpts = store.mdData.runtext
     .filter((e) => e.active)
     .map((e) => e.name);
+
+  /* ── hidrasi dari server: GET /api/settings/displays?kind=monitor +
+     GET /api/fleets/settings. Fleet ikut ditarik karena fleetIds server
+     berupa id NUMERIK fleet_settings, sedangkan UI memakai id "fl-<digger>"
+     milik store — pemetaan butuh dbId dari daftar fleet yang sama. Store
+     dspMonitor DIGANTI penuh hasil server; seed mock hanya tampil sekejap
+     sebagai kerangka sebelum data tiba (loaded menahan tabelnya). */
+  const [loaded, setLoaded] = React.useState(false);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void Promise.all([
+      fleetApi.listFleetSettings(ac.signal),
+      settingsApi.listDisplays("monitor", ac.signal),
+    ])
+      .then(([fleetRows, displays]) => {
+        const mappedFleets = (fleetRows ?? []).map(toFleet);
+        setFleets(() => mappedFleets);
+        const byDbId = new Map<number, string>();
+        for (const f of mappedFleets) if (f.dbId) byDbId.set(f.dbId, f.id);
+        const toRow = (d: ApiDisplayDevice): Display => ({
+          dbId: d.id,
+          id: d.code,
+          name: d.name,
+          loc: d.loc,
+          content: "monitor",
+          fleetIds: (d.fleetIds ?? []).flatMap((n) => {
+            const fid = byDbId.get(n);
+            return fid ? [fid] : [];
+          }),
+          rotateSec: d.rotateSec || 10,
+          runtext: d.runtext,
+          online: d.online,
+          hb: d.hb || "—",
+          active: d.active,
+        });
+        setRows(() => (displays ?? []).map(toRow));
+        setLoaded(true);
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadErr(true);
+      });
+    return () => ac.abort();
+  }, [reloadKey, setFleets, setRows]);
+
+  const retry = React.useCallback(() => {
+    setLoadErr(false);
+    setReloadKey((k) => k + 1);
+  }, []);
 
   const fleetsOf = (d: Display) =>
     (d.fleetIds ?? []).flatMap((id) => {
@@ -111,9 +179,12 @@ export function MonitorAdmin() {
   const [fRuntext, setFRuntext] = React.useState("");
   const [fActive, setFActive] = React.useState(true);
   const [nameErr, setNameErr] = React.useState(false);
+  const [locErr, setLocErr] = React.useState(false);
   const [fleetErr, setFleetErr] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   const [delTarget, setDelTarget] = React.useState<Display | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   function openAdd() {
     setEditing(null);
@@ -124,6 +195,7 @@ export function MonitorAdmin() {
     setFRuntext(runtextOpts[0] ?? "");
     setFActive(true);
     setNameErr(false);
+    setLocErr(false);
     setFleetErr(false);
     setDlgOpen(true);
   }
@@ -137,6 +209,7 @@ export function MonitorAdmin() {
     setFRuntext(d.runtext);
     setFActive(d.active);
     setNameErr(false);
+    setLocErr(false);
     setFleetErr(false);
     setDlgOpen(true);
   }
@@ -168,43 +241,93 @@ export function MonitorAdmin() {
     });
   }
 
-  function save(e: React.FormEvent) {
+  /* Simpan ke server — POST /api/settings/displays (baru) atau PUT :id (edit).
+     `loc` ikut wajib: service backend menolak display tanpa lokasi. fleetIds
+     dikirim sebagai dbId numerik fleet_settings dalam urutan centang (server
+     menyimpannya ke display_fleets ber-sort_order). PUT wajib menyertakan
+     `code` — kolomnya ikut di-update server; tanpa itu kode terhapus. */
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     const badName = !fName.trim();
+    const badLoc = !fLoc.trim();
     const badFleet = fFleetIds.length === 0;
     setNameErr(badName);
+    setLocErr(badLoc);
     setFleetErr(badFleet);
-    if (badName || badFleet) return;
+    if (badName || badLoc || badFleet || saving) return;
 
-    const data = {
+    const fleetDbIds = fFleetIds.flatMap((id) => {
+      const f = store.fleets.find((x) => x.id === id);
+      return f?.dbId ? [f.dbId] : [];
+    });
+    const body = {
       name: fName.trim(),
       loc: fLoc.trim(),
-      fleetIds: fFleetIds,
+      content: "monitor",
+      fleetIds: fleetDbIds,
       rotateSec: Number(fRotate),
       runtext: fRuntext,
+      /* online milik heartbeat TV, bukan form — kirim balik apa adanya */
+      online: editing ? editing.online : false,
       active: fActive,
     };
-    if (editing) {
-      setRows((prev) =>
-        prev.map((d) => (d.id === editing.id ? { ...d, ...data } : d))
-      );
-      pushToast("success", t.dspToastEdit);
-    } else {
-      const id = `DSP-M${String(rows.length + 1).padStart(2, "0")}`;
-      setRows((prev) => [
-        ...prev,
-        { id, online: true, hb: "baru saja", content: "monitor", ...data },
-      ]);
-      pushToast("success", t.dspToastAdd);
+    const local = {
+      name: body.name,
+      loc: body.loc,
+      fleetIds: fFleetIds,
+      rotateSec: body.rotateSec,
+      runtext: body.runtext,
+      active: body.active,
+    };
+    setSaving(true);
+    try {
+      if (editing) {
+        if (!editing.dbId) return;
+        await settingsApi.updateDisplay(editing.dbId, {
+          ...body,
+          code: editing.id,
+        });
+        setRows((prev) =>
+          prev.map((d) => (d.id === editing.id ? { ...d, ...local } : d))
+        );
+        pushToast("success", t.dspToastEdit);
+      } else {
+        const code = nextMonitorCode(rows);
+        const created = await settingsApi.createDisplay({ ...body, code });
+        setRows((prev) => [
+          ...prev,
+          {
+            ...local,
+            dbId: created.id,
+            id: created.code || code,
+            content: "monitor",
+            online: created.online ?? false,
+            hb: created.hb || "—",
+          },
+        ]);
+        pushToast("success", t.dspToastAdd);
+      }
+      setDlgOpen(false);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.dspLoadErrB));
+    } finally {
+      setSaving(false);
     }
-    setDlgOpen(false);
   }
 
-  function delDo() {
-    if (!delTarget) return;
-    setRows((prev) => prev.filter((d) => d.id !== delTarget.id));
-    pushToast("success", t.dspToastDel);
-    setDelTarget(null);
+  async function delDo() {
+    if (!delTarget?.dbId || deleting) return;
+    setDeleting(true);
+    try {
+      await settingsApi.deleteDisplay(delTarget.dbId);
+      setRows((prev) => prev.filter((d) => d.id !== delTarget.id));
+      pushToast("success", t.dspToastDel);
+      setDelTarget(null);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.dspLoadErrB));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   /* urutan pilihan fleet di dialog: yang sudah dicentang naik ke atas dalam
@@ -252,88 +375,102 @@ export function MonitorAdmin() {
             </Select>
           </ToolbarGroup>
         </Toolbar>
-        <Table>
-          <TableHeader>
-            <tr>
-              <TableHead>{t.dspName}</TableHead>
-              <TableHead>{t.dspMonFleets}</TableHead>
-              <TableHead>{t.dspMonRotateCol}</TableHead>
-              <TableHead>{t.dspConn}</TableHead>
-              <TableHead>{t.thStatus}</TableHead>
-              <TableHead className="w-27.5">{t.thAct}</TableHead>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {pg.rows.map((d) => {
-              const fl = fleetsOf(d);
-              return (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <NameCell name={d.name} sub={`${d.loc} · ${d.id}`} />
-                  </TableCell>
-                  <TableCell className="max-w-90">
-                    <b className="font-semibold">
-                      {fl.length} {t.dspMonUnit} ·{" "}
-                      {Math.max(1, Math.ceil(fl.length / MONITOR_PER_PAGE))}{" "}
-                      {t.dspMonPages}
-                    </b>
-                    {/* leader tiap fleet ditulis apa adanya seperti di layar
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.dspLoadErrB}
+          >
+            <Button onClick={retry}>{t.apRetry}</Button>
+          </StateBox>
+        ) : !loaded ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <tr>
+                <TableHead>{t.dspName}</TableHead>
+                <TableHead>{t.dspMonFleets}</TableHead>
+                <TableHead>{t.dspMonRotateCol}</TableHead>
+                <TableHead>{t.dspConn}</TableHead>
+                <TableHead>{t.thStatus}</TableHead>
+                <TableHead className="w-27.5">{t.thAct}</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {pg.rows.map((d) => {
+                const fl = fleetsOf(d);
+                return (
+                  <TableRow key={d.id}>
+                    <TableCell>
+                      <NameCell name={d.name} sub={`${d.loc} · ${d.id}`} />
+                    </TableCell>
+                    <TableCell className="max-w-90">
+                      <b className="font-semibold">
+                        {fl.length} {t.dspMonUnit} ·{" "}
+                        {Math.max(1, Math.ceil(fl.length / MONITOR_PER_PAGE))}{" "}
+                        {t.dspMonPages}
+                      </b>
+                      {/* leader tiap fleet ditulis apa adanya seperti di layar
                         (EXCA-7001), supaya yang dilihat admin dan yang dilihat
                         kru di TV adalah kosakata yang sama */}
-                    <div className="mt-0.5 font-mono text-xs text-(--text-tertiary)">
-                      {fl.length
-                        ? fl.map((f) => unitLabel(f.digger)).join(" · ")
-                        : "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono tabular-nums">
-                    {d.rotateSec ?? 10}s
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={d.online ? "success" : "danger"} dot>
-                      {d.online ? "Online" : "Offline"}
-                    </Badge>
-                    <div className="mt-1 font-mono text-xs text-(--text-tertiary)">
-                      {d.hb}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={d.active ? "success" : "danger"} dot>
-                      {d.active ? t.stAktif : t.stNonaktif}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <IconButton
-                        aria-label={t.dspPreview}
-                        onClick={() =>
-                          openDisplay(
-                            `/display/monitor?monitor=${encodeURIComponent(d.id)}&name=${encodeURIComponent(d.name)}`
-                          )
-                        }
-                      >
-                        <Eye />
-                      </IconButton>
-                      <IconButton
-                        aria-label={t.udbEditT}
-                        onClick={() => openEdit(d)}
-                      >
-                        <Pencil />
-                      </IconButton>
-                      <IconButton
-                        danger
-                        aria-label={t.empDel}
-                        onClick={() => setDelTarget(d)}
-                      >
-                        <Trash2 />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                      <div className="mt-0.5 font-mono text-xs text-(--text-tertiary)">
+                        {fl.length
+                          ? fl.map((f) => unitLabel(f.digger)).join(" · ")
+                          : "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono tabular-nums">
+                      {d.rotateSec ?? 10}s
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={d.online ? "success" : "danger"} dot>
+                        {d.online ? "Online" : "Offline"}
+                      </Badge>
+                      <div className="mt-1 font-mono text-xs text-(--text-tertiary)">
+                        {d.hb}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={d.active ? "success" : "danger"} dot>
+                        {d.active ? t.stAktif : t.stNonaktif}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <IconButton
+                          aria-label={t.dspPreview}
+                          onClick={() =>
+                            openDisplay(
+                              `/display/monitor?monitor=${encodeURIComponent(d.id)}&name=${encodeURIComponent(d.name)}`
+                            )
+                          }
+                        >
+                          <Eye />
+                        </IconButton>
+                        <IconButton
+                          aria-label={t.udbEditT}
+                          onClick={() => openEdit(d)}
+                        >
+                          <Pencil />
+                        </IconButton>
+                        <IconButton
+                          danger
+                          aria-label={t.empDel}
+                          onClick={() => setDelTarget(d)}
+                        >
+                          <Trash2 />
+                        </IconButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
         <PanelFoot>
           <FootSum>
             {t.attSumA} <b>{pg.range}</b> {t.attSumB} <b>{pg.total}</b>{" "}
@@ -392,11 +529,20 @@ export function MonitorAdmin() {
                   placeholder="Display Monitor 3"
                 />
               </Field>
-              <Field label={t.dspLoc} htmlFor="dspm-loc">
+              <Field
+                label={t.dspLoc}
+                htmlFor="dspm-loc"
+                required
+                error={locErr}
+                errorMessage={t.dspErrLoc}
+              >
                 <Input
                   id="dspm-loc"
                   value={fLoc}
-                  onChange={(e) => setFLoc(e.target.value)}
+                  onChange={(e) => {
+                    setFLoc(e.target.value);
+                    if (e.target.value.trim()) setLocErr(false);
+                  }}
                   placeholder="Kantin — meja tengah"
                 />
               </Field>
@@ -521,7 +667,8 @@ export function MonitorAdmin() {
             >
               {t.btnCancel}
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={saving}>
+              {saving ? <Spinner /> : null}
               {editing ? t.udbSaveEdit : t.dspSaveAdd}
             </Button>
           </DialogActions>
@@ -543,7 +690,8 @@ export function MonitorAdmin() {
           <Button variant="ghost" onClick={() => setDelTarget(null)}>
             {t.btnCancel}
           </Button>
-          <Button variant="destructive" onClick={delDo}>
+          <Button variant="destructive" onClick={delDo} disabled={deleting}>
+            {deleting ? <Spinner /> : null}
             {t.dspDelT}
           </Button>
         </DialogActions>

@@ -54,9 +54,9 @@ const sleepClass = (st: StKey) =>
   cn(
     "font-mono",
     st === "pulang" && "font-semibold text-danger-text",
-    st === "spare" && "font-semibold text-(--badge-warning-text)",
+    st === "istirahat" && "font-semibold text-(--badge-warning-text)",
     st === "belum" && "text-(--text-tertiary)",
-    st === "fit" && "text-(--text-secondary)"
+    (st === "fit" || st === "spare") && "text-(--text-secondary)"
   );
 
 /* Pagination berjendela — maksimal 5 nomor halaman, terpusat di halaman aktif */
@@ -193,9 +193,12 @@ function FtwHistoryInner() {
   const selectedOp = ops.find((o) => o.nik === fhOp);
 
   const stBadge = (key: StKey) => {
+    /* selaras halaman FTW utama: spare hijau (boleh operasi), fit biru info
+       (tidur aman, belum absen), istirahat kuning */
     const map: Record<StKey, { v: BadgeVariant; l: string }> = {
-      fit: { v: "success", l: t.bFit },
-      spare: { v: "warning", l: t.ftwStatSpare },
+      fit: { v: "info", l: t.bFit },
+      spare: { v: "success", l: t.ftwStatSpare },
+      istirahat: { v: "warning", l: t.ftwStatIstirahat },
       pulang: { v: "danger", l: t.ftwStatPulang },
       belum: { v: "neutral", l: t.ftwStatBelum },
     };
@@ -241,12 +244,14 @@ function FtwHistoryInner() {
     const stLabel: Record<StKey, string> = {
       fit: t.bFit,
       spare: t.ftwStatSpare,
+      istirahat: t.ftwStatIstirahat,
       pulang: t.ftwStatPulang,
       belum: t.ftwStatBelum,
     };
     const tone: Record<StKey, "success" | "warning" | "danger" | "neutral"> = {
-      fit: "success",
-      spare: "warning",
+      fit: "neutral",
+      spare: "success",
+      istirahat: "warning",
       pulang: "danger",
       belum: "neutral",
     };
@@ -361,6 +366,7 @@ function FtwHistoryInner() {
               <option value="">{t.allStatus}</option>
               <option value="belum">{t.ftwStatBelum}</option>
               <option value="pulang">{t.ftwStatPulang}</option>
+              <option value="istirahat">{t.ftwStatIstirahat}</option>
               <option value="spare">{t.ftwStatSpare}</option>
               <option value="fit">{t.bFit}</option>
             </Select>

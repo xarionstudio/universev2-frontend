@@ -8,7 +8,11 @@
 import { api, requestBlob } from "../client";
 import type { ListQuery, Paged } from "../types";
 
-export type FtwStatus = "fit" | "spare" | "pulang" | "belum";
+/* "spare" = status TURUNAN server saat baca: fit + punya data absen
+   (hadir/terlambat) → boleh mengoperasikan unit. Yang tersimpan hanya
+   fit/istirahat/pulang/belum; "istirahat" = kurang tidur 4j-5j29
+   (label UI: Diistirahatkan) — revisi 29 Agu 2026. */
+export type FtwStatus = "fit" | "spare" | "istirahat" | "pulang" | "belum";
 
 /* internal/model/ftw.go — FTWRecord.
    `name` dan `dept` bertag gorm:"-": diisi service dari tabel employees, jadi

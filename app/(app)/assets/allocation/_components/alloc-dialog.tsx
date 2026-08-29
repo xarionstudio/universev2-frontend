@@ -65,8 +65,11 @@ export function AllocDialog({
               const busyCode = Object.entries(alloc).find(
                 ([code, nik]) => nik === o.nik && code !== unit.code
               )?.[0];
+              /* spare = fit + sudah absen — kandidat TERBAIK, jangan diblokir */
               const blocked =
-                !valid || !!busyCode || (ftwAvailable && o.ftw !== "fit");
+                !valid ||
+                !!busyCode ||
+                (ftwAvailable && o.ftw !== "fit" && o.ftw !== "spare");
               const ftw = ftwBadgeOf(o, t);
               let sub = match
                 ? `${match.cls} · SIMPER ${match.simper}`

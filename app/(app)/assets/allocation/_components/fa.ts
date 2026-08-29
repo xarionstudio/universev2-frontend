@@ -40,8 +40,10 @@ export function ftwBadgeOf(
   t: Dict
 ): { variant: BadgeVariant; label: string } {
   if (op.ftw === "fit") return { variant: "success", label: "Fit" };
-  /* spare masih boleh dialokasikan, tapi baru setelah istirahat tambahan */
-  if (op.ftw === "spare") return { variant: "warning", label: t.ftwStatSpare };
+  if (op.ftw === "spare") return { variant: "success", label: t.ftwStatSpare };
+  /* diistirahatkan masih boleh dialokasikan, setelah istirahat tambahan */
+  if (op.ftw === "istirahat")
+    return { variant: "warning", label: t.ftwStatIstirahat };
   if (op.ftw === "pulang") return { variant: "danger", label: t.ftwStatPulang };
   return { variant: "neutral", label: t.ftwStatBelum };
 }

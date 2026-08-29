@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Clock, MessageSquareMore, Search, Truck, XCircle } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { fleetApi, miscApi, rosterApi } from "@/lib/api";
 import { toUnits } from "@/lib/api/adapters";
@@ -41,6 +41,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import {
+  ApprovalWaitIcon,
+  BelumAbsenIcon,
+  BreakdownTruckIcon,
+  UnfitSleepIcon,
+} from "./_components/stat-icons";
 import { WeatherCard } from "./_components/weather-card";
 
 /* Irama poll yang sama dengan halaman Attendance & layar TV (worker
@@ -276,7 +282,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:gap-3">
         <StatCard
           href="/fit-to-work"
-          icon={<XCircle />}
+          icon={<UnfitSleepIcon />}
           iconStyle={{
             background: "var(--badge-danger-fill)",
             borderColor: "var(--badge-danger-border)",
@@ -292,7 +298,7 @@ export default function DashboardPage() {
         />
         <StatCard
           href="/roster/attendance"
-          icon={<Clock />}
+          icon={<BelumAbsenIcon />}
           iconStyle={{
             background: "var(--badge-warning-fill)",
             borderColor: "var(--badge-warning-border)",
@@ -308,7 +314,7 @@ export default function DashboardPage() {
         />
         <StatCard
           href="/assets/allocation"
-          icon={<Truck />}
+          icon={<BreakdownTruckIcon />}
           iconStyle={{
             background: "var(--badge-danger-fill)",
             borderColor: "var(--badge-danger-border)",
@@ -334,7 +340,7 @@ export default function DashboardPage() {
         />
         <StatCard
           href="/roster/approval"
-          icon={<MessageSquareMore />}
+          icon={<ApprovalWaitIcon />}
           iconStyle={{
             background: "rgba(0,212,255,.14)",
             borderColor: "rgba(0,212,255,.4)",

@@ -53,8 +53,8 @@ export const PTS_PENALTY = -15;
 
 /* Ambang kelayakan TIDAK didefinisikan di sini — diambil dari modul Fit To
    Work (`ftwEvaluate`) supaya kedua modul selalu sepakat. Lihat lib/data/ftw.ts:
-     >= 5j30 fit · 5j00–5j29 spare(+1j) · 4j00–4j59 spare(+2j) · <4j dipulangkan
-   Operator "spare" tetap boleh bekerja setelah istirahat, jadi ia mendapat
+     >= 5j30 fit · 5j00–5j29 istirahat(+1j) · 4j00–4j59 istirahat(+2j) · <4j dipulangkan
+   Operator "istirahat" tetap boleh bekerja setelah istirahat, jadi ia mendapat
    poin operasi dasar TANPA bonus tepat waktu / tidur berkualitas, dan tidak
    kena potongan. Yang "dipulangkan" tidak boleh bekerja sama sekali. */
 
@@ -386,7 +386,7 @@ function simulateDay(
         r.late,
         r.sleepMin,
         false,
-        r.ftwStatus === "spare"
+        r.ftwStatus === "istirahat"
       ),
     });
   }
@@ -450,7 +450,7 @@ function simulateDay(
           late,
           cover.sleepMin,
           true,
-          cover.ftwStatus === "spare"
+          cover.ftwStatus === "istirahat"
         ),
       });
     }

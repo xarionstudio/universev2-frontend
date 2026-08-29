@@ -88,9 +88,10 @@ const FTW_TONE: Record<
   { tone: DisplayTone; label: string; rank: number }
 > = {
   pulang: { tone: "danger", label: "Dipulangkan", rank: 0 },
-  spare: { tone: "warning", label: "Spare", rank: 1 },
+  istirahat: { tone: "warning", label: "Diistirahatkan", rank: 1 },
   belum: { tone: "warning", label: "Belum lapor", rank: 2 },
   fit: { tone: "success", label: "Fit", rank: 3 },
+  spare: { tone: "success", label: "Spare", rank: 4 },
 };
 
 export function displayFtwRowsNow(): DisplayFtwRow[] {
@@ -105,11 +106,13 @@ export function displayFtwRowsNow(): DisplayFtwRow[] {
         note:
           r.st === "pulang"
             ? "Tidur < 4 jam — dipulangkan, butuh penggantian"
-            : r.st === "spare"
-              ? `Spare — istirahat ${r.restHours} jam sebelum boleh bekerja`
+            : r.st === "istirahat"
+              ? `Diistirahatkan ${r.restHours} jam sebelum boleh bekerja`
               : r.st === "belum"
                 ? "Belum mengirim log — hubungi sebelum shift"
-                : `Lapor ${ftwHistoryFor(r, "id", 1)[0].sendTime}`,
+                : r.st === "spare"
+                  ? "Absen & tidur aman — boleh mengoperasikan unit"
+                  : `Lapor ${ftwHistoryFor(r, "id", 1)[0].sendTime}`,
         tone: FTW_TONE[r.st].tone,
         label: FTW_TONE[r.st].label,
       },

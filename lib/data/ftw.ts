@@ -7,13 +7,16 @@ import type { Lang } from "@/lib/i18n";
    halaman Fit To Work tidak pernah berbeda pendapat soal siapa yang layak.
 
      >= 5j30       → fit         : boleh langsung bekerja
-     5j00 – 5j29   → spare       : istirahat 1 jam dulu, lalu boleh bekerja
-     4j00 – 4j59   → spare       : istirahat 2 jam dulu, lalu boleh bekerja
+     5j00 – 5j29   → istirahat   : diistirahatkan 1 jam dulu, lalu boleh bekerja
+     4j00 – 4j59   → istirahat   : diistirahatkan 2 jam dulu, lalu boleh bekerja
      <  4j00       → dipulangkan : tidak boleh bekerja pada shift itu
      tidak ada log → belum       : belum mengirim log tidur
+
+   "spare" TIDAK dihasilkan evaluator ini — status TURUNAN server saat baca
+   (fit + punya data absen = boleh mengoperasikan unit), revisi 29 Agu 2026.
 */
 
-export type FtwStatus = "fit" | "spare" | "pulang" | "belum";
+export type FtwStatus = "fit" | "spare" | "istirahat" | "pulang" | "belum";
 
 /* Ambang dalam MENIT — dipakai lintas modul, jangan di-hardcode di tempat lain */
 export const SLEEP_FIT_MIN = 330; // 5 jam 30 menit
@@ -34,9 +37,9 @@ export function ftwEvaluate(sleepMin: number | null | undefined): FtwEval {
   if (sleepMin >= SLEEP_FIT_MIN)
     return { status: "fit", restHours: 0, canWork: true };
   if (sleepMin >= SLEEP_SPARE_1H_MIN)
-    return { status: "spare", restHours: 1, canWork: true };
+    return { status: "istirahat", restHours: 1, canWork: true };
   if (sleepMin >= SLEEP_SPARE_2H_MIN)
-    return { status: "spare", restHours: 2, canWork: true };
+    return { status: "istirahat", restHours: 2, canWork: true };
   return { status: "pulang", restHours: 0, canWork: false };
 }
 

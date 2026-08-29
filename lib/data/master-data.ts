@@ -26,14 +26,18 @@ export type MdCat =
   | "mess"
   | "runtext";
 
+/* Kategori yang TAMPIL: menggerakkan sidebar (nav.ts) sekaligus validasi
+   route /master/[cat] — di luar daftar ini halaman menjawab notFound().
+
+   "tempudo", "bus", dan "lokasiex" sengaja TIDAK ada di sini (dicabut dari
+   MVP, 29 Agu 2026) tapi tetap hidup di union MdCat + seed: fleet-setting
+   masih membaca opsi bus dari seed store, dan kategori API-nya tidak
+   disentuh — hanya halaman kelolanya yang hilang. */
 export const mdCats: MdCat[] = [
   "egi",
   "product",
   "eqclass",
   "area",
-  "tempudo",
-  "bus",
-  "lokasiex",
   "mess",
   "runtext",
 ];
