@@ -12,8 +12,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { errorDetail, fleetApi, settingsApi } from "@/lib/api";
-import { toFleet } from "@/lib/api/adapters";
+import { errorDetail, fleetApi, masterApi, settingsApi } from "@/lib/api";
+import { toFleet, toMdEntry } from "@/lib/api/adapters";
 import type { ApiDisplayDevice } from "@/lib/api/endpoints/settings";
 import {
   MONITOR_MAX_FLEETS,
@@ -74,6 +74,14 @@ import { useToast } from "@/components/ui/toast";
 
 const ROTATE_OPTIONS = ["5", "8", "10", "15", "20", "30"];
 
+/* Target Running Text yang relevan untuk layar monitor — selaras opsi Target
+   di Master → Running Text. "Display Attendance" sengaja dikecualikan. */
+const MONITOR_RUNTEXT_TARGETS = new Set([
+  "Semua kiosk",
+  "Display Fleet",
+  "Display Monitor",
+]);
+
 /* Kode display baru: lanjutan nomor DSP-M tertinggi yang ada. Kode dipakai
    URL kiosk (?monitor=) dan route heartbeat, jadi harus stabil & terbaca. */
 function nextMonitorCode(rows: Display[]): string {
@@ -93,16 +101,26 @@ export function MonitorAdmin() {
   const rows = store.dspMonitor;
   const setRows = store.setDspMonitor;
   const setFleets = store.setFleets;
-  const runtextOpts = store.mdData.runtext
-    .filter((e) => e.active)
-    .map((e) => e.name);
+  const setMdData = store.setMdData;
+
+  /* Running text dari store setelah hidrasi GET /api/master/runtext — hanya
+     yang aktif dan targetnya cocok untuk layar monitor. */
+  const runtextOpts = React.useMemo(
+    () =>
+      store.mdData.runtext
+        .filter((e) => e.active && (!e.a || MONITOR_RUNTEXT_TARGETS.has(e.a)))
+        .map((e) => e.name),
+    [store.mdData.runtext]
+  );
 
   /* ── hidrasi dari server: GET /api/settings/displays?kind=monitor +
-     GET /api/fleets/settings. Fleet ikut ditarik karena fleetIds server
-     berupa id NUMERIK fleet_settings, sedangkan UI memakai id "fl-<digger>"
-     milik store — pemetaan butuh dbId dari daftar fleet yang sama. Store
-     dspMonitor DIGANTI penuh hasil server; seed mock hanya tampil sekejap
-     sebagai kerangka sebelum data tiba (loaded menahan tabelnya). */
+     GET /api/fleet/settings + GET /api/master/runtext.
+     Fleet ikut ditarik karena fleetIds server berupa id NUMERIK
+     fleet_settings, sedangkan UI memakai id "fl-<digger>" milik store —
+     pemetaan butuh dbId dari daftar fleet yang sama. Running text ikut
+     ditarik agar dropdown tidak bergantung pada kunjungan ke Master.
+     Store dspMonitor DIGANTI penuh hasil server; seed mock hanya tampil
+     sekejap sebagai kerangka sebelum data tiba (loaded menahan tabelnya). */
   const [loaded, setLoaded] = React.useState(false);
   const [loadErr, setLoadErr] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
@@ -111,10 +129,17 @@ export function MonitorAdmin() {
     void Promise.all([
       fleetApi.listFleetSettings(ac.signal),
       settingsApi.listDisplays("monitor", ac.signal),
+      masterApi.listMaster("runtext", { perPage: 200 }, ac.signal),
     ])
-      .then(([fleetRows, displays]) => {
+      .then(([fleetRows, displays, runtextRes]) => {
         const mappedFleets = (fleetRows ?? []).map(toFleet);
         setFleets(() => mappedFleets);
+        setMdData((prev) => ({
+          ...prev,
+          runtext: (runtextRes.entries ?? []).map((e) =>
+            toMdEntry("runtext", e)
+          ),
+        }));
         const byDbId = new Map<number, string>();
         for (const f of mappedFleets) if (f.dbId) byDbId.set(f.dbId, f.id);
         const toRow = (d: ApiDisplayDevice): Display => ({
@@ -127,7 +152,9 @@ export function MonitorAdmin() {
             const fid = byDbId.get(n);
             return fid ? [fid] : [];
           }),
-          rotateSec: d.rotateSec || 10,
+          /* rotateSec wajib angka positif — fallback 10 hanya bila server
+             mengirim 0/null (data lama), bukan menimpa pilihan admin. */
+          rotateSec: d.rotateSec > 0 ? d.rotateSec : 10,
           runtext: d.runtext,
           online: d.online,
           hb: d.hb || "—",
@@ -141,7 +168,7 @@ export function MonitorAdmin() {
         if (!ac.signal.aborted) setLoadErr(true);
       });
     return () => ac.abort();
-  }, [reloadKey, setFleets, setRows]);
+  }, [reloadKey, setFleets, setMdData, setRows]);
 
   const retry = React.useCallback(() => {
     setLoadErr(false);
@@ -205,7 +232,10 @@ export function MonitorAdmin() {
     setFName(d.name);
     setFLoc(d.loc);
     setFFleetIds(d.fleetIds ?? []);
-    setFRotate(String(d.rotateSec ?? 10));
+    /* Durasi dari server — pastikan string sama dengan value <option> agar
+       Select menampilkan pilihan yang tersimpan, bukan jatuh ke opsi pertama. */
+    const sec = (d.rotateSec ?? 0) > 0 ? (d.rotateSec as number) : 10;
+    setFRotate(String(sec));
     setFRuntext(d.runtext);
     setFActive(d.active);
     setNameErr(false);
@@ -213,6 +243,22 @@ export function MonitorAdmin() {
     setFleetErr(false);
     setDlgOpen(true);
   }
+
+  /* Opsi durasi: konstanta + nilai tersimpan bila di luar daftar (data lama). */
+  const rotateOpts = React.useMemo(() => {
+    const opts = new Set(ROTATE_OPTIONS);
+    if (fRotate && Number(fRotate) > 0) opts.add(fRotate);
+    return [...opts].sort((a, b) => Number(a) - Number(b));
+  }, [fRotate]);
+
+  /* Opsi running text + teks yang sudah tersimpan pada baris edit, supaya
+     Select tidak kosong bila entri master dinonaktifkan / target diubah. */
+  const runtextSelectOpts = React.useMemo(() => {
+    if (fRuntext && !runtextOpts.includes(fRuntext)) {
+      return [fRuntext, ...runtextOpts];
+    }
+    return runtextOpts;
+  }, [fRuntext, runtextOpts]);
 
   /* Centang MENAMBAH ke akhir daftar, bukan menyisipkan sesuai urutan master.
      Urutan array adalah urutan tayangan di layar, jadi admin yang mencentang
@@ -260,12 +306,23 @@ export function MonitorAdmin() {
       const f = store.fleets.find((x) => x.id === id);
       return f?.dbId ? [f.dbId] : [];
     });
+    /* Bila mapping dbId gagal, jangan kirim daftar kosong — server akan
+       menghapus pivot dan TV kehilangan fleet tanpa peringatan. */
+    if (fleetDbIds.length !== fFleetIds.length) {
+      pushToast("error", t.apErrT, t.dspMonErrFleets);
+      return;
+    }
+    const rotateSec = Number(fRotate);
+    if (!Number.isFinite(rotateSec) || rotateSec <= 0) {
+      pushToast("error", t.apErrT, t.dspMonRotateHelp);
+      return;
+    }
     const body = {
       name: fName.trim(),
       loc: fLoc.trim(),
       content: "monitor",
       fleetIds: fleetDbIds,
-      rotateSec: Number(fRotate),
+      rotateSec,
       runtext: fRuntext,
       /* online milik heartbeat TV, bukan form — kirim balik apa adanya */
       online: editing ? editing.online : false,
@@ -331,14 +388,16 @@ export function MonitorAdmin() {
   }
 
   /* urutan pilihan fleet di dialog: yang sudah dicentang naik ke atas dalam
-     urutan gilirannya, sisanya menyusul menurut nama */
+     urutan gilirannya, sisanya = formasi AKTIF dari Setting Fleet (urut nama).
+     Fleet nonaktif yang sudah dipilih tetap tampil agar edit tidak kehilangan
+     referensi; formasi nonaktif lain disembunyikan. */
   const fleetPicker = React.useMemo(() => {
     const chosen = fFleetIds.flatMap((id) => {
       const f = store.fleets.find((x) => x.id === id);
       return f ? [f] : [];
     });
     const rest = store.fleets
-      .filter((f) => !fFleetIds.includes(f.id))
+      .filter((f) => f.active && !fFleetIds.includes(f.id))
       .sort((a, b) => a.digger.localeCompare(b.digger));
     return [...chosen, ...rest];
   }, [fFleetIds, store.fleets]);
@@ -346,7 +405,7 @@ export function MonitorAdmin() {
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={t.navDispMonitor} sub={t.dspSubMonitor}>
-        <Button onClick={openAdd}>
+        <Button onClick={openAdd} disabled={!loaded || loadErr}>
           <Plus />
           {t.dspMonAdd}
         </Button>
@@ -556,7 +615,7 @@ export function MonitorAdmin() {
                   value={fRotate}
                   onChange={(e) => setFRotate(e.target.value)}
                 >
-                  {ROTATE_OPTIONS.map((s) => (
+                  {rotateOpts.map((s) => (
                     <option key={s} value={s}>
                       {s} detik
                     </option>
@@ -573,11 +632,15 @@ export function MonitorAdmin() {
                   value={fRuntext}
                   onChange={(e) => setFRuntext(e.target.value)}
                 >
-                  {runtextOpts.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
+                  {runtextSelectOpts.length === 0 ? (
+                    <option value="">—</option>
+                  ) : (
+                    runtextSelectOpts.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))
+                  )}
                 </Select>
               </Field>
 
@@ -618,6 +681,7 @@ export function MonitorAdmin() {
                               {" "}
                               · {unitLabel(f.bus)} · {f.units.length + 1} unit ·{" "}
                               {f.loc}
+                              {!f.active ? " · nonaktif" : ""}
                             </span>
                           </span>
                         </ToggleRow>
@@ -692,7 +756,7 @@ export function MonitorAdmin() {
           </Button>
           <Button variant="destructive" onClick={delDo} disabled={deleting}>
             {deleting ? <Spinner /> : null}
-            {t.dspDelT}
+            {t.empDelDo}
           </Button>
         </DialogActions>
       </Dialog>

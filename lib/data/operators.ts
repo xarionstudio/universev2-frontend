@@ -595,6 +595,8 @@ export const operatorAllocSeed: OperatorAlloc = (() => {
 /* Kompetensi diturunkan dari unit yang dioperasikan operator itu di kedua
    shift: satu entri per Type EGI, tanpa duplikat. */
 const egiByCode = new Map(unitsDb.map((u) => [u.code, u.egi]));
+/* eq class unit → field `eq` kompetensi ("Pilih Kompetensi") */
+const clsByCode = new Map(unitsDb.map((u) => [u.code, u.cls]));
 const kompByNik = (() => {
   const out = new Map<string, Komp[]>();
   for (const map of [operatorAllocSeed.pagi, operatorAllocSeed.malam]) {
@@ -604,7 +606,12 @@ const kompByNik = (() => {
       const cls = typeOfEgi(egi);
       const list = out.get(nik) ?? [];
       if (!list.some((k) => k.cls === cls))
-        list.push({ cls, simper: "Kelas B", exp: "2027-06-30" });
+        list.push({
+          cls,
+          eq: clsByCode.get(unit) ?? "",
+          simper: "Kelas B",
+          exp: "2027-06-30",
+        });
       out.set(nik, list);
     }
   }

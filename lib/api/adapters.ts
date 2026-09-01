@@ -112,6 +112,10 @@ export function toMdEntry(cat: MdCat, e: ApiMasterEntry): MdEntry {
   let a = "";
   let b = "";
   switch (cat) {
+    case "egi":
+      /* klasifikasi per Eq. Class (kode induk, migrasi 000031) */
+      a = s("eqClass");
+      break;
     case "eqclass":
       a = s("description");
       break;
@@ -150,6 +154,9 @@ export function mdEntryBody(
 ): Record<string, unknown> {
   const body: Record<string, unknown> = { name: d.name, active: d.active };
   switch (cat) {
+    case "egi":
+      body.eqClass = d.a;
+      break;
     case "eqclass":
       body.description = d.a;
       break;
@@ -333,7 +340,12 @@ function asEmpStatus(v: string): Employee["status"] {
 }
 
 export function toKomp(k: ApiCompetency): Komp {
-  return { cls: k.cls, simper: k.simper, exp: isoDateOnly(k.exp) };
+  return {
+    cls: k.cls,
+    eq: k.eq ?? "",
+    simper: k.simper,
+    exp: isoDateOnly(k.exp),
+  };
 }
 
 /* ApiEmployee -> Employee. `komp` selalu array (backend memakai omitempty,
@@ -357,6 +369,7 @@ export function toEmployee(e: ApiEmployee): Employee {
     license: e.license,
     mcu: e.mcu,
     medis: e.medis,
+    medMonitor: e.medMonitor ?? "",
     blood: e.blood,
     bpjs: e.bpjs,
     mess: e.mess,

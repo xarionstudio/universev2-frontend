@@ -34,6 +34,18 @@ export type ApiMasterEntry = {
   [extra: string]: unknown;
 };
 
+/* Type EGI — `eqClass` = KODE Eq. Class induk ("HD", "MH", ...); "" = belum
+   terklasifikasi (mis. SPARE). Dipakai form Database Unit untuk cascade
+   Eq. Class → Type EGI. Lihat docs/api/database-unit.md. */
+export type ApiMasterEgi = ApiMasterEntry & {
+  eqClass: string;
+};
+
+/* Eq. Class — `name` menyimpan KODE ("MH"); `description` kepanjangan. */
+export type ApiMasterEqClass = ApiMasterEntry & {
+  description: string;
+};
+
 /* Amplop daftar master — BUKAN Paged<T> ({items, pagination}) seperti grup
    lain: master_service membungkusnya sendiri. `search` disaring in-memory
    di server; perPage default 20, maksimum 200 (pkg/pagination). */
@@ -46,7 +58,16 @@ export type MasterList<T = ApiMasterEntry> = {
   category: string;
 };
 
-/* GET /api/master/:category */
+/* GET /api/master/:category
+
+   Untuk `runtext`, tiap entri punya `targetDisplay` + `textColor` (lihat
+   MasterRunningText). Form Display Monitor menyaring entri aktif dengan
+   target ∈ { Semua kiosk, Display Fleet, Display Monitor } — dokumentasi:
+   docs/api/display-monitor.md.
+
+   Untuk `egi` / `eqclass` / `product`, form Database Unit (Tambah/Edit Unit)
+   memuat opsi dropdown — cascade Eq. Class → Type EGI memakai field
+   `eqClass` pada entri egi. Dokumentasi: docs/api/database-unit.md. */
 export function listMaster<T = ApiMasterEntry>(
   category: MasterCategory,
   q?: ListQuery,

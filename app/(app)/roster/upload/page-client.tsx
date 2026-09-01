@@ -2,12 +2,23 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, FileSpreadsheet, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  FileSpreadsheet,
+  ScanSearch,
+  Upload,
+} from "lucide-react";
 
-import { legendGroupsFor, upErrorRows, upPreviewData } from "@/lib/data/roster";
+import { errorDetail, rosterApi } from "@/lib/api";
+import type {
+  ApiRosterError,
+  ApiRosterUploadResult,
+  ApiRosterValidation,
+} from "@/lib/api/endpoints/roster";
+import { useAuthPageConfig } from "@/lib/auth-page-config";
+import { legendGroupsFor } from "@/lib/data/roster";
 import { useI18n } from "@/lib/i18n";
-import { printedAt, reportFileName } from "@/lib/report/logo";
-import { downloadXlsx } from "@/lib/report/xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
 import {
@@ -29,7 +40,6 @@ import {
   ToolbarGroup,
   ToolbarTitle,
 } from "@/components/ui/panel";
-import { Progress } from "@/components/ui/progress";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select } from "@/components/ui/select";
 import {
@@ -42,10 +52,10 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
-type Stage = "idle" | "progress" | "validating" | "results";
+import { downloadBlob } from "../../users/_lib/csv";
 
-/* Nama bulan penuh untuk dialog template — lokal seperti MON_ID di halaman
-   attendance; kamus i18n hanya menyimpan string tunggal. */
+type Stage = "idle" | "ready" | "scanning" | "results";
+
 const MONTH_ID = [
   "Januari",
   "Februari",
@@ -75,153 +85,265 @@ const MONTH_EN = [
   "December",
 ];
 
+/* Warna sel review: merah untuk kode invalid/kosong; sisanya netral. */
+function cellTone(code: string, bad: boolean): string {
+  if (bad) return "var(--color-danger-text)";
+  if (!code || code === "—") return "var(--text-tertiary)";
+  return "var(--text-secondary)";
+}
+
 export default function RosterUploadPage() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
   const router = useRouter();
+  const { departments } = useAuthPageConfig();
 
   const [stage, setStage] = React.useState<Stage>("idle");
-  const [pct, setPct] = React.useState(0);
-  const [upName, setUpName] = React.useState("roster_juli_2026.xlsx");
+  const [file, setFile] = React.useState<File | null>(null);
+  const [upName, setUpName] = React.useState("");
   const [dragging, setDragging] = React.useState(false);
   const [importBusy, setImportBusy] = React.useState(false);
+  const [scanBusy, setScanBusy] = React.useState(false);
+  const [validation, setValidation] =
+    React.useState<ApiRosterValidation | null>(null);
 
-  const fileRef = React.useRef<HTMLInputElement>(null);
-  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-
-  React.useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
-
-  const startUpload = React.useCallback((name?: string) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setUpName(name || "roster_juli_2026.xlsx");
-    setStage("progress");
-    setPct(0);
-    timerRef.current = setInterval(() => {
-      setPct((prev) => {
-        const p = prev + 12 + Math.random() * 10;
-        if (p >= 100) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = null;
-          setStage("validating");
-          setTimeout(() => setStage("results"), 700);
-          return 100;
-        }
-        return p;
-      });
-    }, 150);
-  }, []);
-
-  function doImport() {
-    setImportBusy(true);
-    setTimeout(() => {
-      setImportBusy(false);
-      pushToast("success", t.toastImportT, t.toastImportD);
-    }, 1200);
-  }
-
-  /* Dialog template: default periode = bulan DEPAN — roster disusun di muka. */
+  /* Periode & dept untuk Scan/Submit — diisi dari dialog template atau
+     default bulan depan. */
   const now = new Date();
   const defMonth = ((now.getMonth() + 1) % 12) + 1;
   const defYear =
     now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  const [workDept, setWorkDept] = React.useState("");
+  const [workMonth, setWorkMonth] = React.useState(String(defMonth));
+  const [workYear, setWorkYear] = React.useState(String(defYear));
+
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
   const [tplOpen, setTplOpen] = React.useState(false);
   const [tplBusy, setTplBusy] = React.useState(false);
+  const [tplDept, setTplDept] = React.useState("");
   const [tplMonth, setTplMonth] = React.useState(String(defMonth));
   const [tplYear, setTplYear] = React.useState(String(defYear));
+  const [tplDeptErr, setTplDeptErr] = React.useState(false);
   const tplYears = [defYear - 1, defYear, defYear + 1, defYear + 2];
   const monthNames = lang === "en" ? MONTH_EN : MONTH_ID;
 
-  /* Template .xlsx bermerek (kop logo + PT + cap waktu) via lib/report.
-     Kolom tanggal mengikuti jumlah hari bulan terpilih. Baris data sengaja
-     kosong tapi header persis format parser backend (internal/export/excel.go
-     mencari baris ber-sel A "NIK"; kop bermerek tidak mengganggunya), jadi
-     template hasil unduhan bisa langsung diisi dan diunggah balik. */
+  /* Default departemen = opsi resmi pertama begitu daftarnya tiba.
+     DITURUNKAN saat render, bukan setState dalam effect (dilarang
+     react-hooks/set-state-in-effect — memblokir pre-commit): state kosong
+     berarti "belum disentuh pengguna", dan nilai efektif ini dipakai
+     KONSISTEN oleh select, validasi, dan payload — pola yang sama dengan
+     dept/pos di employee-form. */
+  const workDeptEff = workDept || departments[0] || "";
+  const tplDeptEff = tplDept || departments[0] || "";
+
+  const monthPeriod = React.useMemo(() => {
+    const y = parseInt(workYear, 10);
+    const m = parseInt(workMonth, 10);
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }, [workMonth, workYear]);
+
+  function pickFile(f: File) {
+    setFile(f);
+    setUpName(f.name);
+    setValidation(null);
+    setStage("ready");
+  }
+
   async function downloadTemplate() {
     if (tplBusy) return;
+    if (!tplDeptEff.trim()) {
+      setTplDeptErr(true);
+      return;
+    }
     setTplBusy(true);
     try {
       const y = parseInt(tplYear, 10);
       const m = parseInt(tplMonth, 10);
-      /* new Date(y, m, 0) = hari terakhir bulan m (1-12) */
-      const days = new Date(y, m, 0).getDate();
-      const mm = String(m).padStart(2, "0");
-      const name = reportFileName(`roster-template-${y}-${mm}`, "xlsx");
-      await downloadXlsx(name, {
-        name: `Roster ${y}-${mm}`,
-        title: `${t.upTplSheetTitle} — ${monthNames[m - 1]} ${y}`,
-        meta: [
-          `${t.expPrintedAt}: ${printedAt(lang === "en")}`,
-          t.upTplMetaFill,
-        ],
-        columns: [
-          { header: "NIK", width: 14 },
-          { header: t.thNama, width: 26 },
-          { header: t.thDept, width: 20 },
-          { header: t.thPos, width: 20 },
-          ...Array.from({ length: days }, (_, i) => ({
-            header: String(i + 1).padStart(2, "0"),
-            width: 5,
-          })),
-        ],
-        rows: [],
+      const month = `${y}-${String(m).padStart(2, "0")}`;
+      const blob = await rosterApi.downloadRosterTemplate({
+        dept: tplDeptEff,
+        month,
       });
+      const name = `roster-template-${tplDeptEff.toLowerCase().replace(/\s+/g, "-")}-${month}.xlsx`;
+      downloadBlob(name, blob);
+      setWorkDept(tplDeptEff);
+      setWorkMonth(tplMonth);
+      setWorkYear(tplYear);
       pushToast("success", t.toastTemplateT, name);
       setTplOpen(false);
+    } catch (err) {
+      pushToast("error", t.toastScanErrT, errorDetail(err, t.upTplEmpty));
     } finally {
       setTplBusy(false);
     }
   }
 
-  const preview = React.useMemo(() => upPreviewData(), []);
+  async function doScan() {
+    if (!file || scanBusy) return;
+    /* Periode/dept diambil dari dialog Unduh Template (bukan filter di
+       dekat attach). Jika belum pernah unduh, minta unduh dulu. */
+    if (!workDeptEff.trim()) {
+      pushToast("error", t.toastScanErrT, t.upTplErrDept);
+      setTplOpen(true);
+      return;
+    }
+    setScanBusy(true);
+    setStage("scanning");
+    try {
+      const res: ApiRosterUploadResult = await rosterApi.uploadRoster({
+        file,
+        month: monthPeriod,
+        dept: workDeptEff,
+        label: `${monthNames[parseInt(workMonth, 10) - 1]} ${workYear} — ${workDeptEff}`,
+        dryRun: true,
+      });
+      setValidation(res.validation);
+      setStage("results");
+      pushToast(
+        "success",
+        t.toastScanT,
+        `${res.validation.validCount} ${t.vValid.split("—")[0].trim()}`
+      );
+    } catch (err) {
+      setStage("ready");
+      pushToast("error", t.toastScanErrT, errorDetail(err, t.apErrT));
+    } finally {
+      setScanBusy(false);
+    }
+  }
+
+  async function doImport() {
+    if (!file || !validation || importBusy) return;
+    if (validation.errCount > 0) {
+      pushToast("error", t.toastScanErrT, t.upImportBlocked);
+      return;
+    }
+    setImportBusy(true);
+    try {
+      const res = await rosterApi.uploadRoster({
+        file,
+        month: monthPeriod,
+        dept: workDeptEff,
+        label: `${monthNames[parseInt(workMonth, 10) - 1]} ${workYear} — ${workDeptEff}`,
+        dryRun: false,
+      });
+      pushToast(
+        "success",
+        t.toastImportT,
+        res.meta
+          ? `${res.meta.label} · ${res.meta.emp} ${t.thEmpN.toLowerCase()}`
+          : t.toastImportD
+      );
+      router.push(
+        res.meta?.key != null
+          ? `/roster/detail?p=${res.meta.key}`
+          : "/roster/data"
+      );
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.upImportBlocked));
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  /* Peta sel bermasalah: nik|day → true */
+  const badCells = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const e of validation?.errors ?? []) {
+      if (e.day && e.nik) set.add(`${e.nik}|${e.day}`);
+    }
+    return set;
+  }, [validation]);
+
+  /* Catatan di bawah tabel: "Tanggal - Catatan Kesalahan" */
+  const dateNotes = React.useMemo(() => {
+    const notes: { key: string; label: string }[] = [];
+    const seen = new Set<string>();
+    for (const e of validation?.errors ?? []) {
+      if (!e.day) continue;
+      const issue = lang === "en" ? e.issueEn || e.issue : e.issue;
+      const dayLabel = validation?.days?.[e.day - 1] ?? String(e.day);
+      const text = `${dayLabel} - ${issue}`;
+      if (seen.has(text)) continue;
+      seen.add(text);
+      notes.push({ key: `${e.nik}-${e.day}-${e.row}`, label: text });
+    }
+    return notes;
+  }, [validation, lang]);
+
   const [qPrev, setQPrev] = React.useState("");
   const needlePrev = qPrev.trim().toLowerCase();
-  const prevRows = preview.rows.filter(
+  const prevRows = (validation?.preview ?? []).filter(
     (r) =>
       !needlePrev ||
       r.name.toLowerCase().includes(needlePrev) ||
       r.nik.toLowerCase().includes(needlePrev)
   );
   const pgPrev = usePagination(prevRows);
-  const errors = upErrorRows(lang);
+
   const [qErr, setQErr] = React.useState("");
   const needleErr = qErr.trim().toLowerCase();
-  const errRows = errors.filter(
-    (e) =>
-      !needleErr ||
+  const errRows = (validation?.errors ?? []).filter((e: ApiRosterError) => {
+    if (!needleErr) return true;
+    const issue = lang === "en" ? e.issueEn || e.issue : e.issue;
+    return (
       e.nik.toLowerCase().includes(needleErr) ||
       e.emp.toLowerCase().includes(needleErr) ||
-      e.issue.toLowerCase().includes(needleErr)
-  );
+      issue.toLowerCase().includes(needleErr)
+    );
+  });
   const pgErr = usePagination(errRows);
   const legendGroups = legendGroupsFor(lang);
 
-  const vchips = [
-    {
-      n: t.n2140,
-      label: t.vValid,
-      bg: "var(--badge-success-fill)",
-      border: "var(--badge-success-border)",
-      color: "var(--badge-success-text)",
-    },
-    {
-      n: "3",
-      label: t.vDup,
-      bg: "var(--badge-warning-fill)",
-      border: "var(--badge-warning-border)",
-      color: "var(--badge-warning-text)",
-    },
-    {
-      n: "5",
-      label: t.vErr,
-      bg: "var(--badge-danger-fill)",
-      border: "var(--badge-danger-border)",
-      color: "var(--color-danger-text)",
-    },
-  ];
+  const days = validation?.days ?? [];
+  const dayCount = days.length;
+
+  function downloadErrorNotes() {
+    const lines = [
+      "Tanggal - Catatan Kesalahan",
+      ...dateNotes.map((n) => n.label),
+      "",
+      "Detail baris:",
+      ...(validation?.errors ?? []).map((e) => {
+        const issue = lang === "en" ? e.issueEn || e.issue : e.issue;
+        return `Baris ${e.row} | ${e.nik} | ${e.emp} | ${issue}`;
+      }),
+    ];
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/plain;charset=utf-8",
+    });
+    downloadBlob(`roster-errors-${monthPeriod}.txt`, blob);
+    pushToast("success", t.toastErrT, t.toastErrD);
+  }
+
+  const vchips = validation
+    ? [
+        {
+          n: String(validation.validCount),
+          label: t.vValid,
+          bg: "var(--badge-success-fill)",
+          border: "var(--badge-success-border)",
+          color: "var(--badge-success-text)",
+        },
+        {
+          n: String(validation.dupCount),
+          label: t.vDup,
+          bg: "var(--badge-warning-fill)",
+          border: "var(--badge-warning-border)",
+          color: "var(--badge-warning-text)",
+        },
+        {
+          n: String(validation.errCount),
+          label: t.vErr,
+          bg: "var(--badge-danger-fill)",
+          border: "var(--badge-danger-border)",
+          color: "var(--color-danger-text)",
+        },
+      ]
+    : [];
+
+  const canSubmit = !!validation && validation.errCount === 0;
 
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
@@ -247,36 +369,48 @@ export default function RosterUploadPage() {
           dragging={dragging}
           onDragChange={setDragging}
           onPick={() => fileRef.current?.click()}
-          onDropFile={(name) => startUpload(name)}
+          onDropFile={(name, f) => {
+            if (f) pickFile(f);
+            else if (name) {
+              /* Dropzone lama kadang hanya kirim nama — minta pilih ulang */
+              fileRef.current?.click();
+            }
+          }}
         />
         <input
           ref={fileRef}
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.xls,.csv"
           className="hidden"
           onChange={(e) => {
-            const name = e.target.files?.[0]?.name;
-            if (name) startUpload(name);
+            const f = e.target.files?.[0];
+            if (f) pickFile(f);
             e.target.value = "";
           }}
         />
-        {stage === "progress" || stage === "validating" ? (
-          <div className="mt-5">
-            <div className="mb-2 flex justify-between text-sm">
+
+        {file ? (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm">
               <span className="font-semibold">{upName}</span>
-              <span className="font-mono text-(--text-secondary)">
-                {Math.round(pct)}%
+              <span className="ml-2 text-(--text-tertiary)">
+                {stage === "scanning" ? t.upScanning : t.upFileReady}
               </span>
             </div>
-            <Progress value={pct} />
-            <p className="mt-2 text-xs text-(--text-tertiary)">
-              {stage === "validating" ? t.upValidating : t.upUploading}
-            </p>
+            <Button
+              onClick={() => void doScan()}
+              disabled={scanBusy || !workDeptEff}
+            >
+              {scanBusy ? <Spinner /> : <ScanSearch />}
+              {scanBusy ? t.upScanning : t.upScan}
+            </Button>
           </div>
         ) : null}
       </Panel>
 
-      {stage === "results" ? (
+      {/* Review di tengah: di bawah attach, di atas legend — tanpa filter;
+          isi matriks mengikuti hasil Scan dari file yang diunggah. */}
+      {stage === "results" && validation ? (
         <div className="flex flex-col gap-6 max-sm:gap-4">
           <Panel>
             <Toolbar className="mb-4">
@@ -302,7 +436,7 @@ export default function RosterUploadPage() {
                   <tr>
                     <TableHead className="w-27.5">NIK</TableHead>
                     <TableHead className="w-47.5">{t.thNama}</TableHead>
-                    {preview.days.map((d) => (
+                    {days.map((d) => (
                       <TableHead
                         key={d}
                         className="px-1.5 py-3 text-center font-mono"
@@ -321,15 +455,28 @@ export default function RosterUploadPage() {
                       <TableCell className="font-semibold whitespace-nowrap">
                         {r.name}
                       </TableCell>
-                      {r.codes.map((c, i) => (
-                        <TableCell
-                          key={i}
-                          className="px-1.5 py-3 text-center font-mono text-xs"
-                          style={{ color: c.color }}
-                        >
-                          {c.v}
-                        </TableCell>
-                      ))}
+                      {Array.from({ length: dayCount }, (_, i) => {
+                        const day = i + 1;
+                        const code = r.codes?.[day] ?? "—";
+                        const bad =
+                          badCells.has(`${r.nik}|${day}`) ||
+                          code === "—" ||
+                          code === "";
+                        return (
+                          <TableCell
+                            key={day}
+                            className="px-1.5 py-3 text-center font-mono text-xs font-semibold"
+                            style={{
+                              color: cellTone(code, bad),
+                              background: bad
+                                ? "var(--badge-danger-fill)"
+                                : undefined,
+                            }}
+                          >
+                            {code || "—"}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -348,6 +495,23 @@ export default function RosterUploadPage() {
                 onPer={pgPrev.setPer}
               />
             </PanelFoot>
+
+            <div className="mt-4 border-t border-(--divider) px-1 pt-4">
+              <div className="mb-2 text-sm font-semibold">{t.upNotesTitle}</div>
+              {dateNotes.length === 0 ? (
+                <p className="text-sm text-(--text-tertiary)">
+                  {t.upNotesEmpty}
+                </p>
+              ) : (
+                <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto text-sm text-(--color-danger-text)">
+                  {dateNotes.map((n) => (
+                    <li key={n.key} className="font-mono">
+                      ( {n.label} )
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </Panel>
 
           <Panel>
@@ -386,54 +550,66 @@ export default function RosterUploadPage() {
                 </div>
               ))}
             </div>
-            <Table>
-              <TableHeader>
-                <tr>
-                  <TableHead className="w-22.5">{t.thRow}</TableHead>
-                  <TableHead>NIK</TableHead>
-                  <TableHead>{t.thEmp}</TableHead>
-                  <TableHead>{t.thIssue}</TableHead>
-                  <TableHead>{t.thType}</TableHead>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {pgErr.rows.map((e) => (
-                  <TableRow key={e.row}>
-                    <TableCell className="font-mono">{e.row}</TableCell>
-                    <TableCell className="font-mono">{e.nik}</TableCell>
-                    <TableCell>{e.emp}</TableCell>
-                    <TableCell>{e.issue}</TableCell>
-                    <TableCell>
-                      <Badge variant={e.badgeVariant} dot>
-                        {e.badge}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {errRows.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <tr>
+                    <TableHead className="w-22.5">{t.thRow}</TableHead>
+                    <TableHead>NIK</TableHead>
+                    <TableHead>{t.thEmp}</TableHead>
+                    <TableHead>{t.thIssue}</TableHead>
+                    <TableHead>{t.thType}</TableHead>
+                  </tr>
+                </TableHeader>
+                <TableBody>
+                  {pgErr.rows.map((e, idx) => (
+                    <TableRow key={`${e.row}-${e.nik}-${idx}`}>
+                      <TableCell className="font-mono">{e.row}</TableCell>
+                      <TableCell className="font-mono">{e.nik}</TableCell>
+                      <TableCell>{e.emp}</TableCell>
+                      <TableCell>
+                        {lang === "en" ? e.issueEn || e.issue : e.issue}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            e.badgeVariant === "warning" ? "warning" : "danger"
+                          }
+                          dot
+                        >
+                          {e.badge}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : null}
             <PanelFoot>
               <FootSum>{t.upFootNote}</FootSum>
               <div className="flex flex-wrap items-center gap-4">
-                <Pagination
-                  page={pgErr.page}
-                  pageCount={pgErr.pageCount}
-                  onPage={pgErr.setPage}
-                  per={pgErr.per}
-                  perOptions={["10", "25", "50"]}
-                  onPer={pgErr.setPer}
-                />
+                {errRows.length > 0 ? (
+                  <Pagination
+                    page={pgErr.page}
+                    pageCount={pgErr.pageCount}
+                    onPage={pgErr.setPage}
+                    per={pgErr.per}
+                    perOptions={["10", "25", "50"]}
+                    onPer={pgErr.setPer}
+                  />
+                ) : null}
                 <div className="flex flex-wrap gap-2">
+                  {dateNotes.length > 0 ||
+                  (validation.errors?.length ?? 0) > 0 ? (
+                    <Button variant="secondary" onClick={downloadErrorNotes}>
+                      <Download />
+                      {t.upDlErrors}
+                    </Button>
+                  ) : null}
                   <Button
-                    variant="secondary"
-                    onClick={() =>
-                      pushToast("success", t.toastErrT, t.toastErrD)
-                    }
+                    onClick={() => void doImport()}
+                    disabled={importBusy || !canSubmit}
                   >
-                    <Download />
-                    {t.upDlErrors}
-                  </Button>
-                  <Button onClick={doImport} disabled={importBusy}>
                     {importBusy ? <Spinner /> : null}
                     {importBusy ? t.upImporting : t.upImport}
                   </Button>
@@ -484,6 +660,30 @@ export default function RosterUploadPage() {
         <DialogTitle id="tpl-dlg-title">{t.upTplDlgT}</DialogTitle>
         <DialogBody>{t.upTplDlgB}</DialogBody>
         <FormGrid className="mt-5">
+          <Field
+            label={t.upTplDept}
+            htmlFor="tpl-dept"
+            required
+            error={tplDeptErr}
+            errorMessage={t.upTplErrDept}
+            className="col-span-full"
+          >
+            <Select
+              id="tpl-dept"
+              value={tplDeptEff}
+              onChange={(e) => {
+                setTplDept(e.target.value);
+                if (e.target.value.trim()) setTplDeptErr(false);
+              }}
+            >
+              <option value="">{t.regDeptPh}</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label={t.upTplMonth} htmlFor="tpl-month">
             <Select
               id="tpl-month"
@@ -513,7 +713,7 @@ export default function RosterUploadPage() {
           <Button variant="ghost" onClick={() => setTplOpen(false)}>
             {t.btnCancel}
           </Button>
-          <Button onClick={downloadTemplate} disabled={tplBusy}>
+          <Button onClick={() => void downloadTemplate()} disabled={tplBusy}>
             {tplBusy ? <Spinner /> : <Download />}
             {t.upTemplate}
           </Button>

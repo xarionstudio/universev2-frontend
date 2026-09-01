@@ -73,7 +73,11 @@ export type UnitDbBody = Omit<ApiUnitDb, "id" | "createdAt" | "updatedAt">;
 
 /* ── Setting fleet ───────────────────────────────────────────────────── */
 
-/* GET /api/fleet/settings */
+/* GET /api/fleet/settings
+
+   Sumber opsi "Fleet yang tayang" di form Display Monitor — `id` numerik
+   inilah yang dikirim sebagai `fleetIds` saat POST/PUT display.
+   Lihat docs/api/display-monitor.md. */
 export function listFleetSettings(
   signal?: AbortSignal
 ): Promise<ApiFleetSetting[]> {
@@ -173,7 +177,10 @@ export function getUnitHistory(
   );
 }
 
-/* ── Database unit ───────────────────────────────────────────────────── */
+/* ── Database unit ─────────────────────────────────────────────────────
+   Form Tambah/Edit Unit: `cls` = Eq. Class (kode master eqclass), `egi` =
+   Type EGI (nama master egi). Opsi dropdown dari GET /api/master/eqclass
+   + /api/master/egi — lihat docs/api/database-unit.md. */
 
 /* GET /api/units/db */
 export function listUnitDb(

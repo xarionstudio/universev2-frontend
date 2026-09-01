@@ -22,13 +22,15 @@ import {
   masterApi,
 } from "@/lib/api";
 import { toEmployee, toKomp } from "@/lib/api/adapters";
+import { useAuthPageConfig } from "@/lib/auth-page-config";
 import type { Employee, Komp } from "@/lib/data/employees";
-import { egiTypes } from "@/lib/data/units-db";
+import { egiTypesForClass } from "@/lib/data/units-db";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { RbacDenied } from "@/components/layout/rbac-denied";
 import { useAppStore } from "@/components/providers/app-store";
 import { usePermissions } from "@/components/providers/permissions";
+import { useSession } from "@/components/providers/session";
 import { initialsOf } from "@/components/ui/avatar";
 import { Button, IconButton, Spinner } from "@/components/ui/button";
 import {
@@ -46,6 +48,11 @@ import { Select } from "@/components/ui/select";
 import { StateBox } from "@/components/ui/state-box";
 import { useToast } from "@/components/ui/toast";
 
+/* Revisi 1 Sep 2026: bagian SIMPER & Medis dipangkas menjadi Kompetensi alat
+   berat + Riwayat Medis saja — Kategori/Masa berlaku SIMPER, License type,
+   dan Status MCU tidak lagi punya input (nilai tersimpannya di-pass-through
+   agar PUT yang menimpa semua kolom tidak mengosongkannya). `pantau` =
+   Tingkat Pantau riwayat medis (low/medium/high). */
 type Fields = {
   nama: string;
   nik: string;
@@ -55,11 +62,8 @@ type Fields = {
   equip: string;
   join: string;
   exp: string;
-  simper: string;
-  simperExp: string;
-  license: string;
-  mcu: string;
   medis: string;
+  pantau: string;
   mess: string;
   kamar: string;
 };
@@ -70,9 +74,33 @@ const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 export function EmployeeForm({ nik }: { nik?: string }) {
   const { t } = useI18n();
   const { can } = usePermissions();
+  /* Riwayat Medis (Tingkat Pantau + Catatan Medis) di balik modul RBAC
+     `medical` — hanya Superadmin & role Management (migrasi 000030). Backend
+     mengosongkan field-nya untuk akun lain, jadi tanpa gerbang ini form
+     hanya akan menampilkan input kosong yang menyesatkan. */
+  const canSeeMed = can("medical");
+  const canEditMed = can("medical", "manage");
+
+  /* Permission sesi adalah SNAPSHOT saat aplikasi dimuat — grant `medical`
+     yang baru diberikan lewat Users & Roles tidak terlihat tab yang sudah
+     terbuka. Sekali refresh diam-diam saat blok medis tak tampak membuat
+     grant baru langsung berlaku tanpa login ulang; bagi akun yang memang
+     tanpa akses, jawabannya tetap sama dan blok tetap tersembunyi. */
+  const { refresh: refreshSession } = useSession();
+  const medRefreshTried = React.useRef(false);
+  React.useEffect(() => {
+    if (canSeeMed || medRefreshTried.current) return;
+    medRefreshTried.current = true;
+    void refreshSession().catch(() => {});
+  }, [canSeeMed, refreshSession]);
   const { pushToast } = useToast();
   const { upsertEmp, mdData } = useAppStore();
   const router = useRouter();
+
+  /* Departemen & Posisi dari Settings → Halaman Auth (auth_form_options),
+     sumber yang sama dengan form Register / Pending Registrasi. Hook
+     memuat ulang saat window fokus supaya opsi baru langsung terlihat. */
+  const { departments, positions } = useAuthPageConfig();
 
   /* Mode edit memuat record-nya sendiri dari backend (bukan dari store)
      supaya refresh dan deep-link /employees/:nik/edit tetap bekerja — pola
@@ -82,25 +110,80 @@ export function EmployeeForm({ nik }: { nik?: string }) {
 
   /* Opsi Type EGI dari master (GET /api/master/egi) — penambahan lewat menu
      Master Data langsung tersedia di dropdown SIMPER; kegagalan (termasuk
-     403 akun tanpa master:view) jatuh diam-diam ke daftar statis egiTypes.
-     Set() sekalian membuang duplikat ("SPARE" dua kali di daftar statis). */
-  const [egiOpts, setEgiOpts] = React.useState<string[] | null>(null);
+     403 akun tanpa master:view) jatuh ke egiTypesForClass. Cascade sama
+     Database Unit: Jenis Kompetensi kosong sampai Eq. Class dipilih. */
+  const [egiRows, setEgiRows] = React.useState<
+    { name: string; eq: string }[] | null
+  >(null);
   React.useEffect(() => {
     const ac = new AbortController();
     void masterApi
       .listMaster("egi", { perPage: 200 }, ac.signal)
       .then((res) => {
-        const names = (res.entries ?? [])
+        const rows = (res.entries ?? [])
           .filter((e) => e.active)
-          .map((e) => e.name);
-        if (names.length) setEgiOpts(names);
+          .map((e) => ({
+            name: e.name,
+            /* klasifikasi per Eq. Class (migrasi 000031) — uppercase agar
+               filter cocok dengan kode Eq. Class dari master eqclass */
+            eq:
+              typeof e.eqClass === "string"
+                ? e.eqClass.trim().toUpperCase()
+                : "",
+          }));
+        if (rows.length) setEgiRows(rows);
       })
       .catch(() => {});
     return () => ac.abort();
   }, []);
-  const egiList = React.useMemo(
-    () => Array.from(new Set(egiOpts ?? egiTypes)),
-    [egiOpts]
+  /* Opsi "Pilih Jenis Kompetensi" TERFILTER ketat oleh Eq. Class terpilih.
+     Tanpa Eq. Class → kosong (bukan daftar penuh). Dengan class → hanya
+     Type EGI master yang eqClass-nya cocok; fallback lokal egiTypesForClass. */
+  const jenisOptsFor = React.useCallback(
+    (eq: string) => {
+      const c = (eq || "").trim().toUpperCase();
+      if (!c) return [];
+      if (egiRows && egiRows.some((r) => r.eq)) {
+        return Array.from(
+          new Set(egiRows.filter((r) => r.eq === c).map((r) => r.name))
+        ).sort((a, b) => a.localeCompare(b));
+      }
+      return egiTypesForClass(c);
+    },
+    [egiRows]
+  );
+
+  /* Opsi "Pilih Kompetensi" = kode Eq. Class dari master (GET
+     /api/master/eqclass), pola yang sama dengan Type EGI di atas; gagal →
+     jatuh ke store mdData.eqclass (seed statisnya eqClassDefs). Nilai yang
+     disimpan adalah KODE-nya ("HD"); kepanjangan hanya untuk label. */
+  const [eqOpts, setEqOpts] = React.useState<{ v: string; l: string }[] | null>(
+    null
+  );
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void masterApi
+      .listMaster("eqclass", { perPage: 200 }, ac.signal)
+      .then((res) => {
+        const rows = (res.entries ?? [])
+          .filter((e) => e.active)
+          .map((e) => {
+            const code = e.name.trim().toUpperCase();
+            const desc = typeof e.description === "string" ? e.description : "";
+            return { v: code, l: desc ? `${code} — ${desc}` : code };
+          });
+        if (rows.length) setEqOpts(rows);
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+  const eqList = React.useMemo(
+    () =>
+      eqOpts ??
+      mdData.eqclass
+        .filter((r) => r.active)
+        .map((r) => ({ v: r.name, l: r.a ? `${r.name} — ${r.a}` : r.name })),
+    [eqOpts, mdData.eqclass]
   );
   const [loadErr, setLoadErr] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
@@ -109,19 +192,24 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     nama: "",
     nik: "",
     company: "PT Unggul Dinamika Utama",
-    dept: "Operation",
+    dept: "",
     pos: "",
     equip: "",
     join: "",
     exp: "",
-    simper: "",
-    simperExp: "",
-    license: "",
-    mcu: "Fit",
     medis: "",
+    pantau: "",
     mess: "",
     kamar: "",
   }));
+
+  /* Mode tambah: dept/pos default = opsi resmi pertama begitu daftarnya tiba.
+     DITURUNKAN saat render, bukan setState dalam effect (dilarang
+     react-hooks/set-state-in-effect): f.dept kosong berarti "belum disentuh
+     pengguna", dan nilai efektif ini dipakai KONSISTEN oleh select, validasi,
+     dan submit supaya yang tampil = yang tersimpan. */
+  const deptEff = f.dept || (!nik ? (departments[0] ?? "") : "");
+  const posEff = f.pos || (!nik ? (positions[0] ?? "") : "");
   const [kompRows, setKompRows] = React.useState<Komp[]>([]);
   /* opsi mess dari master data (Master Data → Mess) — bukan daftar hardcoded */
   const messOpts = React.useMemo(
@@ -141,6 +229,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
   const [errors, setErrors] = React.useState<{
     nama?: boolean;
     nik?: boolean;
+    dept?: boolean;
+    pos?: boolean;
     exp?: boolean;
     /* penanda "submit terakhir punya baris kompetensi tanpa masa berlaku" —
        baris mana yang disorot dihitung ulang saat render dari kompRows,
@@ -170,11 +260,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
           equip: emp.equip,
           join: emp.join,
           exp: emp.exp,
-          simper: emp.simper,
-          simperExp: emp.simperExp,
-          license: emp.license,
-          mcu: emp.mcu,
           medis: emp.medis,
+          pantau: emp.medMonitor ?? "",
           mess: emp.mess,
           kamar: emp.kamar,
         });
@@ -223,8 +310,16 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     setDirty(true);
   }
 
+  /* Ganti Eq. Class → Jenis Kompetensi dikosongkan (opsi berubah). */
+  function kompSetEq(i: number, eq: string) {
+    setKompRows((rows) =>
+      rows.map((r, idx) => (idx === i ? { ...r, eq, cls: "" } : r))
+    );
+    setDirty(true);
+  }
+
   function kompAdd() {
-    setKompRows((rows) => [...rows, { cls: "", simper: "", exp: "" }]);
+    setKompRows((rows) => [...rows, { cls: "", eq: "", simper: "", exp: "" }]);
     setDirty(true);
   }
 
@@ -260,6 +355,8 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     const errs = {
       nama: !f.nama.trim(),
       nik: !/^\d{1,50}$/.test(f.nik.trim()),
+      dept: !deptEff.trim(),
+      pos: !posEff.trim(),
       exp: !!(f.exp && f.join && f.exp <= f.join),
       /* baris kompetensi ber-Type EGI wajib punya masa berlaku: kolom
          expiry_date DATE NOT NULL di DB, dan PUT kompetensi berjalan dalam
@@ -267,7 +364,14 @@ export function EmployeeForm({ nik }: { nik?: string }) {
       kompExp: kompRows.some((k) => k.cls && !k.exp),
     };
     setErrors(errs);
-    if (errs.nama || errs.nik || errs.exp || errs.kompExp) {
+    if (
+      errs.nama ||
+      errs.nik ||
+      errs.dept ||
+      errs.pos ||
+      errs.exp ||
+      errs.kompExp
+    ) {
       pushToast("error", t.toastFormErrT, t.toastFormErrD);
       return;
     }
@@ -284,20 +388,26 @@ export function EmployeeForm({ nik }: { nik?: string }) {
     const body = {
       /* dikunci HURUF KAPITAL — backend menormalkan ulang (UpperTrim) */
       name: name.toUpperCase(),
-      dept: f.dept.trim().toUpperCase(),
-      pos: f.pos.trim().toUpperCase(),
+      dept: deptEff.trim().toUpperCase(),
+      pos: posEff.trim().toUpperCase(),
       company: f.company,
       equip: f.equip,
       join: f.join,
       exp: f.exp,
-      license: f.license,
-      mcu: f.mcu,
-      medis: f.medis,
+      /* Riwayat Medis: backend hanya menerima nilai dari pemegang
+         medical:manage dan mempertahankan nilai lama untuk lainnya — kirim
+         pass-through agar payload-nya jujur soal apa yang (tidak) diubah */
+      medis: canEditMed ? f.medis : (record?.medis ?? ""),
+      medMonitor: canEditMed ? f.pantau : (record?.medMonitor ?? ""),
       mess: f.mess,
       kamar: f.kamar,
       status: record?.status ?? ("aktif" as const),
-      simper: f.simper.trim(),
-      simperExp: f.simperExp,
+      /* input SIMPER/License/MCU dihapus dari form (revisi 1 Sep 2026) —
+         nilai tersimpan di-pass-through karena PUT menimpa semua kolom */
+      simper: record?.simper ?? "",
+      simperExp: record?.simperExp ?? "",
+      license: record?.license ?? "",
+      mcu: record?.mcu ?? "",
       blood: record?.blood ?? "",
       bpjs: record?.bpjs ?? "",
       hp: record?.hp ?? "",
@@ -497,26 +607,65 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   <option>PT Unggul Mitra Energi</option>
                 </Select>
               </Field>
-              <Field label={t.thDept} htmlFor="ef-dept" required>
+              <Field
+                label={t.thDept}
+                htmlFor="ef-dept"
+                required
+                error={errors.dept}
+                errorMessage={t.errDept}
+                helper={t.efDeptHelp}
+              >
                 <Select
                   id="ef-dept"
-                  value={f.dept}
-                  onChange={(e) => up("dept", e.target.value)}
+                  value={deptEff}
+                  onChange={(e) => {
+                    up("dept", e.target.value);
+                    if (e.target.value.trim()) {
+                      setErrors((er) => ({ ...er, dept: false }));
+                    }
+                  }}
                 >
-                  {/* nilai KAPITAL — selaras data pasca-migrasi 000021 */}
-                  <option>OPERATION</option>
-                  <option>SDI</option>
-                  <option>HRGA</option>
-                  <option>PLANT</option>
+                  <option value="">{t.regDeptPh}</option>
+                  {/* nilai lawas (nonaktif / dihapus dari Settings) tetap
+                      tampil saat edit — agar tidak kosong diam-diam */}
+                  {deptEff && !departments.includes(deptEff) ? (
+                    <option value={deptEff}>{deptEff}</option>
+                  ) : null}
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </Select>
               </Field>
-              <Field label={t.thPos} htmlFor="ef-pos" required>
-                <Input
+              <Field
+                label={t.thPos}
+                htmlFor="ef-pos"
+                required
+                error={errors.pos}
+                errorMessage={t.errPos}
+                helper={t.efPosHelp}
+              >
+                <Select
                   id="ef-pos"
-                  value={f.pos}
-                  onChange={(e) => up("pos", e.target.value)}
-                  className="uppercase"
-                />
+                  value={posEff}
+                  onChange={(e) => {
+                    up("pos", e.target.value);
+                    if (e.target.value.trim()) {
+                      setErrors((er) => ({ ...er, pos: false }));
+                    }
+                  }}
+                >
+                  <option value="">{t.regPosPh}</option>
+                  {posEff && !positions.includes(posEff) ? (
+                    <option value={posEff}>{posEff}</option>
+                  ) : null}
+                  {positions.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label="Equipment type" htmlFor="ef-equip">
                 <Input
@@ -567,37 +716,48 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   {kompRows.map((k, i) => (
                     <div
                       key={i}
-                      /* 150+1fr+170+40 plus tiga gap butuh >420px; di ponsel
-                         barisnya jadi 2x2 (tipe EGI | SIMPER, masa berlaku |
-                         hapus) agar tetap terbaca sebagai satu kesatuan. */
-                      className="grid grid-cols-[150px_1fr_170px_40px] items-center gap-3 max-sm:grid-cols-2 max-sm:gap-2 max-sm:*:min-w-0"
+                      /* 190+1fr+170+40 plus tiga gap butuh >440px; di ponsel
+                         barisnya jadi 2x2 (Eq. Class | Type EGI, masa
+                         berlaku | hapus) agar terbaca sebagai satu kesatuan. */
+                      className="grid grid-cols-[190px_1fr_170px_40px] items-center gap-3 max-sm:grid-cols-2 max-sm:gap-2 max-sm:*:min-w-0"
                     >
                       <Select
-                        value={k.cls}
-                        onChange={(e) => kompChange(i, "cls", e.target.value)}
-                        aria-label="Type EGI"
+                        value={k.eq}
+                        onChange={(e) => kompSetEq(i, e.target.value)}
+                        aria-label={t.efKompEq}
                       >
-                        <option value=""></option>
-                        {/* nilai lawas dari DB (mis. kode seed "DT") tetap
-                            tampil walau tak ada di daftar — agar edit
-                            tidak diam-diam mengosongkannya */}
-                        {k.cls && !egiList.includes(k.cls) ? (
+                        <option value="">{t.efKompEq}</option>
+                        {/* nilai lawas yang tak ada di master tetap tampil —
+                            agar edit tidak diam-diam mengosongkannya */}
+                        {k.eq && !eqList.some((o) => o.v === k.eq) ? (
+                          <option value={k.eq}>{k.eq}</option>
+                        ) : null}
+                        {eqList.map((o) => (
+                          <option key={o.v} value={o.v}>
+                            {o.l}
+                          </option>
+                        ))}
+                      </Select>
+                      {/* Type EGI disabled sampai Eq. Class (Pilih Kompetensi)
+                          dipilih — opsi difilter eqClass dari master/egi. */}
+                      <Select
+                        value={k.cls}
+                        disabled={!k.eq}
+                        onChange={(e) => kompChange(i, "cls", e.target.value)}
+                        aria-label={t.efKompJenis}
+                      >
+                        <option value="">
+                          {k.eq ? t.efKompJenis : t.efKompJenisNeedEq}
+                        </option>
+                        {k.cls && !jenisOptsFor(k.eq).includes(k.cls) ? (
                           <option value={k.cls}>{k.cls}</option>
                         ) : null}
-                        {egiList.map((c) => (
+                        {jenisOptsFor(k.eq).map((c) => (
                           <option key={c} value={c}>
                             {c}
                           </option>
                         ))}
                       </Select>
-                      <Input
-                        value={k.simper}
-                        placeholder={t.efKompSimperPh}
-                        onChange={(e) =>
-                          kompChange(i, "simper", e.target.value)
-                        }
-                        aria-label="SIMPER"
-                      />
                       <Input
                         type="date"
                         /* sorot per baris (bukan lewat prop error Field, yang
@@ -644,76 +804,43 @@ export function EmployeeForm({ nik }: { nik?: string }) {
                   </Button>
                 </div>
               </Field>
-              {/* SIMPER umum milik record karyawan — BUKAN kompetensi per Type
-                  EGI di atas. Input ini wajib ada: PUT backend menimpa
-                  simper_exp tanpa nullIfEmpty, jadi tanpa input ini tanggal
-                  yang kosong sejak create tidak pernah bisa dilengkapi dari UI
-                  dan SETIAP edit karyawan buatan UI tertolak (SQLSTATE 22007,
-                  lihat ADR 0014). */}
-              <Field
-                label={t.kSimperCat}
-                htmlFor="ef-simper"
-                helper={t.helpSimper}
-              >
-                <Input
-                  id="ef-simper"
-                  value={f.simper}
-                  onChange={(e) => up("simper", e.target.value)}
-                />
-              </Field>
-              <Field
-                label={t.kSimperExp}
-                htmlFor="ef-simperexp"
-                helper={t.helpSimperExp}
-              >
-                <Input
-                  id="ef-simperexp"
-                  type="date"
-                  className="font-mono"
-                  value={f.simperExp}
-                  onChange={(e) => up("simperExp", e.target.value)}
-                />
-              </Field>
-              <Field label="License type" htmlFor="ef-lisensi">
-                <Input
-                  id="ef-lisensi"
-                  value={f.license}
-                  onChange={(e) => up("license", e.target.value)}
-                />
-              </Field>
-              <Field label={t.kMcu} htmlFor="ef-mcu">
-                <Select
-                  id="ef-mcu"
-                  value={f.mcu}
-                  onChange={(e) => up("mcu", e.target.value)}
-                >
-                  <option>Fit</option>
-                  <option>Fit dengan catatan</option>
-                  <option>Unfit sementara</option>
-                  {/* nilai MCU lama di luar tiga opsi baku (seed DB memakai
-                      bentuk "Fit — 12 Feb 2026") tetap dipertahankan supaya
-                      membuka form tidak diam-diam menggantinya */}
-                  {f.mcu &&
-                  !["Fit", "Fit dengan catatan", "Unfit sementara"].includes(
-                    f.mcu
-                  ) ? (
-                    <option value={f.mcu}>{f.mcu}</option>
-                  ) : null}
-                </Select>
-              </Field>
-              <Field
-                label={t.kMedHistory}
-                htmlFor="ef-medis"
-                helper={t.helpMedis}
-                className="col-span-full"
-              >
-                <Textarea
-                  id="ef-medis"
-                  placeholder={t.phMedis}
-                  value={f.medis}
-                  onChange={(e) => up("medis", e.target.value)}
-                />
-              </Field>
+              {/* Riwayat Medis — modul RBAC `medical`: yang tidak memegangnya
+                  tidak melihat blok ini sama sekali (backend toh mengirim
+                  kosong); pemegang view-saja melihat nilai tanpa bisa ubah. */}
+              {canSeeMed ? (
+                <>
+                  <Field
+                    label={t.kPantau}
+                    htmlFor="ef-pantau"
+                    helper={t.helpMedis}
+                  >
+                    <Select
+                      id="ef-pantau"
+                      value={f.pantau}
+                      disabled={!canEditMed}
+                      onChange={(e) => up("pantau", e.target.value)}
+                    >
+                      <option value="">{t.optNone}</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </Select>
+                  </Field>
+                  <Field
+                    label={t.kMedHistory}
+                    htmlFor="ef-medis"
+                    className="col-span-full"
+                  >
+                    <Textarea
+                      id="ef-medis"
+                      placeholder={t.phMedis}
+                      value={f.medis}
+                      disabled={!canEditMed}
+                      onChange={(e) => up("medis", e.target.value)}
+                    />
+                  </Field>
+                </>
+              ) : null}
             </FormGrid>
           </Panel>
 

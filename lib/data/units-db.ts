@@ -631,6 +631,65 @@ export function typeOfEgi(egi: string): string {
   return "SPARE";
 }
 
+/* Type EGI yang umum per Eq. class — fallback bila belum ada unit dengan
+   class itu di database (form Tambah Unit tetap punya opsi setelah class
+   dipilih). Diambil dari sebaran data unit aktual; opsi runtime digabung
+   dengan Type EGI yang sudah dipakai unit class yang sama. */
+export const egiTypesByClass: Record<string, readonly string[]> = {
+  AMB: ["LIGHT VEHICLE"],
+  BUS: ["BUS"],
+  CM: ["COMPACTOR"],
+  CT: ["SUPPORT TRUCK"],
+  DR: ["DRILL"],
+  DZ: ["D6-D85SS", "D8-155", "D9-375"],
+  EX: [
+    "PC 200",
+    "PC 350",
+    "PC 470",
+    "PC 870",
+    "PC 1200",
+    "PC 1250",
+    "PC 2000",
+    "PC 2600",
+    "PC 6020",
+  ],
+  FK: ["SPARE"],
+  FT: ["FUEL TRUCK"],
+  GD: ["GRADER"],
+  HD: ["HD 465 / 773", "HD 785 / 777", "SKT105", "SKT130", "VOLVO"],
+  LB: ["SUPPORT TRUCK", "SPARE"],
+  LD: ["SANY SYZ 440", "SCANIA P410"],
+  LT: ["LIGHT VEHICLE"],
+  LV: ["LIGHT VEHICLE"],
+  MH: ["MANHAUL"],
+  PU: ["MANHAUL", "SPARE"],
+  ST: ["SUPPORT TRUCK"],
+  TH: ["MANHAUL", "SPARE"],
+  WE: ["PC 200"],
+  WF: ["SPARE"],
+  WT: ["WATER TRUCK"],
+};
+
+/* Opsi Type EGI untuk dropdown form unit, bergantung Eq. class.
+   Tanpa class → kosong. Dengan class → gabungan fallback kanonik + tipe
+   yang sudah dipakai unit class itu di DB (+ nilai saat ini bila edit). */
+export function egiTypesForClass(
+  cls: string,
+  units: ReadonlyArray<{ cls: string; egi: string }> = [],
+  current?: string
+): string[] {
+  const c = (cls || "").trim().toUpperCase();
+  if (!c) return [];
+  const set = new Set<string>();
+  for (const t of egiTypesByClass[c] ?? []) set.add(t);
+  for (const u of units) {
+    if ((u.cls || "").toUpperCase() === c) set.add(typeOfEgi(u.egi));
+  }
+  const cur = (current || "").trim();
+  if (cur) set.add(typeOfEgi(cur));
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
 /* eq class yang benar-benar ada di data unit */
 export const eqClassDefs: [string, string][] = [
   ["AMB", "Ambulance"],

@@ -446,7 +446,7 @@ export default function EmployeesPage() {
                             <Badge
                               key={k.cls}
                               variant={kompVariant(k.exp)}
-                              title={`SIMPER ${k.simper} · s/d ${k.exp}`}
+                              title={`${k.eq ? `${k.eq} · ` : ""}s/d ${k.exp}`}
                             >
                               {k.cls}
                             </Badge>

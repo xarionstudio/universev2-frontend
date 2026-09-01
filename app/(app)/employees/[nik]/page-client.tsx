@@ -18,6 +18,7 @@ import type { Employee } from "@/lib/data/employees";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/components/providers/permissions";
+import { useSession } from "@/components/providers/session";
 import { initialsOf } from "@/components/ui/avatar";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button, Spinner } from "@/components/ui/button";
@@ -56,6 +57,18 @@ function KvRow({
   );
 }
 
+/* Tingkat Pantau riwayat medis — warna mengikuti bobot pengawasan */
+const pantauTone: Record<string, BadgeVariant> = {
+  low: "success",
+  medium: "warning",
+  high: "danger",
+};
+const pantauLabel: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
 function expTone(exp: string): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -75,6 +88,19 @@ export default function EmployeeDetailPage({
   const router = useRouter();
   const { can } = usePermissions();
   const canManage = can("employees", "manage");
+  const canSeeMed = can("medical");
+
+  /* Grant `medical` yang baru diberikan lewat Users & Roles tidak terlihat
+     tab yang sudah terbuka (permission sesi = snapshot saat muat) — sekali
+     refresh diam-diam membuatnya berlaku tanpa login ulang. Sama seperti di
+     employee-form. */
+  const { refresh: refreshSession } = useSession();
+  const medRefreshTried = React.useRef(false);
+  React.useEffect(() => {
+    if (canSeeMed || medRefreshTried.current) return;
+    medRefreshTried.current = true;
+    void refreshSession().catch(() => {});
+  }, [canSeeMed, refreshSession]);
 
   /* Dimuat sendiri dari backend, BUKAN dari daftar di store: dengan begitu
      refresh dan deep-link /employees/:nik tetap bekerja tanpa harus mampir
@@ -185,7 +211,7 @@ export default function EmployeeDetailPage({
               </Badge>
               {komps[0] ? (
                 <Badge variant="info" dot>
-                  SIMPER {komps[0].simper}
+                  {komps[0].cls}
                 </Badge>
               ) : null}
             </div>
@@ -231,14 +257,17 @@ export default function EmployeeDetailPage({
         <Panel>
           <SectionTitle>
             <IdCard />
-            SIMPER &amp; {t.kLicense}
+            {t.efKompT}
           </SectionTitle>
-          <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {komps.length ? (
               komps.map((k) => (
                 <div key={k.cls} className="flex items-center gap-3">
-                  <Badge variant="info">{k.cls}</Badge>
-                  <span className="text-sm font-medium">SIMPER {k.simper}</span>
+                  {/* eq = kode Eq. Class ("Pilih Kompetensi"); cls = Type EGI
+                      yang dicocokkan auto-alokasi. Baris lawas tanpa eq tetap
+                      tampil wajar. */}
+                  {k.eq ? <Badge variant="info">{k.eq}</Badge> : null}
+                  <span className="text-sm font-medium">{k.cls}</span>
                   <span
                     className={cn("ml-auto font-mono text-xs", expTone(k.exp))}
                   >
@@ -252,9 +281,6 @@ export default function EmployeeDetailPage({
               </span>
             )}
           </div>
-          <Kv>
-            <KvRow label="License type">{emp.license}</KvRow>
-          </Kv>
         </Panel>
 
         <Panel>
@@ -263,8 +289,21 @@ export default function EmployeeDetailPage({
             {t.secMedical}
           </SectionTitle>
           <Kv>
-            <KvRow label={t.kMcu}>{emp.mcu}</KvRow>
-            <KvRow label={t.kMedHistory}>{emp.medis}</KvRow>
+            {/* Riwayat Medis (Tingkat Pantau + catatan) hanya untuk pemegang
+                modul `medical` — backend mengirim kosong bagi yang lain, jadi
+                barisnya disembunyikan alih-alih menampilkan "—" menyesatkan */}
+            {canSeeMed ? (
+              <>
+                <KvRow label={t.kPantau}>
+                  {emp.medMonitor ? (
+                    <Badge variant={pantauTone[emp.medMonitor] ?? "neutral"}>
+                      {pantauLabel[emp.medMonitor] ?? emp.medMonitor}
+                    </Badge>
+                  ) : null}
+                </KvRow>
+                <KvRow label={t.kMedHistory}>{emp.medis}</KvRow>
+              </>
+            ) : null}
             <KvRow label={t.kBlood}>{emp.blood}</KvRow>
             <KvRow label="BPJS Kesehatan" mono>
               {emp.bpjs}

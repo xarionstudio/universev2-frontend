@@ -59,10 +59,18 @@ type ColDef = {
   label: string;
   kind?: "text" | "time" | "select" | "color" | "readonly";
   opts?: string[];
+  /* label opsi dropdown bila berbeda dari nilainya (mis. kode Eq. Class
+     "HD" berlabel "HD — Heavy Dump Truck") — nilai tersimpan tetap opts */
+  optLabel?: (v: string) => string;
   help?: string;
 };
 
-const runtextTargets = ["Semua kiosk", "Display Attendance", "Display Fleet"];
+const runtextTargets = [
+  "Semua kiosk",
+  "Display Attendance",
+  "Display Fleet",
+  "Display Monitor",
+];
 const runtextColors = ["Cyan", "Oranye", "Putih", "Merah"];
 const colorVal: Record<string, string> = {
   Cyan: "#00D4FF",
@@ -133,6 +141,20 @@ export default function MasterDataPage() {
       .catch(() => {
         if (!ac.signal.aborted) setLoadErr(true);
       });
+    if (cat === "egi") {
+      /* form Type EGI butuh opsi klasifikasi Eq. Class */
+      void masterApi
+        .listMaster("eqclass", { perPage: 200 }, ac.signal)
+        .then((res) =>
+          setMdData((prev) => ({
+            ...prev,
+            eqclass: (res.entries ?? []).map((e) => toMdEntry("eqclass", e)),
+          }))
+        )
+        .catch(() => {
+          /* dropdown jatuh ke isi store */
+        });
+    }
     if (cat === "lokasiex") {
       for (const dep of ["bus", "tempudo"] as const) {
         void masterApi
@@ -209,9 +231,36 @@ export default function MasterDataPage() {
   const busTypeOf = (code: string) =>
     unitsSrc.find((u) => u.code === code)?.egi ?? "";
 
+  /* opsi klasifikasi Type EGI: kode Eq. Class aktif dari master; "" di depan
+     = belum terklasifikasi (mis. SPARE). Label menyertakan kepanjangannya. */
+  const eqClassOpts = React.useMemo(
+    () => ["", ...mdData.eqclass.filter((r) => r.active).map((r) => r.name)],
+    [mdData.eqclass]
+  );
+  const eqClassLabel = React.useCallback(
+    (v: string) => {
+      if (!v) return "—";
+      const d = mdData.eqclass.find((r) => r.name === v)?.a;
+      return d ? `${v} — ${d}` : v;
+    },
+    [mdData.eqclass]
+  );
+
   const cols: ColDef[] = React.useMemo(() => {
     switch (cat) {
       case "egi":
+        /* Eq. Class DULU (dropdown klasifikasi), baru ketik nama Type EGI */
+        return [
+          {
+            key: "a",
+            label: "Eq. Class",
+            kind: "select",
+            opts: eqClassOpts,
+            optLabel: eqClassLabel,
+            help: t.mdEgiEqHelp,
+          },
+          { key: "name", label: "Type EGI" },
+        ];
       case "product":
         return [{ key: "name", label: t.mdNama }];
       case "eqclass":
@@ -282,7 +331,17 @@ export default function MasterDataPage() {
           },
         ];
     }
-  }, [cat, t, en, busCodeOpts, diggerOpts, busOpts, tempudoOpts]);
+  }, [
+    cat,
+    t,
+    en,
+    busCodeOpts,
+    diggerOpts,
+    busOpts,
+    tempudoOpts,
+    eqClassOpts,
+    eqClassLabel,
+  ]);
 
   const entries = mdData[cat];
   const needle = q.trim().toLowerCase();
@@ -630,7 +689,7 @@ export default function MasterDataPage() {
                   ) : null}
                   {(c.opts ?? []).map((o) => (
                     <option key={o} value={o}>
-                      {o}
+                      {c.optLabel ? c.optLabel(o) : o}
                     </option>
                   ))}
                 </Select>

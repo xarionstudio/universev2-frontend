@@ -6,9 +6,12 @@
 import { api, requestBlob } from "../client";
 import type { ListQuery, Paged } from "../types";
 
-/* internal/model/employee.go — Competency */
+/* internal/model/employee.go — Competency.
+   cls = Type EGI (dipakai matcher auto-alokasi), eq = kode Eq. Class
+   ("Pilih Kompetensi", migrasi 000030), simper = warisan (tak diisi form). */
 export type ApiCompetency = {
   cls: string;
+  eq: string;
   simper: string;
   exp: string;
 };
@@ -36,7 +39,10 @@ export type ApiEmployee = {
   exp: string;
   license: string;
   mcu: string;
+  /* medis + medMonitor = Riwayat Medis: backend mengosongkannya bila akun
+     tidak memegang modul RBAC `medical` (view utk lihat, manage utk tulis) */
   medis: string;
+  medMonitor: string;
   blood: string;
   bpjs: string;
   mess: string;

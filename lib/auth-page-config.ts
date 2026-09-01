@@ -1,9 +1,11 @@
 "use client";
 
 /* Konfigurasi tampilan halaman login/register — slide foto panel kiri dan
-   opsi Posisi/Departemen formulir register — diambil dari backend
-   (GET /api/auth/page-config, publik) dan diatur superadmin lewat
-   Settings → Halaman Auth.
+   opsi Posisi/Departemen — diambil dari backend (GET /api/auth/page-config,
+   publik) dan diatur superadmin lewat Settings → Halaman Auth.
+
+   Konsumen: form Register, Pending Registrasi, dan Tambah/Edit Karyawan
+   (dropdown Departemen & Posisi). Semua memakai daftar aktif yang sama.
 
    Halaman auth harus tetap tampil utuh saat backend belum hidup, jadi hook
    ini selalu mulai dari FALLBACK lalu menimpanya dengan data server bila

@@ -19,6 +19,11 @@ export type UmModule =
   | "dashboard"
   | "display"
   | "employees"
+  /* `medical` = Riwayat Medis karyawan (med_history + med_monitor) — modul
+     per-FIELD, bukan per-route: route-nya tetap milik `employees`, tapi
+     backend mengosongkan kedua field itu bagi yang tidak memegang medical
+     (migrasi 000030: Superadmin & role Management). */
+  | "medical"
   | "roster"
   | "fingerprint"
   | "ftw"
@@ -32,6 +37,7 @@ export const umModules: UmModule[] = [
   "dashboard",
   "display",
   "employees",
+  "medical",
   "roster",
   "fingerprint",
   "ftw",

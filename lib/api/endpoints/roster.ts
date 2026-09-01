@@ -56,22 +56,46 @@ export type ApiAttendanceRow = {
   date?: string;
 };
 
-/* internal/model/roster.go — RosterValidationResult, hasil unggah berkas. */
+/* internal/model/roster.go — RosterValidationResult, hasil Scan/unggah. */
+export type ApiRosterError = {
+  row: string;
+  nik: string;
+  emp: string;
+  issue: string;
+  issueEn: string;
+  badgeVariant: "danger" | "warning";
+  badge: string;
+  /** Nomor tanggal (1–31) bila kesalahan pada sel kode hari. */
+  day?: number;
+};
+
 export type ApiRosterValidation = {
   preview: { nik: string; name: string; codes: Record<number, string> }[];
   days: string[];
-  errors: {
-    row: string;
-    nik: string;
-    emp: string;
-    issue: string;
-    issueEn: string;
-    badgeVariant: "danger" | "warning";
-    badge: string;
-  }[];
+  errors: ApiRosterError[];
   validCount: number;
   dupCount: number;
   errCount: number;
+};
+
+export type ApiRosterUploadResult = {
+  meta?: ApiRosterMeta;
+  validation: ApiRosterValidation;
+  dryRun?: boolean;
+  saved?: number;
+};
+
+export type ApiRosterDetail = {
+  key: string;
+  days: string[];
+  rows: {
+    nik: string;
+    name: string;
+    dept: string;
+    pos: string;
+    codes: { date: string; code: string }[];
+  }[];
+  total: number;
 };
 
 /* ── Berkas roster ───────────────────────────────────────────────────── */
@@ -84,16 +108,46 @@ export function listRosters(
   return api.get<Paged<ApiRosterMeta>>("/rosters/", q, signal);
 }
 
-/* POST /api/rosters/upload — field form `file`, hanya .xlsx/.xls/.csv. */
-export function uploadRoster(file: File): Promise<ApiRosterValidation> {
+/* GET /api/rosters/template?dept=&month=YYYY-MM — .xlsx karyawan aktif
+   departemen terpilih; kolom tanggal kosong. Permission: roster:manage. */
+export function downloadRosterTemplate(q: {
+  dept: string;
+  month: string;
+}): Promise<Blob> {
+  return requestBlob("/rosters/template", q);
+}
+
+export type RosterUploadOpts = {
+  file: File;
+  month: string;
+  dept: string;
+  label?: string;
+  /** true = Scan saja (preview + error), tidak menulis DB. */
+  dryRun?: boolean;
+  createdBy?: string;
+};
+
+/* POST /api/rosters/upload — field form: file, month, dept, dryRun?, label?.
+   dryRun=true → Scan/review; dryRun=false → Submit ke DB. */
+export function uploadRoster(
+  opts: RosterUploadOpts
+): Promise<ApiRosterUploadResult> {
   const fd = new FormData();
-  fd.append("file", file);
-  return api.post<ApiRosterValidation>("/rosters/upload", fd);
+  fd.append("file", opts.file);
+  fd.append("month", opts.month);
+  fd.append("dept", opts.dept);
+  if (opts.label) fd.append("label", opts.label);
+  if (opts.createdBy) fd.append("createdBy", opts.createdBy);
+  if (opts.dryRun) fd.append("dryRun", "true");
+  return api.post<ApiRosterUploadResult>("/rosters/upload", fd);
 }
 
 /* GET /api/rosters/:key/detail */
-export function getRosterDetail(key: string | number): Promise<unknown> {
-  return api.get<unknown>(`/rosters/${key}/detail`);
+export function getRosterDetail(
+  key: string | number,
+  signal?: AbortSignal
+): Promise<ApiRosterDetail> {
+  return api.get<ApiRosterDetail>(`/rosters/${key}/detail`, undefined, signal);
 }
 
 /* GET /api/rosters/:key/export */

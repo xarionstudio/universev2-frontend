@@ -3,12 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Eye, Search, Upload } from "lucide-react";
+import { CircleAlert, Download, Eye, Search, Upload } from "lucide-react";
 
-import { rosterMeta } from "@/lib/data/roster";
+import { errorDetail, rosterApi } from "@/lib/api";
+import type { ApiRosterMeta } from "@/lib/api/endpoints/roster";
+import { useAuthPageConfig } from "@/lib/auth-page-config";
 import { useI18n } from "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, IconButton, Spinner } from "@/components/ui/button";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import {
   FootSum,
@@ -33,18 +35,40 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
+import { downloadBlob } from "../../users/_lib/csv";
+
 export default function RosterDataPage() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
   const router = useRouter();
+  const { departments } = useAuthPageConfig();
 
   const [month, setMonth] = React.useState("");
   const [dept, setDept] = React.useState("");
   const [q, setQ] = React.useState("");
   const [st, setSt] = React.useState("");
 
-  const all = rosterMeta(lang);
-  const depts = Array.from(new Set(all.map((r) => r.dept))).sort();
+  const [rows, setRows] = React.useState<ApiRosterMeta[] | null>(null);
+  const [loadErr, setLoadErr] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+
+  React.useEffect(() => {
+    const ac = new AbortController();
+    void rosterApi
+      .listRosters({ perPage: 200 }, ac.signal)
+      .then((res) => {
+        setRows(res.items ?? []);
+        setLoadErr(false);
+      })
+      .catch(() => {
+        if (!ac.signal.aborted) {
+          setLoadErr(true);
+          setRows([]);
+        }
+      });
+    return () => ac.abort();
+  }, [reloadKey]);
+
   const monthNames = React.useMemo(() => {
     const loc = lang === "en" ? "en-GB" : "id-ID";
     return Array.from({ length: 12 }, (_, i) =>
@@ -52,7 +76,12 @@ export default function RosterDataPage() {
     );
   }, [lang]);
 
-  const rows = all.filter((r) => {
+  const depts = React.useMemo(() => {
+    const fromData = (rows ?? []).map((r) => r.dept);
+    return Array.from(new Set([...departments, ...fromData])).sort();
+  }, [rows, departments]);
+
+  const filtered = (rows ?? []).filter((r) => {
     if (st && r.status !== st) return false;
     if (dept && r.dept !== dept) return false;
     if (month && r.month.slice(5) !== month) return false;
@@ -65,7 +94,17 @@ export default function RosterDataPage() {
       r.by.toLowerCase().includes(needle)
     );
   });
-  const pg = usePagination(rows);
+  const pg = usePagination(filtered);
+
+  async function exportOne(r: ApiRosterMeta) {
+    try {
+      const blob = await rosterApi.exportRoster(r.key);
+      downloadBlob(r.file || `roster-${r.key}.xlsx`, blob);
+      pushToast("success", t.rdDlT, r.file);
+    } catch (err) {
+      pushToast("error", t.apErrT, errorDetail(err, t.apErrT));
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
@@ -126,7 +165,21 @@ export default function RosterDataPage() {
           </ToolbarGroup>
         </Toolbar>
 
-        {rows.length ? (
+        {loadErr ? (
+          <StateBox
+            icon={<CircleAlert className="text-danger-text" />}
+            title={t.apLoadErrT}
+            body={t.apErrT}
+          >
+            <Button onClick={() => setReloadKey((k) => k + 1)}>
+              {t.apRetry}
+            </Button>
+          </StateBox>
+        ) : rows === null ? (
+          <div className="grid place-items-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : filtered.length ? (
           <Table>
             <TableHeader>
               <tr>
@@ -149,7 +202,7 @@ export default function RosterDataPage() {
                   <TableCell className="max-xl:hidden">
                     <NameCell
                       name={<span className="font-medium">{r.by}</span>}
-                      sub={r.date}
+                      sub={r.dateISO}
                     />
                   </TableCell>
                   <TableCell className="font-mono">{r.emp}</TableCell>
@@ -178,7 +231,7 @@ export default function RosterDataPage() {
                       </IconButton>
                       <IconButton
                         aria-label={t.rdDl}
-                        onClick={() => pushToast("success", t.rdDlT, r.file)}
+                        onClick={() => void exportOne(r)}
                       >
                         <Download />
                       </IconButton>

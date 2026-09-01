@@ -72,7 +72,9 @@ export function AllocDialog({
                 (ftwAvailable && o.ftw !== "fit" && o.ftw !== "spare");
               const ftw = ftwBadgeOf(o, t);
               let sub = match
-                ? `${match.cls} · SIMPER ${match.simper}`
+                ? match.eq
+                  ? `${match.eq} · ${match.cls}`
+                  : match.cls
                 : t.faKompNone;
               if (busyCode) sub += ` · ${t.faBusy} (${busyCode})`;
               /* aturan MVP: server menuntut data hadir — beri hint dini */

@@ -85,12 +85,53 @@ export function getDisplayFleet(
   return api.get<unknown[]>("/display/fleet", q, signal);
 }
 
-/* GET /api/display/monitor — `monitor` adalah kode perangkat display. */
+/* internal/service/display_service.go — FleetUnitCard / FleetDisplayData /
+   DisplayMonitorData. Digunakan GET /api/display/monitor dan
+   GET /api/display/fleet. `id` fleet di sini adalah id NUMERIK
+   fleet_settings (stringified), bukan "fl-<digger>" milik UI admin. */
+export type ApiFleetUnitCard = {
+  code: string;
+  opName: string;
+  opNik: string;
+  tone: string;
+  label: string;
+  isDigger: boolean;
+};
+
+export type ApiFleetDisplayData = {
+  id: string;
+  digger: string;
+  loc: string;
+  bus: string;
+  units: ApiFleetUnitCard[];
+};
+
+export type ApiDisplayMonitorData = {
+  id: string;
+  name: string;
+  loc: string;
+  fleetIds: number[];
+  rotateSec: number;
+  runtext: string;
+  online: boolean;
+  active: boolean;
+  fleets?: ApiFleetDisplayData[];
+};
+
+/* GET /api/display/monitor — `monitor` adalah KODE perangkat (mis. DSP-M01).
+   Tanpa query: semua display content_kind=monitor. Balasan memuat rotateSec
+   dan runtext apa adanya dari display_devices, plus formasi fleet aktif
+   (urut sort_order di display_fleets). Permission: display:view.
+   Lihat docs/api/display-monitor.md. */
 export function getDisplayMonitor(
   monitor?: string,
   signal?: AbortSignal
-): Promise<unknown[]> {
-  return api.get<unknown[]>("/display/monitor", { monitor }, signal);
+): Promise<ApiDisplayMonitorData[]> {
+  return api.get<ApiDisplayMonitorData[]>(
+    "/display/monitor",
+    { monitor },
+    signal
+  );
 }
 
 /* internal/service/display_service.go — DisplayFpDevice. Bentuknya sengaja

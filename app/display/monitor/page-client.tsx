@@ -3,11 +3,17 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 
+import { fleetApi, settingsApi } from "@/lib/api";
+import { toFleet } from "@/lib/api/adapters";
+import type { ApiDisplayDevice } from "@/lib/api/endpoints/settings";
 import { displayRuntext } from "@/lib/data/display-screens";
 import type { Fleet } from "@/lib/data/fleet";
-import { MONITOR_MAX_FLEETS, MONITOR_PER_PAGE } from "@/lib/data/settings-data";
+import {
+  MONITOR_MAX_FLEETS,
+  MONITOR_PER_PAGE,
+  type Display,
+} from "@/lib/data/settings-data";
 import { cn } from "@/lib/utils";
-import { useAppStore } from "@/components/providers/app-store";
 
 import { DisplayShell } from "../_components/display-shell";
 import { shiftNow, useFleetCardsMany } from "../_components/fleet-board";
@@ -31,18 +37,85 @@ const OPEN_TOTAL = FLIP_IN_MS + STAGGER_MS * (MONITOR_PER_PAGE - 1);
    giliran lebih pendek dari animasinya sendiri */
 const MIN_HOLD_MS = 800;
 
+/* Selaras teks dialog admin: perubahan diterapkan ke TV dalam ±30 detik. */
+const REFRESH_MS = 30 * 1000;
+
 type Phase = "open" | "closing" | "opening";
+
+function toMonitorRow(
+  d: ApiDisplayDevice,
+  byDbId: Map<number, string>
+): Display {
+  return {
+    dbId: d.id,
+    id: d.code,
+    name: d.name,
+    loc: d.loc,
+    content: "monitor",
+    fleetIds: (d.fleetIds ?? []).flatMap((n) => {
+      const fid = byDbId.get(n);
+      return fid ? [fid] : [];
+    }),
+    rotateSec: d.rotateSec > 0 ? d.rotateSec : 10,
+    runtext: d.runtext,
+    online: d.online,
+    hb: d.hb || "—",
+    active: d.active,
+  };
+}
 
 export default function DisplayMonitorPage() {
   const params = useSearchParams();
   const deviceName = params.get("name") ?? undefined;
   const monitorId = params.get("monitor");
-  const { dspMonitor, fleets } = useAppStore();
+
+  /* Hidrasi dari server — tab baru (preview Eye) tidak punya store admin,
+     jadi durasi / running text / fleet wajib diambil ulang dari API yang
+     sama dengan form Tambah Monitor. */
+  const [monitors, setMonitors] = React.useState<Display[]>([]);
+  const [fleets, setFleets] = React.useState<Fleet[]>([]);
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    let gotData = false;
+    let ac: AbortController | null = null;
+    const load = () => {
+      ac?.abort();
+      const c = new AbortController();
+      ac = c;
+      void Promise.all([
+        fleetApi.listFleetSettings(c.signal),
+        settingsApi.listDisplays("monitor", c.signal),
+      ])
+        .then(([fleetRows, displays]) => {
+          if (!alive) return;
+          const mappedFleets = (fleetRows ?? []).map(toFleet);
+          const byDbId = new Map<number, string>();
+          for (const f of mappedFleets) if (f.dbId) byDbId.set(f.dbId, f.id);
+          setFleets(mappedFleets);
+          setMonitors((displays ?? []).map((d) => toMonitorRow(d, byDbId)));
+          gotData = true;
+          setReady(true);
+        })
+        .catch(() => {
+          /* diamkan setelah data pertama — sama pola layar attendance */
+          if (alive && !c.signal.aborted && !gotData) setReady(true);
+        });
+    };
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => {
+      alive = false;
+      ac?.abort();
+      clearInterval(timer);
+    };
+  }, []);
 
   const monitor =
-    dspMonitor.find((m) => m.id === monitorId) ??
-    dspMonitor.find((m) => m.active) ??
-    dspMonitor[0];
+    monitors.find((m) => m.id === monitorId) ??
+    monitors.find((m) => m.active) ??
+    monitors[0];
 
   /* fleet yang benar-benar masih ada di Setting Fleet — formasi yang sudah
      dihapus tidak boleh menyisakan giliran kosong di layar */
@@ -118,7 +191,7 @@ export default function DisplayMonitorPage() {
 
   return (
     <DisplayShell
-      title={monitor?.name ?? "Display Monitor"}
+      title={monitor?.name ?? (ready ? "Display Monitor" : "Memuat…")}
       meta={
         list.length ? (
           <span className="truncate">
@@ -126,7 +199,11 @@ export default function DisplayMonitorPage() {
             {pageCount} · fleet {first}–{last} dari {list.length}
           </span>
         ) : (
-          <span>Belum ada fleet yang dipilih untuk monitor ini</span>
+          <span>
+            {ready
+              ? "Belum ada fleet yang dipilih untuk monitor ini"
+              : "Memuat konfigurasi monitor…"}
+          </span>
         )
       }
       deviceName={deviceName !== monitor?.name ? deviceName : undefined}

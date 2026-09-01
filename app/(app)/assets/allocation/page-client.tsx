@@ -659,8 +659,12 @@ export default function FleetAllocationPage() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Badge variant="info">
+                          {/* eq = kode Eq. Class (revisi 1 Sep 2026); baris
+                              lawas hanya punya cls */}
                           {komp
-                            ? `${komp.cls} · SIMPER ${komp.simper}`
+                            ? komp.eq
+                              ? `${komp.eq} · ${komp.cls}`
+                              : komp.cls
                             : t.faKompNone}
                         </Badge>
                         {ftw ? (

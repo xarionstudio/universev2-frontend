@@ -132,7 +132,14 @@ export function deleteAudioSchedule(id: string | number): Promise<void> {
 
 /* ── Perangkat display TV ────────────────────────────────────────────── */
 
-/* GET /api/settings/displays — `kind` menyaring jenis kontennya. */
+/* CRUD display_devices. Untuk kind=monitor:
+   - `fleetIds` = id numerik fleet_settings, urutan = sort_order tayangan
+   - `rotateSec` = durasi giliran (detik) yang dipakai kiosk apa adanya
+   - `runtext` = teks berjalan (string; sumber opsi = Master → runtext)
+   Dokumentasi lengkap: docs/api/display-monitor.md */
+
+/* GET /api/settings/displays — `kind` menyaring content_kind
+   (attendance|fleet|monitor|…). Permission: settings:view. */
 export function listDisplays(
   kind?: string,
   signal?: AbortSignal
@@ -140,14 +147,17 @@ export function listDisplays(
   return api.get<ApiDisplayDevice[]>("/settings/displays", { kind }, signal);
 }
 
-/* POST /api/settings/displays */
+/* POST /api/settings/displays — `name` + `loc` wajib; untuk monitor kirim
+   juga `content:"monitor"`, `fleetIds`, `rotateSec`, `runtext`.
+   Permission: settings:manage. */
 export function createDisplay(
   body: Partial<ApiDisplayDevice>
 ): Promise<ApiDisplayDevice> {
   return api.post<ApiDisplayDevice>("/settings/displays", body);
 }
 
-/* PUT /api/settings/displays/:id */
+/* PUT /api/settings/displays/:id — `:id` adalah id NUMERIK baris.
+   `code` wajib ikut dikirim (kolom ikut di-update). Permission: settings:manage. */
 export function updateDisplay(
   id: string | number,
   body: Partial<ApiDisplayDevice>
@@ -155,7 +165,8 @@ export function updateDisplay(
   return api.put<void>(`/settings/displays/${id}`, body);
 }
 
-/* DELETE /api/settings/displays/:id */
+/* DELETE /api/settings/displays/:id — pivot display_fleets ikut terhapus.
+   Permission: settings:manage. */
 export function deleteDisplay(id: string | number): Promise<void> {
   return api.del<void>(`/settings/displays/${id}`);
 }
@@ -202,7 +213,10 @@ export function deleteAuthSlide(id: string | number): Promise<void> {
   return api.del<void>(`/settings/auth-slides/${id}`);
 }
 
-/* GET /api/settings/auth-options — tanpa `kind` mengembalikan keduanya. */
+/* GET /api/settings/auth-options — tanpa `kind` mengembalikan keduanya.
+   Sumber opsi Departemen/Posisi di Settings → Halaman Auth; daftar aktif
+   yang sama dikonsumsi form Register, Pending, dan Tambah/Edit Karyawan
+   lewat GET /api/auth/page-config. */
 export function listAuthOptions(
   kind?: AuthOptionKind,
   signal?: AbortSignal

@@ -67,11 +67,13 @@ import { useToast } from "@/components/ui/toast";
 
 import { downloadBlob } from "../users/_lib/csv";
 
-/* Label modul RBAC = label menu di sidebar */
+/* Label modul RBAC = label menu di sidebar; `medical` tidak punya menu
+   sendiri (gerbang per-field Riwayat Medis di Data Karyawan) → label khusus */
 const MODULE_LABEL_KEYS: Record<UmModule, keyof Dict> = {
   dashboard: "navDashboard",
   display: "navDisplay",
   employees: "navEmployees",
+  medical: "umModMedical",
   roster: "navRoster",
   fingerprint: "navFingerprint",
   ftw: "navFtw",

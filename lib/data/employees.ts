@@ -2,7 +2,10 @@
 
 import { ftwEvaluate, type FtwStatus } from "@/lib/data/ftw";
 
-export type Komp = { cls: string; simper: string; exp: string };
+/* cls = Type EGI ("Pilih Jenis Kompetensi") — kolom yang dicocokkan
+   auto-alokasi; eq = kode Eq. Class ("Pilih Kompetensi", revisi 1 Sep 2026);
+   simper = nomor/kelas SIMPER warisan, tidak lagi diisi form. */
+export type Komp = { cls: string; eq: string; simper: string; exp: string };
 
 export type Employee = {
   name: string;
@@ -19,6 +22,10 @@ export type Employee = {
   license: string;
   mcu: string;
   medis: string;
+  /* Tingkat Pantau riwayat medis ("" | low | medium | high). Bersama `medis`
+     hanya terisi bagi pemegang modul RBAC `medical` — untuk yang lain backend
+     mengirim kosong. Optional supaya seed mock lama tidak perlu diubah. */
+  medMonitor?: string;
   blood: string;
   bpjs: string;
   mess: string;
@@ -497,37 +504,53 @@ export const employees: Employee[] = [
   },
 ];
 
-/* kompetensi per Type EGI (grup model, ikut spreadsheet) — bukan per eq. class */
+/* kompetensi per Type EGI (grup model, ikut spreadsheet); eq = kode Eq. Class */
 export const kompMap: Record<string, Komp[]> = {
   "503264133": [
-    { cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-03-14" },
-    { cls: "SANY SYZ 440", simper: "Kelas A", exp: "2027-03-14" },
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2027-03-14" },
+    { cls: "SANY SYZ 440", eq: "HD", simper: "Kelas A", exp: "2027-03-14" },
   ],
-  "503264136": [{ cls: "HD 785 / 777", simper: "Kelas A", exp: "2026-07-28" }],
-  "503264135": [{ cls: "PC 200", simper: "Kelas B", exp: "2026-08-02" }],
-  "503264139": [{ cls: "SPARE", simper: "Kelas A", exp: "2027-01-19" }],
-  "503264142": [{ cls: "WATER TRUCK", simper: "Kelas B", exp: "2026-11-05" }],
+  "503264136": [
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2026-07-28" },
+  ],
+  "503264135": [
+    { cls: "PC 200", eq: "EX", simper: "Kelas B", exp: "2026-08-02" },
+  ],
+  "503264139": [{ cls: "SPARE", eq: "", simper: "Kelas A", exp: "2027-01-19" }],
+  "503264142": [
+    { cls: "WATER TRUCK", eq: "WT", simper: "Kelas B", exp: "2026-11-05" },
+  ],
   "503264150": [
-    { cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-05-20" },
-    { cls: "PC 2000", simper: "Kelas B", exp: "2027-05-20" },
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2027-05-20" },
+    { cls: "PC 2000", eq: "EX", simper: "Kelas B", exp: "2027-05-20" },
   ],
   "503264146": [
-    { cls: "PC 2600", simper: "Kelas A", exp: "2027-06-30" },
-    { cls: "PC 2000", simper: "Kelas A", exp: "2027-06-30" },
+    { cls: "PC 2600", eq: "EX", simper: "Kelas A", exp: "2027-06-30" },
+    { cls: "PC 2000", eq: "EX", simper: "Kelas A", exp: "2027-06-30" },
   ],
-  "503264147": [{ cls: "PC 2000", simper: "Kelas A", exp: "2027-06-30" }],
-  "503264148": [{ cls: "PC 2000", simper: "Kelas B", exp: "2027-06-30" }],
-  "503264149": [{ cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-06-30" }],
+  "503264147": [
+    { cls: "PC 2000", eq: "EX", simper: "Kelas A", exp: "2027-06-30" },
+  ],
+  "503264148": [
+    { cls: "PC 2000", eq: "EX", simper: "Kelas B", exp: "2027-06-30" },
+  ],
+  "503264149": [
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2027-06-30" },
+  ],
   "503264151": [
-    { cls: "PC 2000", simper: "Kelas A", exp: "2027-06-30" },
-    { cls: "PC 2600", simper: "Kelas A", exp: "2027-06-30" },
+    { cls: "PC 2000", eq: "EX", simper: "Kelas A", exp: "2027-06-30" },
+    { cls: "PC 2600", eq: "EX", simper: "Kelas A", exp: "2027-06-30" },
   ],
-  "503264152": [{ cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-06-30" }],
+  "503264152": [
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2027-06-30" },
+  ],
   "503264153": [
-    { cls: "HD 785 / 777", simper: "Kelas B", exp: "2027-06-30" },
-    { cls: "SKT105", simper: "Kelas B", exp: "2027-06-30" },
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas B", exp: "2027-06-30" },
+    { cls: "SKT105", eq: "HD", simper: "Kelas B", exp: "2027-06-30" },
   ],
-  "503264154": [{ cls: "HD 785 / 777", simper: "Kelas A", exp: "2027-06-30" }],
+  "503264154": [
+    { cls: "HD 785 / 777", eq: "HD", simper: "Kelas A", exp: "2027-06-30" },
+  ],
 };
 
 export function withKomp(list: Employee[]): Employee[] {
