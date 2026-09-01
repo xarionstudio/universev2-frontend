@@ -1,12 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { notFound, useParams } from "next/navigation";
-import { CircleAlert, Pencil, Plus, Rows3, Search, Trash2 } from "lucide-react";
+import { notFound, useParams, useRouter } from "next/navigation";
+import {
+  CircleAlert,
+  Download,
+  Pencil,
+  Plus,
+  Rows3,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 import { errorDetail, fleetApi, masterApi } from "@/lib/api";
 import { mdEntryBody, toMdEntry } from "@/lib/api/adapters";
 import type { ApiUnitDb } from "@/lib/api/endpoints/fleet";
+import { hasGuidedImport } from "@/lib/api/endpoints/master";
 import {
   mdCatLabels,
   mdCats,
@@ -52,6 +62,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
+import { downloadBlob } from "../../users/_lib/csv";
+
 type ColKey = "name" | "a" | "b";
 type SortKey = ColKey | "active";
 type ColDef = {
@@ -85,6 +97,7 @@ export default function MasterDataPage() {
   const { t, lang } = useI18n();
   const { pushToast } = useToast();
   const { can } = usePermissions();
+  const router = useRouter();
   const canManage = can("master", "manage");
   /* Store mdData tetap jadi rumah datanya: konsumen lain (dropdown bus/area
      Fleet Setting, mess di form karyawan, running text di admin display)
@@ -478,15 +491,49 @@ export default function MasterDataPage() {
     else setFB(v);
   }
 
+  /* Export dirakit backend (GET /api/master/:category/export). Sengaja
+     tanpa query: filter cari/status di layar ini disaring di klien, jadi
+     yang diekspor selalu seluruh kategori supaya isinya tidak diam-diam
+     berbeda dengan yang tampak tersaring. */
+  async function exportNow() {
+    try {
+      const blob = await masterApi.exportMaster(cat);
+      const name = `master-${cat}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      downloadBlob(name, blob);
+      pushToast("success", t.empToastExp, name);
+    } catch (e) {
+      pushToast("error", t.apErrT, errorDetail(e, t.apErrT));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 max-sm:gap-4">
       <PageTitle title={catLabel} sub={t.mdSub}>
-        {canManage ? (
-          <Button onClick={openAdd}>
-            <Plus />
-            {t.mdAdd}
+        <div className="flex flex-wrap gap-2">
+          {/* Import hanya untuk kategori yang punya impor terpandu
+              (Eq. Class & Type EGI). Kategori lain belum punya layarnya,
+              jadi tombolnya tidak ditampilkan alih-alih mengantar ke 404. */}
+          {canManage && hasGuidedImport(cat) ? (
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/master/${cat}/import`)}
+            >
+              <Upload />
+              {t.upImportShort}
+            </Button>
+          ) : null}
+          {/* Export tersedia untuk permission Lihat — hanya membaca */}
+          <Button variant="secondary" onClick={() => void exportNow()}>
+            <Download />
+            {t.export}
           </Button>
-        ) : null}
+          {canManage ? (
+            <Button onClick={openAdd}>
+              <Plus />
+              {t.mdAdd}
+            </Button>
+          ) : null}
+        </div>
       </PageTitle>
 
       {loadErr && !loaded ? (

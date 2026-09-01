@@ -189,11 +189,101 @@ export function deletePendingRegistration(id: string | number): Promise<void> {
   return api.del<void>(`/employees/pending/${id}`);
 }
 
-/* POST /api/employees/import — Excel, field form `file`. */
-export function importEmployees(file: File): Promise<unknown> {
+/* ── Impor Excel: Data Karyawan + Kompetensi Alat Berat ──────────────────
+
+   Dua langkah, pola yang sama dengan unggah Roster: preview dulu (tidak
+   menulis apa pun), lalu commit. Backend mem-parse dan MEMVALIDASI ULANG
+   berkasnya saat commit — preview tidak dikirim balik dan tidak dipercaya.
+
+   Berkasnya dua sheet: "Karyawan" (satu baris per orang, dibaca berdasarkan
+   NAMA kolom sehingga urutannya bebas) dan "Kompetensi" (satu baris per
+   Type EGI yang boleh dioperasikan: NIK | Eq. Class | Type EGI | Masa
+   Berlaku | No. Simper). Export karyawan memakai bentuk yang sama, jadi
+   hasil unduhan bisa disunting lalu diunggah kembali. */
+
+/* internal/dto/employee_import.go — ImportIssue. Bentuknya sengaja sama
+   dengan ApiRosterError agar kedua layar impor memakai satu tabel hasil. */
+export type ApiImportIssue = {
+  row: string;
+  nik: string;
+  emp: string;
+  issue: string;
+  badgeVariant: "danger" | "warning";
+  badge: string;
+};
+
+/* Kolom yang akan tertimpa oleh baris "updated". */
+export type ApiImportChange = { field: string; from: string; to: string };
+
+export type ApiEmployeeImportRow = {
+  row: number;
+  /* pending = departemennya tidak dikenal → masuk Pending Registrasi,
+     bukan Data Karyawan. */
+  kind: "new" | "updated" | "unchanged" | "pending";
+  nik: string;
+  name: string;
+  data: string;
+  /* Kompetensi yang akan DIPASANG untuk NIK ini ("HD 785 / 777 · 2027-03-01").
+     Kosong = sheet Kompetensi tidak menyebut NIK ini; SIMPER lamanya tidak
+     disentuh. */
+  komp: string[] | null;
+  changes: ApiImportChange[] | null;
+};
+
+export type ApiEmployeeImportPreview = {
+  fileName: string;
+  newCount: number;
+  updatedCount: number;
+  unchangedCount: number;
+  pendingCount: number;
+  /* > 0 memblokir commit sepenuhnya. */
+  errorCount: number;
+  kompRowCount: number;
+  kompEmpCount: number;
+  /* Karyawan yang kompetensinya BENAR-BENAR berubah. Ikut menentukan apakah
+     ada yang perlu ditulis: berkas yang data karyawannya sudah sama persis
+     dan hanya mengisi SIMPER yang masih kosong tetap punya pekerjaan. */
+  kompChangedCount: number;
+  /* false = berkas tanpa sheet Kompetensi; kompetensi yang tersimpan
+     dibiarkan apa adanya. */
+  kompSheetFound: boolean;
+  rows: ApiEmployeeImportRow[];
+  errors: ApiImportIssue[] | null;
+  warnings: ApiImportIssue[] | null;
+  newPositions: string[] | null;
+};
+
+export type ApiEmployeeImportResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  pending: number;
+  kompUpdated: number;
+  positionsCreated: number;
+};
+
+/* GET /api/employees/import/template — xlsx tiga sheet (Karyawan,
+   Kompetensi, Referensi). Dibuat ulang tiap unduh: sheet Referensi berisi
+   Type EGI per Eq. Class yang berlaku SAAT INI. Permission: employees:manage. */
+export function downloadImportTemplate(): Promise<Blob> {
+  return requestBlob("/employees/import/template");
+}
+
+/* POST /api/employees/import/preview — tidak menulis apa pun. */
+export function previewImportEmployees(
+  file: File
+): Promise<ApiEmployeeImportPreview> {
   const fd = new FormData();
   fd.append("file", file);
-  return api.post<unknown>("/employees/import", fd);
+  return api.post<ApiEmployeeImportPreview>("/employees/import/preview", fd);
+}
+
+/* POST /api/employees/import — commit. Menolak 422 bila berkasnya masih
+   punya error, jadi tangani kegagalan di sini alih-alih menganggap sukses. */
+export function importEmployees(file: File): Promise<ApiEmployeeImportResult> {
+  const fd = new FormData();
+  fd.append("file", file);
+  return api.post<ApiEmployeeImportResult>("/employees/import", fd);
 }
 
 /* GET /api/employees/export */

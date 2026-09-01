@@ -250,6 +250,65 @@ export const en: Dict = {
   empImpOkB: "rows imported",
   empImpSkipB: "rows skipped",
   empImpMore: "more errors",
+
+  /* Employee + heavy-equipment competency Excel import (/employees/import) */
+  eiTitle: "Import Employee Data",
+  eiSub:
+    "Upload an Excel file of employees and their heavy-equipment competencies. The file is checked first — nothing is saved until you press Import.",
+  eiBack: "Back",
+  eiTpl: "Download Template",
+  eiTplToastT: "Template downloaded",
+  eiDzTitle: "Choose or drop an Excel file (.xlsx)",
+  eiDzHint:
+    "Upload the whole file — do not split it by sheet. Fill in Karyawan (one row per person) and Kompetensi (one row per EGI type, linked by NIK); the Referensi sheet is reference only and is never read. The orange-marked example row can be left in place — the import skips it.",
+  eiChecking: "Checking file…",
+  eiPrevTitle: "Import Plan",
+  eiResults: "Findings",
+  eiNew: "New",
+  eiUpd: "Updated",
+  eiSame: "Unchanged",
+  eiPending: "Pending Registration",
+  eiErr: "Error",
+  eiKompChip: "competencies changed",
+  eiDataCol: "Data",
+  eiValueCol: "Value",
+  eiChanges: "Changes",
+  eiKompCol: "Competencies",
+  eiNoKomp: "unchanged",
+  eiRowsB: "rows",
+  eiBlocked: "Blocking errors remain — fix the file and upload it again.",
+  eiNothing: "Nothing to import",
+  eiNothingB: "Every row already matches the stored data.",
+  eiFoot: "Review the list above, then Import when it looks right.",
+  eiDo: "Import",
+  eiDoing: "Saving…",
+  eiDoneT: "Import complete",
+  eiCreated: "new",
+  eiUpdated: "updated",
+  eiKompDone: "employees had competencies replaced",
+  eiPendingDone: "moved to Pending Registration",
+  eiNoKompSheetT: "File has no Kompetensi sheet",
+  eiNoKompSheetB:
+    "Only employee data will be updated; stored competencies are left untouched.",
+  eiPosT: "New positions will be created",
+  eiPosB:
+    "These positions are not in the options list yet and will be added on Import. Check the spelling — a misspelt option becomes permanent too.",
+  eiConfirm: "Continue Import",
+
+  /* Master data Excel import — Eq. Class & EGI Type (/master/<cat>/import) */
+  miTitle: "Import Master Data",
+  miSub:
+    "Upload an Excel file to add or update master entries. The file is checked first — nothing is saved until you press Import.",
+  miDzTitle: "Choose or drop an Excel file (.xlsx)",
+  miHintEq:
+    "Columns: Kode, Keterangan, Aktif (Ya/Tidak). This code is what units and employee competencies reference — changing it creates a different class.",
+  miHintEgi:
+    "Columns: Eq. Class, Type EGI, Aktif (Ya/Tidak). The Eq. Class must already exist — see the template's Referensi sheet; leave it blank only for types that genuinely have no class.",
+  miNameEq: "Code",
+  miNameEgi: "EGI Type",
+  miExtraEq: "Description",
+  miExtraEgi: "Eq. Class",
+  miEntriesB: "entries",
   efKompFailT: "Competencies not saved",
   efKompFailD:
     "The employee record was saved, but the competencies failed to write — open Edit and save again.",
@@ -978,6 +1037,7 @@ export const en: Dict = {
     "Submit is enabled only when there are no errors. Fix the file and Scan again.",
   upDlErrors: "Download Error Notes",
   upImport: "Submit Roster",
+  upImportShort: "Import",
   upImporting: "Saving…",
   upImportBlocked: "Errors remain — fix roster codes and Scan again.",
   toastImportT: "Roster Saved",

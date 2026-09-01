@@ -81,7 +81,6 @@ export default function EmployeesPage() {
      halaman Mesin Fingerprint & User Management */
   const { can } = usePermissions();
   const canManage = can("employees", "manage");
-  const impRef = React.useRef<HTMLInputElement>(null);
 
   const [q, setQ] = React.useState("");
   const [fOpen, setFOpen] = React.useState(false);
@@ -193,59 +192,6 @@ export default function EmployeesPage() {
     }
   }
 
-  /* Import Excel — backend hanya menerima .xlsx/.xls (field form `file`),
-     jadi `accept` di input mengikuti persis. Handler memulangkan hasil PER
-     BARIS (imported/skipped/errors): baris ber-NIK invalid/kembar atau
-     bertanggal salah dilewati server, dan alasannya harus sampai ke
-     pengguna — import yang 0 baris masuk bukan sukses. Setelah ada baris
-     yang masuk, daftar dimuat ulang, bukan ditebak. */
-  function importChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    /* reset dulu supaya file yang sama bisa dipilih ulang setelah gagal */
-    e.target.value = "";
-    if (!file) return;
-    void (async () => {
-      try {
-        const res = (await employeesApi.importEmployees(file)) as {
-          imported: number;
-          skipped: number;
-          errors?: string[] | null;
-        };
-        /* tiga alasan pertama cukup untuk tahu polanya; sisanya diringkas */
-        const rowErrs = res.errors ?? [];
-        const reasons =
-          rowErrs.slice(0, 3).join(" · ") +
-          (rowErrs.length > 3
-            ? ` · +${rowErrs.length - 3} ${t.empImpMore}`
-            : "");
-        if (res.imported === 0) {
-          pushToast(
-            "error",
-            t.empImpNoneT,
-            `${res.skipped} ${t.empImpSkipB}${reasons ? ` — ${reasons}` : ""}`
-          );
-          return;
-        }
-        if (res.skipped > 0) {
-          /* variant error dipakai supaya toast-nya tidak menutup sendiri
-             sebelum alasan per barisnya sempat terbaca */
-          pushToast(
-            "error",
-            t.empImpPartT,
-            `${res.imported} ${t.empImpOkB}, ${res.skipped} ${t.empImpSkipB}${
-              reasons ? ` — ${reasons}` : ""
-            }`
-          );
-        } else {
-          pushToast("success", t.umToastImp, `${res.imported} ${t.empImpOkB}.`);
-        }
-        setReloadKey((k) => k + 1);
-      } catch (e2) {
-        toastErr(e2);
-      }
-    })();
-  }
-
   function resetFilters() {
     setQ("");
     setFStatus("");
@@ -355,13 +301,16 @@ export default function EmployeesPage() {
                 ))}
               </DropMenu>
             </DropMenuWrap>
+            {/* Import pindah ke halamannya sendiri: berkasnya diperiksa
+                dulu (baris baru/diperbarui/ditahan + kompetensi alat berat)
+                dan disetujui, bukan langsung ditulis dari sini. */}
             {canManage ? (
               <Button
                 variant="secondary"
-                onClick={() => impRef.current?.click()}
+                onClick={() => router.push("/employees/import")}
               >
                 <Upload />
-                Import
+                {t.eiDo}
               </Button>
             ) : null}
             {/* Export tetap tersedia untuk permission Lihat — hanya membaca */}
@@ -369,13 +318,6 @@ export default function EmployeesPage() {
               <Download />
               {t.export}
             </Button>
-            <input
-              ref={impRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={importChange}
-            />
           </ToolbarGroup>
         </Toolbar>
 

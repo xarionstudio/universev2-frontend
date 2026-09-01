@@ -247,6 +247,66 @@ export const id = {
   empImpOkB: "baris diimpor",
   empImpSkipB: "baris dilewati",
   empImpMore: "error lainnya",
+
+  /* Impor Excel Karyawan + Kompetensi Alat Berat (layar /employees/import) */
+  eiTitle: "Import Data Karyawan",
+  eiSub:
+    "Unggah Excel berisi data karyawan beserta kompetensi alat beratnya. Berkas diperiksa dulu — tidak ada yang tersimpan sebelum Anda menekan Import.",
+  eiBack: "Kembali",
+  eiTpl: "Unduh Template",
+  eiTplToastT: "Template diunduh",
+  eiDzTitle: "Pilih atau seret berkas Excel (.xlsx)",
+  eiDzHint:
+    "Unggah berkasnya utuh — jangan dipecah per sheet. Isi sheet Karyawan (satu baris per orang) dan Kompetensi (satu baris per Type EGI, dihubungkan lewat NIK); sheet Referensi hanya acuan dan tidak dibaca. Baris contoh bertanda oranye boleh dibiarkan — ia dilewati saat impor.",
+  eiChecking: "Memeriksa berkas…",
+  eiPrevTitle: "Rencana Import",
+  eiResults: "Temuan",
+  eiNew: "Baru",
+  eiUpd: "Diperbarui",
+  eiSame: "Tidak berubah",
+  eiPending: "Pending Registrasi",
+  eiErr: "Error",
+  eiKompChip: "kompetensi diperbarui",
+  eiDataCol: "Data",
+  eiValueCol: "Nilai",
+  eiChanges: "Perubahan",
+  eiKompCol: "Kompetensi",
+  eiNoKomp: "tidak diubah",
+  eiRowsB: "baris",
+  eiBlocked:
+    "Masih ada error yang memblokir — perbaiki berkasnya lalu unggah ulang.",
+  eiNothing: "Tidak ada yang perlu diimpor",
+  eiNothingB: "Seluruh baris sudah sama dengan data yang tersimpan.",
+  eiFoot: "Periksa daftar di atas, lalu Import bila sudah sesuai.",
+  eiDo: "Import",
+  eiDoing: "Menyimpan…",
+  eiDoneT: "Import selesai",
+  eiCreated: "baru",
+  eiUpdated: "diperbarui",
+  eiKompDone: "karyawan diperbarui kompetensinya",
+  eiPendingDone: "masuk Pending Registrasi",
+  eiNoKompSheetT: "Berkas tanpa sheet Kompetensi",
+  eiNoKompSheetB:
+    "Hanya data karyawan yang akan diperbarui; kompetensi yang sudah tersimpan dibiarkan apa adanya.",
+  eiPosT: "Posisi baru akan dibuat",
+  eiPosB:
+    "Posisi berikut belum ada di daftar opsi dan akan ditambahkan otomatis saat Import. Pastikan ejaannya benar — opsi yang salah ketik ikut permanen.",
+  eiConfirm: "Lanjutkan Import",
+
+  /* Impor Excel Master Data — Eq. Class & Type EGI (/master/<kat>/import) */
+  miTitle: "Import Master Data",
+  miSub:
+    "Unggah Excel untuk menambah atau memperbarui entri master. Berkas diperiksa dulu — tidak ada yang tersimpan sebelum Anda menekan Import.",
+  miDzTitle: "Pilih atau seret berkas Excel (.xlsx)",
+  miHintEq:
+    "Kolom: Kode, Keterangan, Aktif (Ya/Tidak). Kode inilah yang dirujuk unit dan kompetensi karyawan — mengubahnya berarti membuat kelas lain.",
+  miHintEgi:
+    "Kolom: Eq. Class, Type EGI, Aktif (Ya/Tidak). Eq. Class harus sudah ada di master — lihat sheet Referensi di template; kosongkan hanya untuk type yang memang tanpa kelas.",
+  miNameEq: "Kode",
+  miNameEgi: "Type EGI",
+  miExtraEq: "Keterangan",
+  miExtraEgi: "Eq. Class",
+  miEntriesB: "entri",
   efKompFailT: "Kompetensi gagal disimpan",
   efKompFailD:
     "Data karyawan sudah tersimpan, tetapi kompetensinya gagal ditulis — buka Edit lalu simpan ulang.",
@@ -972,6 +1032,7 @@ export const id = {
     "Submit hanya aktif bila tidak ada error. Perbaiki file lalu Scan ulang.",
   upDlErrors: "Unduh Catatan Error",
   upImport: "Submit Roster",
+  upImportShort: "Import",
   upImporting: "Menyimpan…",
   upImportBlocked: "Masih ada error — perbaiki kode roster lalu Scan ulang.",
   toastImportT: "Roster tersimpan",
